@@ -35,10 +35,10 @@ scene :: proc(s: SCENES) -> ^scene_t {
 	colliders := make([]rectangle, NUM_RECTANGLES_ON_SCENE)
 
 	colliders_slice := []rectangle {
-		{position = {0, 0}, w = SCREEN_WIDTH, h = 20},
-		{position = {0, SCREEN_HEIGHT - 20}, w = SCREEN_WIDTH, h = 20},
-		{position = {0, 0}, w = 20, h = SCREEN_HEIGHT},
-		{position = {SCREEN_WIDTH - 20, 0}, w = 20, h = SCREEN_HEIGHT},
+		{position = {0, 0}, w = SCREEN_WIDTH, h = PLAYER_SIZE},
+		{position = {0, SCREEN_HEIGHT - PLAYER_SIZE}, w = SCREEN_WIDTH, h = PLAYER_SIZE},
+		{position = {0, 0}, w = PLAYER_SIZE, h = SCREEN_HEIGHT},
+		{position = {SCREEN_WIDTH - PLAYER_SIZE, 0}, w = PLAYER_SIZE, h = SCREEN_HEIGHT},
 	}
 	cnt := 0
 	for i in 0 ..< len(colliders_slice) {

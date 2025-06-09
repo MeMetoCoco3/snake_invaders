@@ -8,13 +8,14 @@ import rl "vendor:raylib"
 
 SCREEN_WIDTH :: 800
 SCREEN_HEIGHT :: 800
-PLAYER_SIZE :: 20
+PLAYER_SIZE :: 16
 PLAYER_SPEED :: 2
 MAX_NUM_BODY :: 20
 MAX_NUM_MOVERS :: 100
 MAX_NUM_CANDIES :: 3
 CANDY_SIZE :: 20
 CANDY_RESPAWN_TIME :: 20
+
 
 BULLET_SPEED :: 4
 BULLET_SIZE :: 16
@@ -27,7 +28,6 @@ main :: proc() {
 	defer rl.CloseWindow()
 	rl.SetTargetFPS(60)
 
-
 	tileset = rl.LoadTexture("./assets/tileset.png")
 	defer rl.UnloadTexture(tileset)
 
@@ -39,17 +39,18 @@ main :: proc() {
 	}
 
 	pj := Player {
-		head         = cell_t {
+		head             = cell_t {
 			vec2_t{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2},
 			{0, -1},
 			0,
 			PLAYER_SIZE,
 		},
-		body         = [MAX_NUM_BODY]cell_t{},
-		health       = 3,
-		ghost_pieces = &ring_buffer,
-		next_dir     = {0, 0},
-		rotation     = 0,
+		body             = [MAX_NUM_BODY]cell_t{},
+		health           = 3,
+		ghost_pieces     = &ring_buffer,
+		next_dir         = {0, 0},
+		rotation         = 0,
+		next_bullet_size = 0,
 	}
 
 	scene := scene(.ONE)
@@ -111,17 +112,32 @@ get_input :: proc(game: ^Game) {
 	if (rl.IsKeyPressed(.K) || rl.IsKeyPressed(.UP)) {
 		game.player.next_dir = {0, -1}
 	}
-	if (rl.IsKeyPressed(.SPACE)) && game.player.num_cells > 0 {
+
+
+	if rl.IsKeyDown(.SPACE) &&
+	   game.player.num_cells != 0 &&
+	   game.player.next_bullet_size < f32(game.player.num_cells) {
+		fmt.println(game.player.delay_for_size_bullet)
+		if game.player.delay_for_size_bullet > 60 {
+			game.player.next_bullet_size += 1
+			game.player.delay_for_size_bullet = 0
+		} else {
+			fmt.println(game.player.delay_for_size_bullet)
+			game.player.delay_for_size_bullet += 1
+		}
+	}
+
+	if (rl.IsKeyReleased(.SPACE)) && game.player.num_cells > 0 {
 		spawn_bullet(game)
+		game.player.num_cells -= i8(game.player.next_bullet_size)
+		game.player.next_bullet_size = 0
+		game.player.delay_for_size_bullet = 0
 	}
 }
 
 try_set_dir :: proc(player: ^Player) -> bool {
 	prev_dir := player.head.direction
 	next_dir := player.next_dir
-	fmt.println()
-	fmt.println("PREV DIR:", prev_dir)
-	fmt.println("NEXT DIR:", next_dir)
 	if !oposite_directions(next_dir, prev_dir) && next_dir != prev_dir {
 		player.head.direction = next_dir
 		return true
@@ -134,8 +150,8 @@ update_scene :: proc(game: ^Game) {
 		entity := &game.scene.entities[i]
 		switch entity.kind {
 		case .BULLET:
-			entity.position.x += entity.direction.x
-			entity.position.y += entity.direction.y
+			entity.position.x += (entity.speed * entity.direction.x)
+			entity.position.y += (entity.speed * entity.direction.y)
 		case .CANDY:
 		case .STATIC:
 		}
@@ -144,7 +160,6 @@ update_scene :: proc(game: ^Game) {
 }
 
 update_player :: proc(player: ^Player) {
-
 	if aligned_to_grid(player.head.position) {
 		if try_set_dir(player) && player.num_cells > 0 && player.head.direction != {0, 0} {
 			fmt.println("ADD CELL")
@@ -202,10 +217,11 @@ update_player :: proc(player: ^Player) {
 }
 
 grow_body :: proc(pj: ^Player) {
+
 	if pj.num_cells < MAX_NUM_BODY {
 		direction: vec2_t
 		new_x, new_y: f32
-
+		fmt.println("WE GROW THE BODY")
 
 		if pj.num_cells == 0 {
 			direction = pj.head.direction
@@ -252,17 +268,17 @@ spawn_bullet :: proc(game: ^Game) {
 	y_position: f32
 	switch head.direction {
 	case {0, 1}:
-		x_position = head.position.x + (PLAYER_SIZE / 2)
+		x_position = head.position.x
 		y_position = head.position.y + PLAYER_SIZE
 	case {0, -1}:
-		x_position = head.position.x + (PLAYER_SIZE / 2)
+		x_position = head.position.x
 		y_position = head.position.y
 	case {1, 0}:
 		x_position = head.position.x + PLAYER_SIZE
-		y_position = head.position.y + (PLAYER_SIZE / 2)
+		y_position = head.position.y
 	case {-1, 0}:
 		x_position = head.position.x
-		y_position = head.position.y + (PLAYER_SIZE / 2)
+		y_position = head.position.y
 	}
 
 	bullet := new(Entity)
@@ -270,6 +286,8 @@ spawn_bullet :: proc(game: ^Game) {
 	bullet.direction = head.direction
 	bullet.kind = .BULLET
 	bullet.speed = BULLET_SPEED
+	bullet.w = game.player.next_bullet_size
+	bullet.h = game.player.next_bullet_size
 
 	game.scene.entities[game.scene.count_entities] = bullet^
 	game.scene.count_entities += 1
@@ -283,8 +301,6 @@ spawn_bullet :: proc(game: ^Game) {
 		pop_cell(game.player.ghost_pieces)
 	}
 
-	game.player.num_cells -= 1
-
 	//TODO: CHECK FOR GHOST PIECES WITH NO PARENTS 
 }
 
@@ -297,7 +313,8 @@ spawn_candy :: proc(game: ^Game) {
 	candy.position.x = clamp(x_position, PLAYER_SIZE * 2, SCREEN_WIDTH - PLAYER_SIZE * 2)
 	candy.position.y = clamp(y_position, PLAYER_SIZE * 2, SCREEN_HEIGHT - PLAYER_SIZE * 2)
 	candy.kind = .CANDY
-
+	candy.w = PLAYER_SIZE
+	candy.h = PLAYER_SIZE
 	game.scene.entities[game.scene.count_entities] = candy^
 	game.scene.count_entities += 1
 	game.scene.count_candies += 1
@@ -314,7 +331,7 @@ draw_scene :: proc(game: ^Game) {
 	}
 
 	for entity in game.scene.entities {
-		rec := rl.Rectangle{entity.position.x, entity.position.y, PLAYER_SIZE, PLAYER_SIZE}
+		rec := rl.Rectangle{entity.position.x, entity.position.y, entity.w, entity.h}
 
 		color: rl.Color
 		switch entity.kind {
@@ -323,6 +340,8 @@ draw_scene :: proc(game: ^Game) {
 		case .CANDY:
 			color = rl.RED
 		case .BULLET:
+			rec.width *= PLAYER_SIZE
+			rec.height *= PLAYER_SIZE
 			color = rl.BLUE
 		}
 
@@ -331,32 +350,32 @@ draw_scene :: proc(game: ^Game) {
 }
 
 draw_player :: proc(player: ^Player) {
-	//
-	// src_rec := rl.Rectangle{0, 32, PLAYER_SIZE, PLAYER_SIZE}
-	// rotation := player.rotation
-	// switch head.direction {
-	// case {0, 1}:
-	// 	rotation = 270
-	// case {0, -1}:
-	// 	rotation = 90
-	// case {1, 0}:
-	// 	rotation = 180
-	// case {-1, 0}:
-	// 	rotation = 0
-	// }
-	//
-	// dst_rec := rl.Rectangle {
-	// 	head.position.x + PLAYER_SIZE / 2,
-	// 	head.position.y + PLAYER_SIZE / 2,
-	// 	PLAYER_SIZE,
-	// 	PLAYER_SIZE,
-	// }
-	// origin := rl.Vector2{PLAYER_SIZE / 2, PLAYER_SIZE / 2}
-	// rl.DrawTexturePro(tileset, src_rec, dst_rec, origin, rotation, rl.WHITE)
-	rl.DrawRectangleRec(
-		rl.Rectangle{player.head.position.x, player.head.position.y, PLAYER_SIZE, PLAYER_SIZE},
-		rl.WHITE,
-	)
+
+	src_rec := rl.Rectangle{0, 32, PLAYER_SIZE, PLAYER_SIZE}
+	rotation := player.rotation
+	switch player.head.direction {
+	case {0, 1}:
+		rotation = 270
+	case {0, -1}:
+		rotation = 90
+	case {1, 0}:
+		rotation = 180
+	case {-1, 0}:
+		rotation = 0
+	}
+
+	dst_rec := rl.Rectangle {
+		player.head.position.x + PLAYER_SIZE / 2,
+		player.head.position.y + PLAYER_SIZE / 2,
+		PLAYER_SIZE,
+		PLAYER_SIZE,
+	}
+	origin := rl.Vector2{PLAYER_SIZE / 2, PLAYER_SIZE / 2}
+	rl.DrawTexturePro(tileset, src_rec, dst_rec, origin, rotation, rl.WHITE)
+	// rl.DrawRectangleRec(
+	// 	rl.Rectangle{player.head.position.x, player.head.position.y, PLAYER_SIZE, PLAYER_SIZE},
+	// 	rl.WHITE,
+	// )
 
 	for i in 0 ..< player.num_cells {
 		cell := player.body[i]
@@ -465,8 +484,7 @@ check_collision :: proc(game: ^Game) {
 			center_candy := entity.position
 			center_candy.x += CANDY_SIZE / 2
 			center_candy.y += CANDY_SIZE / 2
-			if vec2_distance(center_player, center_candy) < PLAYER_SIZE {
-				fmt.println("WE IN!")
+			if vec2_distance(center_player, center_candy) + 4 < PLAYER_SIZE {
 				if i != int(count_candies - 1) {
 					game.scene.entities[i] = game.scene.entities[game.scene.count_entities - 1]
 				}

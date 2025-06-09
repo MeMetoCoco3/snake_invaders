@@ -29,14 +29,16 @@ cell_ghost_t :: struct {
 
 
 Player :: struct {
-	head:             cell_t,
-	next_dir:         vec2_t,
-	body:             [MAX_NUM_BODY]cell_t,
-	health:           i8,
-	num_cells:        i8,
-	num_ghost_pieces: i8,
-	ghost_pieces:     ^Ringuffer_t,
-	rotation:         f32,
+	head:                  cell_t,
+	next_dir:              vec2_t,
+	body:                  [MAX_NUM_BODY]cell_t,
+	health:                i8,
+	num_cells:             i8,
+	num_ghost_pieces:      i8,
+	ghost_pieces:          ^Ringuffer_t,
+	rotation:              f32,
+	next_bullet_size:      f32,
+	delay_for_size_bullet: f32,
 }
 
 Game :: struct {
