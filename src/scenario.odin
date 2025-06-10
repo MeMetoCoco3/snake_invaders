@@ -11,6 +11,7 @@ Entity :: struct {
 	h:         f32,
 	kind:      KIND,
 	speed:     f32,
+	state:     STATE,
 }
 
 SCENES :: enum {

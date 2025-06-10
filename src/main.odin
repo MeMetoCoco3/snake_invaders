@@ -114,20 +114,23 @@ get_input :: proc(game: ^Game) {
 	}
 
 
-	if rl.IsKeyDown(.SPACE) &&
-	   game.player.num_cells != 0 &&
-	   game.player.next_bullet_size < f32(game.player.num_cells) {
-		fmt.println(game.player.delay_for_size_bullet)
+	if rl.IsKeyDown(.SPACE) && game.player.num_cells != 0 {
 		if game.player.delay_for_size_bullet > 60 {
 			game.player.next_bullet_size += 1
 			game.player.delay_for_size_bullet = 0
 		} else {
-			fmt.println(game.player.delay_for_size_bullet)
-			game.player.delay_for_size_bullet += 1
+			if game.player.next_bullet_size < 3 {
+				fmt.println(game.player.delay_for_size_bullet)
+				game.player.delay_for_size_bullet += 1
+			}
 		}
 	}
 
 	if (rl.IsKeyReleased(.SPACE)) && game.player.num_cells > 0 {
+		// TODO: JIC: JUST IN CASE
+		game.player.next_bullet_size =
+			(game.player.next_bullet_size >= 3) ? 3 : game.player.next_bullet_size
+
 		spawn_bullet(game)
 		game.player.num_cells -= i8(game.player.next_bullet_size)
 		game.player.next_bullet_size = 0
@@ -211,7 +214,6 @@ update_player :: proc(player: ^Player) {
 			}
 			player.body[i].position.x += player.body[i].direction.x * PLAYER_SPEED
 			player.body[i].position.y += player.body[i].direction.y * PLAYER_SPEED
-
 		}
 	}
 }
@@ -288,6 +290,7 @@ spawn_bullet :: proc(game: ^Game) {
 	bullet.speed = BULLET_SPEED
 	bullet.w = game.player.next_bullet_size
 	bullet.h = game.player.next_bullet_size
+	bullet.state = .ALIVE
 
 	game.scene.entities[game.scene.count_entities] = bullet^
 	game.scene.count_entities += 1
@@ -309,12 +312,13 @@ spawn_candy :: proc(game: ^Game) {
 	x_position := f32((int(rand.float32() * SCREEN_WIDTH) % PLAYER_SIZE) * PLAYER_SIZE * 2)
 	y_position := f32((int(rand.float32() * SCREEN_HEIGHT) % PLAYER_SIZE) * PLAYER_SIZE * 2)
 
-
 	candy.position.x = clamp(x_position, PLAYER_SIZE * 2, SCREEN_WIDTH - PLAYER_SIZE * 2)
 	candy.position.y = clamp(y_position, PLAYER_SIZE * 2, SCREEN_HEIGHT - PLAYER_SIZE * 2)
 	candy.kind = .CANDY
 	candy.w = PLAYER_SIZE
 	candy.h = PLAYER_SIZE
+	candy.state = .ALIVE
+
 	game.scene.entities[game.scene.count_entities] = candy^
 	game.scene.count_entities += 1
 	game.scene.count_candies += 1
@@ -455,7 +459,6 @@ draw_ghost_cells :: proc(rb: ^Ringuffer_t) {
 			rl.PINK,
 		)
 	}
-
 }
 
 draw_grid :: proc(col: rl.Color) {
@@ -473,6 +476,8 @@ check_collision :: proc(game: ^Game) {
 	future_pos := vec2_add(player.head.position, vec2_mul_scalar(player.next_dir, PLAYER_SPEED))
 
 	count_candies := game.scene.count_candies
+
+
 	for i in 0 ..< game.scene.count_entities {
 		entity := &game.scene.entities[i]
 		switch entity.kind {
@@ -484,7 +489,9 @@ check_collision :: proc(game: ^Game) {
 			center_candy := entity.position
 			center_candy.x += CANDY_SIZE / 2
 			center_candy.y += CANDY_SIZE / 2
-			if vec2_distance(center_player, center_candy) + 4 < PLAYER_SIZE {
+			if vec2_distance(center_player, center_candy) + 4 < PLAYER_SIZE &&
+			   entity.state != .DEAD {
+				game.scene.entities[i].state = .DEAD
 				if i != int(count_candies - 1) {
 					game.scene.entities[i] = game.scene.entities[game.scene.count_entities - 1]
 				}
