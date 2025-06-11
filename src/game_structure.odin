@@ -1,10 +1,43 @@
 package main
 import "core:fmt"
 
+NUM_RECTANGLES_ON_SCENE :: 100
+NUM_ENTITIES :: 1000
+
+Entity :: struct {
+	position:  vec2_t,
+	direction: vec2_t,
+	w:         f32,
+	h:         f32,
+	kind:      KIND,
+	speed:     f32,
+	state:     STATE,
+	shape:     SHAPE,
+}
+
+
+SCENES :: enum {
+	ONE,
+}
+
+SHAPE :: enum {
+	CIRCLE,
+	RECTANGLE,
+	SQUARE,
+}
+
+
+rectangle :: struct {
+	position: vec2_t,
+	w, h:     f32,
+}
+
+
 KIND :: enum {
 	STATIC,
 	BULLET,
 	CANDY,
+	ENEMY,
 }
 
 STATE :: enum {

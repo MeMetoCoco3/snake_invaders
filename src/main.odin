@@ -14,7 +14,7 @@ MAX_NUM_BODY :: 20
 MAX_NUM_MOVERS :: 100
 MAX_NUM_CANDIES :: 3
 CANDY_SIZE :: 20
-CANDY_RESPAWN_TIME :: 20
+CANDY_RESPAWN_TIME :: 200000000
 
 
 BULLET_SPEED :: 4
@@ -77,9 +77,9 @@ main :: proc() {
 		rl.ClearBackground(rl.BLACK)
 		draw_grid({100, 100, 100, 255})
 
+		draw_scene(&game)
 		draw_player(&pj)
 		draw_ghost_cells(pj.ghost_pieces)
-		draw_scene(&game)
 
 		rl.EndDrawing()
 
@@ -100,41 +100,43 @@ update :: proc(game: ^Game) {
 }
 
 get_input :: proc(game: ^Game) {
+	player := game.player
 	if (rl.IsKeyPressed(.H) || rl.IsKeyPressed(.LEFT)) {
-		game.player.next_dir = {-1, 0}
+		player.next_dir = {-1, 0}
 	}
 	if (rl.IsKeyPressed(.L) || rl.IsKeyPressed(.RIGHT)) {
-		game.player.next_dir = {1, 0}
+		player.next_dir = {1, 0}
 	}
 	if (rl.IsKeyPressed(.J) || rl.IsKeyPressed(.DOWN)) {
-		game.player.next_dir = {0, 1}
+		player.next_dir = {0, 1}
 	}
 	if (rl.IsKeyPressed(.K) || rl.IsKeyPressed(.UP)) {
-		game.player.next_dir = {0, -1}
+		player.next_dir = {0, -1}
+	}
+	if rl.IsKeyPressed(.T) {
+		fmt.println("TT")
+		spawn_enemy(game)
 	}
 
-
-	if rl.IsKeyDown(.SPACE) && game.player.num_cells != 0 {
-		if game.player.delay_for_size_bullet > 60 {
-			game.player.next_bullet_size += 1
-			game.player.delay_for_size_bullet = 0
+	if rl.IsKeyDown(.SPACE) && player.num_cells != 0 {
+		if player.delay_for_size_bullet > 60 {
+			player.next_bullet_size += 1
+			player.delay_for_size_bullet = 0
 		} else {
-			if game.player.next_bullet_size < 3 {
-				fmt.println(game.player.delay_for_size_bullet)
-				game.player.delay_for_size_bullet += 1
+			if player.next_bullet_size < 3 {
+				player.delay_for_size_bullet += 1
 			}
 		}
 	}
 
-	if (rl.IsKeyReleased(.SPACE)) && game.player.num_cells > 0 {
+	if (rl.IsKeyReleased(.SPACE)) && player.num_cells > 0 {
 		// TODO: JIC: JUST IN CASE
-		game.player.next_bullet_size =
-			(game.player.next_bullet_size >= 3) ? 3 : game.player.next_bullet_size
+		player.next_bullet_size = (player.next_bullet_size >= 3) ? 3 : player.next_bullet_size
 
 		spawn_bullet(game)
-		game.player.num_cells -= i8(game.player.next_bullet_size)
-		game.player.next_bullet_size = 0
-		game.player.delay_for_size_bullet = 0
+		player.num_cells -= i8(player.next_bullet_size)
+		player.next_bullet_size = 0
+		player.delay_for_size_bullet = 0
 	}
 }
 
@@ -157,6 +159,7 @@ update_scene :: proc(game: ^Game) {
 			entity.position.y += (entity.speed * entity.direction.y)
 		case .CANDY:
 		case .STATIC:
+		case .ENEMY:
 		}
 	}
 
@@ -219,7 +222,6 @@ update_player :: proc(player: ^Player) {
 }
 
 grow_body :: proc(pj: ^Player) {
-
 	if pj.num_cells < MAX_NUM_BODY {
 		direction: vec2_t
 		new_x, new_y: f32
@@ -264,6 +266,32 @@ dealing_ghost_piece :: proc(player: ^Player, last_piece: i8) {
 	}
 }
 
+spawn_enemy :: proc(game: ^Game) {
+	enemy := new(Entity)
+
+	fmt.println(len(game.scene.spawn_areas))
+	random_index := rand.int31_max(i32(game.scene.count_spawners))
+	spawn_area := game.scene.spawn_areas[random_index]
+
+	x_position :=
+		math.floor((spawn_area.position.x + rand.float32() * spawn_area.w) / PLAYER_SIZE) *
+		PLAYER_SIZE
+	y_position :=
+		math.floor((spawn_area.position.y + rand.float32() * spawn_area.h) / PLAYER_SIZE) *
+		PLAYER_SIZE
+
+	enemy.position = {x_position + PLAYER_SIZE / 2, y_position + PLAYER_SIZE / 2}
+	enemy.kind = .CANDY
+	enemy.w = PLAYER_SIZE / 2
+	enemy.h = PLAYER_SIZE / 2
+	enemy.state = .ALIVE
+	enemy.shape = .CIRCLE
+
+	game.scene.entities[game.scene.count_entities] = enemy^
+	game.scene.count_entities += 1
+	game.scene.count_enemies += 1
+}
+
 spawn_bullet :: proc(game: ^Game) {
 	head := game.player.head
 	x_position: f32
@@ -291,6 +319,7 @@ spawn_bullet :: proc(game: ^Game) {
 	bullet.w = game.player.next_bullet_size
 	bullet.h = game.player.next_bullet_size
 	bullet.state = .ALIVE
+	bullet.shape = .CIRCLE
 
 	game.scene.entities[game.scene.count_entities] = bullet^
 	game.scene.count_entities += 1
@@ -311,13 +340,16 @@ spawn_candy :: proc(game: ^Game) {
 	candy := new(Entity)
 	x_position := f32((int(rand.float32() * SCREEN_WIDTH) % PLAYER_SIZE) * PLAYER_SIZE * 2)
 	y_position := f32((int(rand.float32() * SCREEN_HEIGHT) % PLAYER_SIZE) * PLAYER_SIZE * 2)
+	x_position += PLAYER_SIZE / 2
+	y_position += PLAYER_SIZE / 2
 
-	candy.position.x = clamp(x_position, PLAYER_SIZE * 2, SCREEN_WIDTH - PLAYER_SIZE * 2)
-	candy.position.y = clamp(y_position, PLAYER_SIZE * 2, SCREEN_HEIGHT - PLAYER_SIZE * 2)
+	candy.position.x = clamp(x_position, PLAYER_SIZE * 2.5, SCREEN_WIDTH - PLAYER_SIZE * 2.5)
+	candy.position.y = clamp(y_position, PLAYER_SIZE * 2.5, SCREEN_HEIGHT - PLAYER_SIZE * 2.5)
 	candy.kind = .CANDY
-	candy.w = PLAYER_SIZE
-	candy.h = PLAYER_SIZE
+	candy.w = PLAYER_SIZE / 2
+	candy.h = PLAYER_SIZE / 2
 	candy.state = .ALIVE
+	candy.shape = .CIRCLE
 
 	game.scene.entities[game.scene.count_entities] = candy^
 	game.scene.count_entities += 1
@@ -327,45 +359,56 @@ spawn_candy :: proc(game: ^Game) {
 ////////////
 // RENDER //
 ////////////
-
 draw_scene :: proc(game: ^Game) {
 	for rectangle in game.scene.scenario {
 		rec := rl.Rectangle{rectangle.position.x, rectangle.position.y, rectangle.w, rectangle.h}
 		rl.DrawRectangleRec(rec, rl.YELLOW)
 	}
+	for rectangle in game.scene.spawn_areas {
+		rec := rl.Rectangle{rectangle.position.x, rectangle.position.y, rectangle.w, rectangle.h}
+		rl.DrawRectangleRec(rec, rl.PINK)
+	}
 
 	for entity in game.scene.entities {
-		rec := rl.Rectangle{entity.position.x, entity.position.y, entity.w, entity.h}
 
 		color: rl.Color
+		w := entity.w
 		switch entity.kind {
 		case .STATIC:
 			color = rl.YELLOW
 		case .CANDY:
 			color = rl.RED
 		case .BULLET:
-			rec.width *= PLAYER_SIZE
-			rec.height *= PLAYER_SIZE
 			color = rl.BLUE
+			w *= PLAYER_SIZE
+		case .ENEMY:
 		}
 
-		rl.DrawRectangleRec(rec, color)
+
+		switch entity.shape {
+		case .CIRCLE:
+			rl.DrawCircle(i32(entity.position.x), i32(entity.position.y), w, color)
+		case .SQUARE:
+			fallthrough
+		case .RECTANGLE:
+			rec := rl.Rectangle{entity.position.x, entity.position.y, entity.w, entity.h}
+			rl.DrawRectangleRec(rec, color)
+		}
+
 	}
 }
 
 draw_player :: proc(player: ^Player) {
-
 	src_rec := rl.Rectangle{0, 32, PLAYER_SIZE, PLAYER_SIZE}
-	rotation := player.rotation
 	switch player.head.direction {
 	case {0, 1}:
-		rotation = 270
+		player.rotation = 270
 	case {0, -1}:
-		rotation = 90
+		player.rotation = 90
 	case {1, 0}:
-		rotation = 180
+		player.rotation = 180
 	case {-1, 0}:
-		rotation = 0
+		player.rotation = 0
 	}
 
 	dst_rec := rl.Rectangle {
@@ -375,7 +418,7 @@ draw_player :: proc(player: ^Player) {
 		PLAYER_SIZE,
 	}
 	origin := rl.Vector2{PLAYER_SIZE / 2, PLAYER_SIZE / 2}
-	rl.DrawTexturePro(tileset, src_rec, dst_rec, origin, rotation, rl.WHITE)
+	rl.DrawTexturePro(tileset, src_rec, dst_rec, origin, player.rotation, rl.WHITE)
 	// rl.DrawRectangleRec(
 	// 	rl.Rectangle{player.head.position.x, player.head.position.y, PLAYER_SIZE, PLAYER_SIZE},
 	// 	rl.WHITE,
@@ -486,10 +529,7 @@ check_collision :: proc(game: ^Game) {
 			center_player.x += PLAYER_SIZE / 2
 			center_player.y += PLAYER_SIZE / 2
 
-			center_candy := entity.position
-			center_candy.x += CANDY_SIZE / 2
-			center_candy.y += CANDY_SIZE / 2
-			if vec2_distance(center_player, center_candy) + 4 < PLAYER_SIZE &&
+			if vec2_distance(center_player, entity.position) + 4 < PLAYER_SIZE &&
 			   entity.state != .DEAD {
 				game.scene.entities[i].state = .DEAD
 				if i != int(count_candies - 1) {
@@ -503,7 +543,7 @@ check_collision :: proc(game: ^Game) {
 
 		case .BULLET:
 		case .STATIC:
-
+		case .ENEMY:
 		}
 	}
 
