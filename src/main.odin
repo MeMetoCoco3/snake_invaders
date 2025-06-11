@@ -15,7 +15,7 @@ MAX_NUM_MOVERS :: 100
 MAX_NUM_CANDIES :: 3
 CANDY_SIZE :: 20
 CANDY_RESPAWN_TIME :: 200000000
-
+ENEMY_SPEED :: 1
 
 BULLET_SPEED :: 4
 BULLET_SIZE :: 16
@@ -160,6 +160,30 @@ update_scene :: proc(game: ^Game) {
 		case .CANDY:
 		case .STATIC:
 		case .ENEMY:
+			to_player: vec2_t = {
+				game.player.head.position.x - entity.position.x,
+				game.player.head.position.y - entity.position.y,
+			}
+			distance := magnitude(to_player)
+
+			if distance > 0 {
+				desired_dir: vec2_t = {to_player.x / distance, to_player.y / distance}
+
+				smoothing := 0.1
+				entity.direction.x = math.lerp(entity.direction.x, desired_dir.x, f32(smoothing))
+				entity.direction.y = math.lerp(entity.direction.y, desired_dir.y, f32(smoothing))
+
+				entity.position.x += entity.direction.x * entity.speed
+				entity.position.y += entity.direction.y * entity.speed
+			}
+
+		// dx := (game.player.head.position.x - entity.position.x)
+		// dy := (game.player.head.position.y - entity.position.y)
+		// entity.direction.x = sign(dx)
+		// entity.direction.y = sign(dy)
+		//
+		// entity.position.x += (entity.speed * entity.direction.x)
+		// entity.position.y += (entity.speed * entity.direction.y)
 		}
 	}
 
@@ -186,8 +210,6 @@ update_player :: proc(player: ^Player) {
 			piece_to_follow: cell_t
 			if (player.body[i].count_turns_left == 0) {
 				piece_to_follow = (i == 0) ? player.head : player.body[i - 1]
-
-
 				player.body[i].direction = piece_to_follow.direction
 			} else {
 				index :=
@@ -269,7 +291,6 @@ dealing_ghost_piece :: proc(player: ^Player, last_piece: i8) {
 spawn_enemy :: proc(game: ^Game) {
 	enemy := new(Entity)
 
-	fmt.println(len(game.scene.spawn_areas))
 	random_index := rand.int31_max(i32(game.scene.count_spawners))
 	spawn_area := game.scene.spawn_areas[random_index]
 
@@ -281,11 +302,12 @@ spawn_enemy :: proc(game: ^Game) {
 		PLAYER_SIZE
 
 	enemy.position = {x_position + PLAYER_SIZE / 2, y_position + PLAYER_SIZE / 2}
-	enemy.kind = .CANDY
+	enemy.kind = .ENEMY
 	enemy.w = PLAYER_SIZE / 2
 	enemy.h = PLAYER_SIZE / 2
 	enemy.state = .ALIVE
 	enemy.shape = .CIRCLE
+	enemy.speed = ENEMY_SPEED
 
 	game.scene.entities[game.scene.count_entities] = enemy^
 	game.scene.count_entities += 1
@@ -377,11 +399,12 @@ draw_scene :: proc(game: ^Game) {
 		case .STATIC:
 			color = rl.YELLOW
 		case .CANDY:
-			color = rl.RED
+			color = rl.PURPLE
 		case .BULLET:
 			color = rl.BLUE
 			w *= PLAYER_SIZE
 		case .ENEMY:
+			color = rl.RED
 		}
 
 
@@ -605,6 +628,7 @@ aligned :: proc(v0: vec2_t, v1: vec2_t) -> bool {
 // OTHERS //
 ////////////
 
+
 add_turn_count :: proc(player: ^Player) {
 	for i in 0 ..< player.num_cells {
 		player.body[i].count_turns_left += 1
@@ -690,10 +714,10 @@ vec2_mul_scalar :: proc(v: vec2_t, scalar: f32) -> vec2_t {
 	return {v.x * scalar, v.y * scalar}
 }
 
+sign :: proc(x: f32) -> f32 {
+	return (x > 0) ? 1 : (x < 0) ? -1 : 0
+}
 
-sign :: proc(num: f32) -> f32 {
-	if num >= 0 {
-		return 1
-	}
-	return -1
+magnitude :: proc(v: vec2_t) -> f32 {
+	return math.sqrt(v.x * v.x + v.y * v.y)
 }

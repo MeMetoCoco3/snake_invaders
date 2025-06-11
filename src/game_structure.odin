@@ -15,7 +15,6 @@ Entity :: struct {
 	shape:     SHAPE,
 }
 
-
 SCENES :: enum {
 	ONE,
 }
