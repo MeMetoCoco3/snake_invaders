@@ -1,5 +1,7 @@
 package main
 
+// TODO: ADD SIZE TO ENTITIES TO CHECK COLLISION
+
 
 import "core:fmt"
 import "core:math"
@@ -12,17 +14,15 @@ PLAYER_SIZE :: 16
 PLAYER_SPEED :: 2
 MAX_NUM_BODY :: 20
 MAX_NUM_MOVERS :: 100
-MAX_NUM_CANDIES :: 3
+MAX_NUM_CANDIES :: 8
 CANDY_SIZE :: 20
-CANDY_RESPAWN_TIME :: 200000000
+CANDY_RESPAWN_TIME :: 20
 ENEMY_SPEED :: 1
 
 BULLET_SPEED :: 4
 BULLET_SIZE :: 16
 
 tileset: rl.Texture2D
-
-
 main :: proc() {
 	rl.InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "snake_invaders")
 	defer rl.CloseWindow()
@@ -94,8 +94,15 @@ main :: proc() {
 update :: proc(game: ^Game) {
 	get_input(game)
 	check_collision(game)
+
+	game.scene.count_entities = clear_dead_entities(
+		&game.scene.entities,
+		game.scene.count_entities,
+	)
+
 	update_player(game.player)
 	update_scene(game)
+
 	TESTING(game)
 }
 
@@ -118,6 +125,7 @@ get_input :: proc(game: ^Game) {
 		spawn_enemy(game)
 	}
 
+	// TODO: CHECK THIS
 	if rl.IsKeyDown(.SPACE) && player.num_cells != 0 {
 		if player.delay_for_size_bullet > 60 {
 			player.next_bullet_size += 1
@@ -176,14 +184,6 @@ update_scene :: proc(game: ^Game) {
 				entity.position.x += entity.direction.x * entity.speed
 				entity.position.y += entity.direction.y * entity.speed
 			}
-
-		// dx := (game.player.head.position.x - entity.position.x)
-		// dy := (game.player.head.position.y - entity.position.y)
-		// entity.direction.x = sign(dx)
-		// entity.direction.y = sign(dy)
-		//
-		// entity.position.x += (entity.speed * entity.direction.x)
-		// entity.position.y += (entity.speed * entity.direction.y)
 		}
 	}
 
@@ -241,6 +241,21 @@ update_player :: proc(player: ^Player) {
 			player.body[i].position.y += player.body[i].direction.y * PLAYER_SPEED
 		}
 	}
+}
+
+
+clear_dead_entities :: proc(entities: ^[]Entity, count_entities: int) -> int {
+	alive_count := 0
+
+	for i in 0 ..< count_entities {
+		if entities^[i].state == .ALIVE {
+			if i != alive_count {
+				entities^[alive_count], entities^[i] = entities^[i], entities^[alive_count]
+			}
+			alive_count += 1
+		}
+	}
+	return alive_count
 }
 
 grow_body :: proc(pj: ^Player) {
@@ -345,6 +360,7 @@ spawn_bullet :: proc(game: ^Game) {
 
 	game.scene.entities[game.scene.count_entities] = bullet^
 	game.scene.count_entities += 1
+	game.scene.count_bullets += 1
 
 	last_cell := game.player.body[game.player.num_cells - 1]
 	last_ghost, ok := peek_cell(game.player.ghost_pieces)
@@ -354,7 +370,6 @@ spawn_bullet :: proc(game: ^Game) {
 	   vec2_distance(last_cell.position, last_ghost.position) < PLAYER_SIZE {
 		pop_cell(game.player.ghost_pieces)
 	}
-
 	//TODO: CHECK FOR GHOST PIECES WITH NO PARENTS 
 }
 
@@ -391,8 +406,8 @@ draw_scene :: proc(game: ^Game) {
 		rl.DrawRectangleRec(rec, rl.PINK)
 	}
 
-	for entity in game.scene.entities {
-
+	for i in 0 ..< game.scene.count_entities {
+		entity := game.scene.entities[i]
 		color: rl.Color
 		w := entity.w
 		switch entity.kind {
@@ -406,7 +421,6 @@ draw_scene :: proc(game: ^Game) {
 		case .ENEMY:
 			color = rl.RED
 		}
-
 
 		switch entity.shape {
 		case .CIRCLE:
@@ -442,10 +456,6 @@ draw_player :: proc(player: ^Player) {
 	}
 	origin := rl.Vector2{PLAYER_SIZE / 2, PLAYER_SIZE / 2}
 	rl.DrawTexturePro(tileset, src_rec, dst_rec, origin, player.rotation, rl.WHITE)
-	// rl.DrawRectangleRec(
-	// 	rl.Rectangle{player.head.position.x, player.head.position.y, PLAYER_SIZE, PLAYER_SIZE},
-	// 	rl.WHITE,
-	// )
 
 	for i in 0 ..< player.num_cells {
 		cell := player.body[i]
@@ -543,33 +553,44 @@ check_collision :: proc(game: ^Game) {
 
 	count_candies := game.scene.count_candies
 
+	center_player := player.head.position
+	center_player.x += PLAYER_SIZE / 2
+	center_player.y += PLAYER_SIZE / 2
 
 	for i in 0 ..< game.scene.count_entities {
 		entity := &game.scene.entities[i]
 		switch entity.kind {
 		case .CANDY:
-			center_player := player.head.position
-			center_player.x += PLAYER_SIZE / 2
-			center_player.y += PLAYER_SIZE / 2
-
 			if vec2_distance(center_player, entity.position) + 4 < PLAYER_SIZE &&
 			   entity.state != .DEAD {
 				game.scene.entities[i].state = .DEAD
-				if i != int(count_candies - 1) {
-					game.scene.entities[i] = game.scene.entities[game.scene.count_entities - 1]
-				}
-
 				game.scene.count_candies -= 1
-				game.scene.count_entities -= 1
 				grow_body(game.player)
 			}
 
 		case .BULLET:
+			for j in 0 ..< game.scene.count_entities {
+				if game.scene.entities[j].kind == .ENEMY {
+					bullet := &game.scene.entities[i]
+					enemy := &game.scene.entities[j]
+					if circle_colliding(bullet.position, enemy.position, bullet.w, enemy.w) {
+						bullet.state = .DEAD
+						enemy.state = .DEAD
+						game.scene.count_enemies -= 1
+						game.scene.count_bullets -= 1
+					}
+				}
+			}
 		case .STATIC:
 		case .ENEMY:
+			if vec2_distance(center_player, entity.position) < PLAYER_SIZE &&
+			   entity.state != .DEAD {
+				rl.CloseWindow()
+			}
+
 		}
 	}
-
+	// TODO:CHECK THIS SHOULD BE A COUNT_PARTS_SCENARIO
 	for i in 0 ..< len(game.scene.scenario) {
 		rectangle := game.scene.scenario[i]
 
@@ -584,16 +605,16 @@ check_collision :: proc(game: ^Game) {
 			fmt.println("WE COLLIDE")
 			player.next_dir = {0, 0}
 		}
-
 	}
-
-
 }
 
 aligned_to_grid :: proc(p: vec2_t) -> bool {
 	return i32(p.x) % PLAYER_SIZE == 0 && i32(p.y) % PLAYER_SIZE == 0
 }
 
+circle_colliding :: proc(v0, v1: vec2_t, d0, d1: f32) -> bool {
+	return vec2_distance(v0, v1) < d0 + d1
+}
 
 rec_colliding :: proc(v0: vec2_t, w0: f32, h0: f32, v1: vec2_t, w1: f32, h1: f32) -> bool {
 	horizontal_in :=
@@ -602,7 +623,6 @@ rec_colliding :: proc(v0: vec2_t, w0: f32, h0: f32, v1: vec2_t, w1: f32, h1: f32
 		(v0.y <= v1.y && v0.y + h0 >= v1.y) || (v0.y <= v1.y + h1 && v0.y + h0 >= v1.y + h1)
 	return horizontal_in && vertical_in
 }
-
 
 rec_colliding_no_edges :: proc(
 	v0: vec2_t,
@@ -627,8 +647,6 @@ aligned :: proc(v0: vec2_t, v1: vec2_t) -> bool {
 ////////////
 // OTHERS //
 ////////////
-
-
 add_turn_count :: proc(player: ^Player) {
 	for i in 0 ..< player.num_cells {
 		player.body[i].count_turns_left += 1
@@ -643,10 +661,10 @@ vec2_distance :: proc(a, b: vec2_t) -> f32 {
 	return math.sqrt(math.pow(b.x - a.x, 2.0) + math.pow(b.y - a.y, 2.0))
 }
 
+
 get_cardinal_direction :: proc(from, to: vec2_t) -> vec2_t {
 	dx := to.x - from.x
 	dy := to.y - from.y
-	// THE PROBLEM IS THAT WE HAVE TO APLY ANOTHER DIRECTION TO PIECES WHEN THEY ARE SPAWNED, not to all, just to the ones that blaabla, you can check up how is it going
 	if (abs(dx) > abs(dy)) {
 		return (dx > 0) ? vec2_t{1, 0} : vec2_t{-1, 0}
 	} else {
@@ -664,7 +682,6 @@ TESTING :: proc(game: ^Game) {
 	for i in 1 ..< game.player.num_cells {
 		prev_cell := game.player.body[i - 1]
 		next_cell := game.player.body[i]
-
 
 		if !rec_colliding(
 			prev_cell.position,

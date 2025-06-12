@@ -11,6 +11,7 @@ scene_t :: struct {
 	count_entities: int,
 	count_enemies:  int,
 	count_candies:  int,
+	count_bullets:  int,
 	count_spawners: int,
 }
 
