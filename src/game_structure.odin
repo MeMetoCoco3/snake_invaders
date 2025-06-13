@@ -5,32 +5,39 @@ NUM_RECTANGLES_ON_SCENE :: 100
 NUM_ENTITIES :: 1000
 
 Entity :: struct {
-	position:  vec2_t,
+	using s:   Shape,
 	direction: vec2_t,
-	w:         f32,
-	h:         f32,
 	kind:      KIND,
 	speed:     f32,
 	state:     STATE,
-	shape:     SHAPE,
 }
 
 SCENES :: enum {
 	ONE,
 }
 
-SHAPE :: enum {
-	CIRCLE,
-	RECTANGLE,
-	SQUARE,
+Shapes :: union #no_nil {
+	Circle,
+	Square,
+	Rect,
 }
 
-
-rectangle :: struct {
+Shape :: struct {
 	position: vec2_t,
-	w, h:     f32,
+	shape:    Shapes,
 }
 
+Circle :: struct {
+	r: f32,
+}
+
+Square :: struct {
+	w: f32,
+}
+
+Rect :: struct {
+	w, h: f32,
+}
 
 KIND :: enum {
 	STATIC,

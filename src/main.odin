@@ -1,8 +1,5 @@
 package main
 
-// TODO: ADD SIZE TO ENTITIES TO CHECK COLLISION
-
-
 import "core:fmt"
 import "core:math"
 import "core:math/rand"
@@ -15,8 +12,8 @@ PLAYER_SPEED :: 2
 MAX_NUM_BODY :: 20
 MAX_NUM_MOVERS :: 100
 MAX_NUM_CANDIES :: 8
-CANDY_SIZE :: 20
-CANDY_RESPAWN_TIME :: 20
+CANDY_SIZE :: 8
+CANDY_RESPAWN_TIME :: 200
 ENEMY_SPEED :: 1
 
 BULLET_SPEED :: 4
@@ -192,7 +189,6 @@ update_scene :: proc(game: ^Game) {
 update_player :: proc(player: ^Player) {
 	if aligned_to_grid(player.head.position) {
 		if try_set_dir(player) && player.num_cells > 0 && player.head.direction != {0, 0} {
-			fmt.println("ADD CELL")
 			put_cell(
 				player.ghost_pieces,
 				cell_ghost_t{player.head.position, player.head.direction},
@@ -262,7 +258,7 @@ grow_body :: proc(pj: ^Player) {
 	if pj.num_cells < MAX_NUM_BODY {
 		direction: vec2_t
 		new_x, new_y: f32
-		fmt.println("WE GROW THE BODY")
+
 
 		if pj.num_cells == 0 {
 			direction = pj.head.direction
@@ -278,6 +274,7 @@ grow_body :: proc(pj: ^Player) {
 		new_cell := cell_t{{new_x, new_y}, direction, num_ghost_pieces, 2}
 		pj.body[pj.num_cells] = new_cell
 		pj.num_cells += 1
+		fmt.println("WE ARE GROWING NUM CELLS: ", pj.num_cells)
 	} else {
 		fmt.println("WE DO NOT GROW!")
 	}
@@ -308,20 +305,25 @@ spawn_enemy :: proc(game: ^Game) {
 
 	random_index := rand.int31_max(i32(game.scene.count_spawners))
 	spawn_area := game.scene.spawn_areas[random_index]
-
+	// TODO: PUT CHECKERS FOR SPAWN_AREA UNION 
 	x_position :=
-		math.floor((spawn_area.position.x + rand.float32() * spawn_area.w) / PLAYER_SIZE) *
+		math.floor(
+			(spawn_area.position.x + rand.float32() * spawn_area.shape.(Rect).w) / PLAYER_SIZE,
+		) *
 		PLAYER_SIZE
 	y_position :=
-		math.floor((spawn_area.position.y + rand.float32() * spawn_area.h) / PLAYER_SIZE) *
+		math.floor(
+			(spawn_area.position.y + rand.float32() * spawn_area.shape.(Rect).h) / PLAYER_SIZE,
+		) *
 		PLAYER_SIZE
 
-	enemy.position = {x_position + PLAYER_SIZE / 2, y_position + PLAYER_SIZE / 2}
 	enemy.kind = .ENEMY
-	enemy.w = PLAYER_SIZE / 2
-	enemy.h = PLAYER_SIZE / 2
 	enemy.state = .ALIVE
-	enemy.shape = .CIRCLE
+	enemy.position = {x_position + PLAYER_SIZE / 2, y_position + PLAYER_SIZE / 2}
+	enemy.shape = Circle {
+		r = PLAYER_SIZE / 2,
+	}
+
 	enemy.speed = ENEMY_SPEED
 
 	game.scene.entities[game.scene.count_entities] = enemy^
@@ -350,13 +352,13 @@ spawn_bullet :: proc(game: ^Game) {
 
 	bullet := new(Entity)
 	bullet.position = {x_position, y_position}
+	bullet.shape = Circle {
+		r = PLAYER_SIZE,
+	}
 	bullet.direction = head.direction
 	bullet.kind = .BULLET
 	bullet.speed = BULLET_SPEED
-	bullet.w = game.player.next_bullet_size
-	bullet.h = game.player.next_bullet_size
 	bullet.state = .ALIVE
-	bullet.shape = .CIRCLE
 
 	game.scene.entities[game.scene.count_entities] = bullet^
 	game.scene.count_entities += 1
@@ -383,10 +385,10 @@ spawn_candy :: proc(game: ^Game) {
 	candy.position.x = clamp(x_position, PLAYER_SIZE * 2.5, SCREEN_WIDTH - PLAYER_SIZE * 2.5)
 	candy.position.y = clamp(y_position, PLAYER_SIZE * 2.5, SCREEN_HEIGHT - PLAYER_SIZE * 2.5)
 	candy.kind = .CANDY
-	candy.w = PLAYER_SIZE / 2
-	candy.h = PLAYER_SIZE / 2
 	candy.state = .ALIVE
-	candy.shape = .CIRCLE
+	candy.shape = Circle {
+		r = CANDY_SIZE,
+	}
 
 	game.scene.entities[game.scene.count_entities] = candy^
 	game.scene.count_entities += 1
@@ -397,38 +399,53 @@ spawn_candy :: proc(game: ^Game) {
 // RENDER //
 ////////////
 draw_scene :: proc(game: ^Game) {
-	for rectangle in game.scene.scenario {
-		rec := rl.Rectangle{rectangle.position.x, rectangle.position.y, rectangle.w, rectangle.h}
+	for i in 0 ..< game.scene.count_scenario {
+		rectangle := game.scene.scenario[i]
+		rec := rl.Rectangle {
+			rectangle.position.x,
+			rectangle.position.y,
+			rectangle.shape.(Rect).w,
+			rectangle.shape.(Rect).h,
+		}
 		rl.DrawRectangleRec(rec, rl.YELLOW)
 	}
-	for rectangle in game.scene.spawn_areas {
-		rec := rl.Rectangle{rectangle.position.x, rectangle.position.y, rectangle.w, rectangle.h}
+	for i in 0 ..< game.scene.count_spawners {
+		rectangle := game.scene.spawn_areas[i]
+		rec := rl.Rectangle {
+			rectangle.position.x,
+			rectangle.position.y,
+			rectangle.shape.(Rect).w,
+			rectangle.shape.(Rect).h,
+		}
 		rl.DrawRectangleRec(rec, rl.PINK)
 	}
 
 	for i in 0 ..< game.scene.count_entities {
 		entity := game.scene.entities[i]
 		color: rl.Color
-		w := entity.w
 		switch entity.kind {
 		case .STATIC:
 			color = rl.YELLOW
 		case .CANDY:
-			color = rl.PURPLE
+			color = rl.WHITE
 		case .BULLET:
 			color = rl.BLUE
-			w *= PLAYER_SIZE
 		case .ENEMY:
 			color = rl.RED
 		}
 
-		switch entity.shape {
-		case .CIRCLE:
-			rl.DrawCircle(i32(entity.position.x), i32(entity.position.y), w, color)
-		case .SQUARE:
-			fallthrough
-		case .RECTANGLE:
-			rec := rl.Rectangle{entity.position.x, entity.position.y, entity.w, entity.h}
+		switch s in entity.shape {
+		case Circle:
+			r := entity.shape.(Circle).r
+			rl.DrawCircle(i32(entity.position.x), i32(entity.position.y), r, color)
+		case Square:
+			w := entity.shape.(Square).w
+			rec := rl.Rectangle{entity.position.x, entity.position.y, w, w}
+			rl.DrawRectangleRec(rec, color)
+		case Rect:
+			w := entity.shape.(Rect).w
+			h := entity.shape.(Rect).h
+			rec := rl.Rectangle{entity.position.x, entity.position.y, w, h}
 			rl.DrawRectangleRec(rec, color)
 		}
 
@@ -565,6 +582,7 @@ check_collision :: proc(game: ^Game) {
 			   entity.state != .DEAD {
 				game.scene.entities[i].state = .DEAD
 				game.scene.count_candies -= 1
+				fmt.println("BEFORE EATING CANDY WE GOT: ", game.player.num_cells)
 				grow_body(game.player)
 			}
 
@@ -572,8 +590,10 @@ check_collision :: proc(game: ^Game) {
 			for j in 0 ..< game.scene.count_entities {
 				if game.scene.entities[j].kind == .ENEMY {
 					bullet := &game.scene.entities[i]
+					bullet_size := bullet.shape.(Circle).r
 					enemy := &game.scene.entities[j]
-					if circle_colliding(bullet.position, enemy.position, bullet.w, enemy.w) {
+					enemy_size := enemy.shape.(Circle).r
+					if circle_colliding(bullet.position, enemy.position, bullet_size, enemy_size) {
 						bullet.state = .DEAD
 						enemy.state = .DEAD
 						game.scene.count_enemies -= 1
@@ -590,14 +610,14 @@ check_collision :: proc(game: ^Game) {
 
 		}
 	}
-	// TODO:CHECK THIS SHOULD BE A COUNT_PARTS_SCENARIO
-	for i in 0 ..< len(game.scene.scenario) {
+
+	for i in 0 ..< game.scene.count_scenario {
 		rectangle := game.scene.scenario[i]
 
 		if rec_colliding_no_edges(
 			rectangle.position,
-			rectangle.w,
-			rectangle.h,
+			rectangle.shape.(Rect).w,
+			rectangle.shape.(Rect).h,
 			future_pos,
 			PLAYER_SIZE,
 			PLAYER_SIZE,
