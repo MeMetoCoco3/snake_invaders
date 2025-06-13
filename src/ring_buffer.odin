@@ -41,3 +41,10 @@ peek_cell :: proc(rb: ^Ringuffer_t) -> (cell_ghost_t, bool) {
 	}
 	return rb.values[rb.head], true
 }
+
+peek_tail :: proc(rb: ^Ringuffer_t) -> (cell_ghost_t, bool) {
+	if rb.count == 0 {
+		return cell_ghost_t{}, false
+	}
+	return rb.values[rb.tail], true
+}

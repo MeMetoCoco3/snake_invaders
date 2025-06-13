@@ -15,6 +15,8 @@ MAX_NUM_CANDIES :: 8
 CANDY_SIZE :: 8
 CANDY_RESPAWN_TIME :: 20
 ENEMY_SPEED :: 1
+EPSILON :: 0.5
+
 
 BULLET_SPEED :: 4
 BULLET_SIZE :: 16
@@ -42,6 +44,7 @@ main :: proc() {
 			{0, -1},
 			0,
 			PLAYER_SIZE,
+			.NORMAL,
 		},
 		body             = [MAX_NUM_BODY]cell_t{},
 		health           = 3,
@@ -119,30 +122,46 @@ get_input :: proc(game: ^Game) {
 		player.next_dir = {0, -1}
 	}
 	if rl.IsKeyPressed(.T) {
-		fmt.println("TT")
 		spawn_enemy(game)
 	}
 
-	// TODO: CHECK THIS
+
 	if rl.IsKeyDown(.SPACE) &&
-	   !(f32(player.num_cells) - player.next_bullet_size <= 0) &&
-	   player.next_bullet_size < 3 {
-		if player.delay_for_size_bullet > 60 {
+	   (f32(player.num_cells) - player.next_bullet_size >= 0) &&
+	   player.num_cells > 0 &&
+	   player.next_bullet_size <= 3 {
+		fmt.println("SPACING")
+		last_cell := &game.player.body[game.player.num_cells - 1]
+		last_cell.size = math.lerp(last_cell.size, f32(0.0), f32(0.05))
+
+		if last_cell.size < f32(EPSILON) {
+			last_ghost, ok := peek_cell(game.player.ghost_pieces)
+
+			if ok &&
+			   last_cell.count_turns_left <= 1 &&
+			   vec2_distance(last_cell.position, last_ghost.position) < PLAYER_SIZE {
+				pop_cell(game.player.ghost_pieces)
+			}
+
 			player.next_bullet_size += 1
+			game.player.num_cells -= 1
 
 			fmt.println("INCREASE BULLET SIZE TO: ", player.next_bullet_size)
-			player.delay_for_size_bullet = 0
+		}
+	} else if player.num_cells > 0 {
+		last_cell := &game.player.body[game.player.num_cells - 1]
+		if PLAYER_SIZE - last_cell.size > EPSILON {
+			last_cell.size = math.lerp(last_cell.size, f32(PLAYER_SIZE), f32(0.09))
 		} else {
-			player.delay_for_size_bullet += 1
-			fmt.println("DEALY: ", player.delay_for_size_bullet)
+			last_cell.size = PLAYER_SIZE
 		}
 	}
-	if (rl.IsKeyReleased(.SPACE)) {
+	if (rl.IsKeyReleased(.SPACE)) && player.next_bullet_size > 0 {
 		spawn_bullet(game)
-		player.num_cells -= i8(player.next_bullet_size)
 		player.next_bullet_size = 0
-		player.delay_for_size_bullet = 0
 	}
+
+
 }
 
 try_set_dir :: proc(player: ^Player) -> bool {
@@ -200,9 +219,8 @@ update_player :: proc(player: ^Player) {
 	player.head.position.x += player.head.direction.x * PLAYER_SPEED
 	player.head.position.y += player.head.direction.y * PLAYER_SPEED
 
-	if player.head.direction != {0, 0} {
+	if player.head.direction != {0, 0} && !player.growing {
 		for i in 0 ..< player.num_cells {
-
 			piece_to_follow: cell_t
 			if (player.body[i].count_turns_left == 0) {
 				piece_to_follow = (i == 0) ? player.head : player.body[i - 1]
@@ -235,10 +253,23 @@ update_player :: proc(player: ^Player) {
 			}
 			player.body[i].position.x += player.body[i].direction.x * PLAYER_SPEED
 			player.body[i].position.y += player.body[i].direction.y * PLAYER_SPEED
+
 		}
 	}
-}
 
+	if player.num_cells > 0 && player.growing {
+		distance: f32
+		if player.body[0].count_turns_left > 0 {
+			ghost_cell, _ := peek_tail(player.ghost_pieces)
+			distance += vec2_distance(player.body[0].position, ghost_cell.position)
+			distance += vec2_distance(player.head.position, ghost_cell.position)
+		} else {
+			distance = vec2_distance(player.head.position, player.body[0].position)
+		}
+
+		if distance >= PLAYER_SIZE {player.growing = false}
+	}
+}
 
 clear_dead_entities :: proc(entities: ^[]Entity, count_entities: int) -> int {
 	alive_count := 0
@@ -254,31 +285,57 @@ clear_dead_entities :: proc(entities: ^[]Entity, count_entities: int) -> int {
 	return alive_count
 }
 
-grow_body :: proc(pj: ^Player) {
-	if pj.num_cells < MAX_NUM_BODY {
-		direction: vec2_t
-		new_x, new_y: f32
+// grow_body :: proc(player: ^Player) {
+// 	if player.num_cells < MAX_NUM_BODY {
+// 		direction: vec2_t
+// 		new_x, new_y: f32
+// 		size: f32
+//
+// 		if player.num_cells == 0 {
+// 			direction = player.head.direction
+// 			new_x = player.head.position.x - direction.x * PLAYER_SIZE
+// 			new_y = player.head.position.y - direction.y * PLAYER_SIZE
+// 		} else {
+// 			last := &player.body[player.num_cells - 1]
+// 			direction = last.direction
+// 			new_x = last.position.x - direction.x * PLAYER_SIZE
+// 			new_y = last.position.y - direction.y * PLAYER_SIZE
+// 		}
+// 		num_ghost_pieces := player.ghost_pieces.count
+//
+// 		new_cell := cell_t{{new_x, new_y}, direction, num_ghost_pieces, size, .GROW}
+// 		shift_array_right(&player.body, int(player.num_cells))
+// 		player.body[0] = new_cell
+// 		player.num_cells += 1
+// 		fmt.println("WE ARE GROWING NUM CELLS: ", player.num_cells)
+// 	} else {
+// 		fmt.println("WE DO NOT GROW!")
+// 	}
+// }
 
-
-		if pj.num_cells == 0 {
-			direction = pj.head.direction
-			new_x = pj.head.position.x - direction.x * PLAYER_SIZE
-			new_y = pj.head.position.y - direction.y * PLAYER_SIZE
-		} else {
-			last := pj.body[pj.num_cells - 1]
-			direction = last.direction
-			new_x = last.position.x - direction.x * PLAYER_SIZE
-			new_y = last.position.y - direction.y * PLAYER_SIZE
+grow_body :: proc(player: ^Player) {
+	if player.num_cells < MAX_NUM_BODY {
+		player.growing = true
+		player.num_cells += 1
+		if player.num_cells > 0 {
+			shift_array_right(&player.body, int(player.num_cells))
 		}
-		num_ghost_pieces := pj.ghost_pieces.count
-		new_cell := cell_t{{new_x, new_y}, direction, num_ghost_pieces, 2}
-		pj.body[pj.num_cells] = new_cell
-		pj.num_cells += 1
-		fmt.println("WE ARE GROWING NUM CELLS: ", pj.num_cells)
+
+		new_cell := cell_t {
+			{player.head.position.x, player.head.position.y},
+			{player.head.direction.x, player.head.direction.y},
+			0,
+			PLAYER_SIZE,
+			.NORMAL,
+		}
+
+		player.body[0] = new_cell
+		fmt.println("WE ARE GROWING NUM CELLS: ", player.num_cells)
 	} else {
 		fmt.println("WE DO NOT GROW!")
 	}
 }
+
 
 dealing_ghost_piece :: proc(player: ^Player, last_piece: i8) {
 	ghost_piece, ok := peek_cell(player.ghost_pieces)
@@ -305,6 +362,7 @@ spawn_enemy :: proc(game: ^Game) {
 
 	random_index := rand.int31_max(i32(game.scene.count_spawners))
 	spawn_area := game.scene.spawn_areas[random_index]
+
 	// TODO: PUT CHECKERS FOR SPAWN_AREA UNION 
 	x_position :=
 		math.floor(
@@ -333,25 +391,25 @@ spawn_enemy :: proc(game: ^Game) {
 
 spawn_bullet :: proc(game: ^Game) {
 	head := game.player.head
-	x_position: f32
-	y_position: f32
-	switch head.direction {
-	case {0, 1}:
-		x_position = head.position.x
-		y_position = head.position.y + PLAYER_SIZE
-	case {0, -1}:
-		x_position = head.position.x
-		y_position = head.position.y
-	case {1, 0}:
-		x_position = head.position.x + PLAYER_SIZE
-		y_position = head.position.y
-	case {-1, 0}:
-		x_position = head.position.x
-		y_position = head.position.y
-	}
+	// x_position: f32
+	// y_position: f32
+	// switch head.direction {
+	// case {0, 1}:
+	// 	x_position = head.position.x
+	// 	y_position = head.position.y + PLAYER_SIZE
+	// case {0, -1}:
+	// 	x_position = head.position.x
+	// 	y_position = head.position.y
+	// case {1, 0}:
+	// 	x_position = head.position.x + PLAYER_SIZE
+	// 	y_position = head.position.y
+	// case {-1, 0}:
+	// 	x_position = head.position.x
+	// 	y_position = head.position.y
+	// }
 
 	bullet := new(Entity)
-	bullet.position = {x_position, y_position}
+	bullet.position = {head.position.x - PLAYER_SIZE / 2, head.position.y - PLAYER_SIZE / 2}
 	bullet.shape = Circle {
 		r = PLAYER_SIZE * (game.player.next_bullet_size / 2),
 	}
@@ -364,14 +422,7 @@ spawn_bullet :: proc(game: ^Game) {
 	game.scene.count_entities += 1
 	game.scene.count_bullets += 1
 
-	last_cell := game.player.body[game.player.num_cells - 1]
-	last_ghost, ok := peek_cell(game.player.ghost_pieces)
 
-	if ok &&
-	   last_cell.count_turns_left <= 1 &&
-	   vec2_distance(last_cell.position, last_ghost.position) < PLAYER_SIZE {
-		pop_cell(game.player.ghost_pieces)
-	}
 	//TODO: CHECK FOR GHOST PIECES WITH NO PARENTS 
 }
 
@@ -476,64 +527,94 @@ draw_player :: proc(player: ^Player) {
 
 	for i in 0 ..< player.num_cells {
 		cell := player.body[i]
-		if cell.size < PLAYER_SIZE {
-			x_position: f32
-			y_position: f32
-			cell_size_x: i8
-			cell_size_y: i8
-			direction := player.body[i].direction
 
-			piece_to_follow := (i == 0) ? player.head : player.body[i - 1]
-
-			if player.ghost_pieces.count > 0 {
-				ghost_piece :=
-					player.ghost_pieces.values[get_ghost_piece_index(cell.count_turns_left, player.ghost_pieces.tail)]
-				if rec_colliding(
-					cell.position,
-					PLAYER_SIZE,
-					PLAYER_SIZE,
-					ghost_piece.position,
-					PLAYER_SIZE,
-					PLAYER_SIZE,
-				) {
-					piece_to_follow = ghost_to_cell(ghost_piece)
-				}
-			}
-
-
-			switch direction {
-			case {0, 1}:
-				x_position = piece_to_follow.position.x
-				y_position = piece_to_follow.position.y - f32(cell.size)
-			case {0, -1}:
-				x_position = piece_to_follow.position.x
-				y_position = piece_to_follow.position.y + PLAYER_SIZE
-			case {1, 0}:
-				x_position = piece_to_follow.position.x - f32(cell.size)
-				y_position = piece_to_follow.position.y
-			case {-1, 0}:
-				x_position = piece_to_follow.position.x + PLAYER_SIZE
-				y_position = piece_to_follow.position.y
-			}
-			cell_size_x = PLAYER_SIZE
-			cell_size_y = cell.size
-			rl.DrawRectangle(
-				i32(x_position),
-				i32(y_position),
-				i32(cell_size_x),
-				i32(cell_size_y),
-				rl.PURPLE,
-			)
-			player.body[i].size += 2
-		} else {
-			rl.DrawRectangle(
-				i32(cell.position.x),
-				i32(cell.position.y),
-				PLAYER_SIZE,
-				PLAYER_SIZE,
-				rl.ORANGE,
-			)
+		x_size := cell.direction.x != 0 ? cell.size : PLAYER_SIZE
+		y_size := cell.direction.y != 0 ? cell.size : PLAYER_SIZE
+		x_position: f32
+		y_position: f32
+		switch cell.direction {
+		case {0, 1}:
+			x_position = cell.position.x
+			y_position = cell.position.y + PLAYER_SIZE - cell.size
+		case {0, -1}:
+			x_position = cell.position.x
+			y_position = cell.position.y
+		case {1, 0}:
+			x_position = cell.position.x + PLAYER_SIZE - cell.size
+			y_position = cell.position.y
+		case {-1, 0}:
+			x_position = cell.position.x
+			y_position = cell.position.y
 		}
+
+		rl.DrawRectangle(
+			i32(math.round(x_position)),
+			i32(math.round(y_position)),
+			i32(math.round(x_size)),
+			i32(math.round(y_size)),
+			rl.ORANGE,
+		)
+
+
+		// cell := player.body[i]
+		// if cell.size < PLAYER_SIZE {
+		// 	x_position: f32
+		// 	y_position: f32
+		// 	cell_size_x: i8
+		// 	cell_size_y: i8
+		// 	direction := player.body[i].direction
+		//
+		// 	piece_to_follow := (i == 0) ? player.head : player.body[i - 1]
+		//
+		// 	if player.ghost_pieces.count > 0 {
+		// 		ghost_piece :=
+		// 			player.ghost_pieces.values[get_ghost_piece_index(cell.count_turns_left, player.ghost_pieces.tail)]
+		// 		if rec_colliding(
+		// 			cell.position,
+		// 			PLAYER_SIZE,
+		// 			PLAYER_SIZE,
+		// 			ghost_piece.position,
+		// 			PLAYER_SIZE,
+		// 			PLAYER_SIZE,
+		// 		) {
+		// 			piece_to_follow = ghost_to_cell(ghost_piece)
+		// 		}
+		// 	}
+		//
+		//
+		// 	switch direction {
+		// 	case {0, 1}:
+		// 		x_position = piece_to_follow.position.x
+		// 		y_position = piece_to_follow.position.y - f32(cell.size)
+		// 	case {0, -1}:
+		// 		x_position = piece_to_follow.position.x
+		// 		y_position = piece_to_follow.position.y + PLAYER_SIZE
+		// 	case {1, 0}:
+		// 		x_position = piece_to_follow.position.x - f32(cell.size)
+		// 		y_position = piece_to_follow.position.y
+		// 	case {-1, 0}:
+		// 		x_position = piece_to_follow.position.x + PLAYER_SIZE
+		// 		y_position = piece_to_follow.position.y
+		// 	}
+		// 	cell_size_x = PLAYER_SIZE
+		// 	cell_size_y = cell.size
+		// 	rl.DrawRectangle(
+		// 		i32(x_position),
+		// 		i32(y_position),
+		// 		i32(cell_size_x),
+		// 		i32(cell_size_y),
+		// 		rl.PURPLE,
+		// 	)
+		// 	player.body[i].size += 2
+		// } else {
+		// 	rl.DrawRectangle(
+		// 		i32(cell.position.x),
+		// 		i32(cell.position.y),
+		// 		PLAYER_SIZE,
+		// 		PLAYER_SIZE,
+		// 		rl.ORANGE,
+		// 	)
+		// }
 	}
 }
 
@@ -757,4 +838,10 @@ sign :: proc(x: f32) -> f32 {
 
 magnitude :: proc(v: vec2_t) -> f32 {
 	return math.sqrt(v.x * v.x + v.y * v.y)
+}
+
+shift_array_right :: proc(arr: ^[20]cell_t, count: int) {
+	for i := count - 1; i > 0; i -= 1 {
+		arr[i] = arr[i - 1]
+	}
 }

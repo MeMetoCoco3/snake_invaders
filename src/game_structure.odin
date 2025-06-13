@@ -45,6 +45,11 @@ KIND :: enum {
 	CANDY,
 	ENEMY,
 }
+CELL_STATE :: enum {
+	NORMAL,
+	GROW,
+	SHRINK,
+}
 
 STATE :: enum {
 	DEAD,
@@ -59,7 +64,8 @@ vec2_t :: struct {
 cell_t :: struct {
 	position, direction: vec2_t,
 	count_turns_left:    i8,
-	size:                i8,
+	size:                f32,
+	state:               CELL_STATE,
 }
 
 cell_ghost_t :: struct {
@@ -68,16 +74,16 @@ cell_ghost_t :: struct {
 
 
 Player :: struct {
-	head:                  cell_t,
-	next_dir:              vec2_t,
-	body:                  [MAX_NUM_BODY]cell_t,
-	health:                i8,
-	num_cells:             i8,
-	num_ghost_pieces:      i8,
-	ghost_pieces:          ^Ringuffer_t,
-	rotation:              f32,
-	next_bullet_size:      f32,
-	delay_for_size_bullet: f32,
+	head:             cell_t,
+	next_dir:         vec2_t,
+	body:             [MAX_NUM_BODY]cell_t,
+	health:           i8,
+	num_cells:        i8,
+	num_ghost_pieces: i8,
+	ghost_pieces:     ^Ringuffer_t,
+	rotation:         f32,
+	next_bullet_size: f32,
+	growing:          bool,
 }
 
 Game :: struct {
