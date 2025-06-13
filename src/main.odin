@@ -13,7 +13,7 @@ MAX_NUM_BODY :: 20
 MAX_NUM_MOVERS :: 100
 MAX_NUM_CANDIES :: 8
 CANDY_SIZE :: 8
-CANDY_RESPAWN_TIME :: 200
+CANDY_RESPAWN_TIME :: 20
 ENEMY_SPEED :: 1
 
 BULLET_SPEED :: 4
@@ -34,6 +34,7 @@ main :: proc() {
 		tail   = 0,
 		count  = 0,
 	}
+
 
 	pj := Player {
 		head             = cell_t {
@@ -123,21 +124,20 @@ get_input :: proc(game: ^Game) {
 	}
 
 	// TODO: CHECK THIS
-	if rl.IsKeyDown(.SPACE) && player.num_cells != 0 {
+	if rl.IsKeyDown(.SPACE) &&
+	   !(f32(player.num_cells) - player.next_bullet_size <= 0) &&
+	   player.next_bullet_size < 3 {
 		if player.delay_for_size_bullet > 60 {
 			player.next_bullet_size += 1
+
+			fmt.println("INCREASE BULLET SIZE TO: ", player.next_bullet_size)
 			player.delay_for_size_bullet = 0
 		} else {
-			if player.next_bullet_size < 3 {
-				player.delay_for_size_bullet += 1
-			}
+			player.delay_for_size_bullet += 1
+			fmt.println("DEALY: ", player.delay_for_size_bullet)
 		}
 	}
-
-	if (rl.IsKeyReleased(.SPACE)) && player.num_cells > 0 {
-		// TODO: JIC: JUST IN CASE
-		player.next_bullet_size = (player.next_bullet_size >= 3) ? 3 : player.next_bullet_size
-
+	if (rl.IsKeyReleased(.SPACE)) {
 		spawn_bullet(game)
 		player.num_cells -= i8(player.next_bullet_size)
 		player.next_bullet_size = 0
@@ -353,7 +353,7 @@ spawn_bullet :: proc(game: ^Game) {
 	bullet := new(Entity)
 	bullet.position = {x_position, y_position}
 	bullet.shape = Circle {
-		r = PLAYER_SIZE,
+		r = PLAYER_SIZE * (game.player.next_bullet_size / 2),
 	}
 	bullet.direction = head.direction
 	bullet.kind = .BULLET
