@@ -17,7 +17,7 @@ scene_t :: struct {
 }
 
 
-scene :: proc(s: SCENES) -> ^scene_t {
+load_scenario :: proc(s: SCENES) -> ^scene_t {
 	s := new(scene_t)
 
 	colliders := make([]Shape, NUM_RECTANGLES_ON_SCENE)
@@ -53,6 +53,7 @@ scene :: proc(s: SCENES) -> ^scene_t {
 		colliders[i] = colliders_slice[i]
 		cnt += 1
 	}
+
 	s.count_scenario = cnt
 	s.scenario = colliders
 

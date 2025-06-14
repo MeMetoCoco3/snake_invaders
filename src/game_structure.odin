@@ -102,7 +102,35 @@ Game :: struct {
 	enemy_respawn_time: int,
 }
 
+load_scene :: proc(game: ^Game, scene: SCENES) {
+	old_ghost_pieces := game.player.ghost_pieces
 
-oposite_directions :: proc(new, curr: vec2_t) -> bool {
-	return new.x == -curr.x && new.y == -curr.y
+	game.player^ = Player {
+		head             = cell_t {
+			vec2_t{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2},
+			{0, -1},
+			0,
+			PLAYER_SIZE,
+			.NORMAL,
+		},
+		body             = [MAX_NUM_BODY]cell_t{},
+		health           = 3,
+		next_dir         = {0, 0},
+		rotation         = 0,
+		next_bullet_size = 0,
+	}
+
+	game.player.ghost_pieces = old_ghost_pieces
+	game.player.ghost_pieces^ = Ringuffer_t {
+		values = [MAX_NUM_BODY]cell_ghost_t{},
+		head   = 0,
+		tail   = 0,
+		count  = 0,
+	}
+
+
+	game.state = .PLAY
+	game.scene = load_scenario(scene)
+	game.candy_respawn_time = 0
+	game.enemy_respawn_time = 0
 }

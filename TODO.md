@@ -9,3 +9,4 @@
 - Add other objectives for player.
 - Add state to enemies.
 - Add visuals and sounds.
+- Move player to stack alloc

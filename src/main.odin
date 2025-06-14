@@ -27,6 +27,7 @@ BULLET_SPEED :: 4
 BULLET_SIZE :: 16
 
 tileset: rl.Texture2D
+
 main :: proc() {
 	rl.InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "snake_invaders")
 	defer rl.CloseWindow()
@@ -35,40 +36,14 @@ main :: proc() {
 	tileset = rl.LoadTexture("./assets/tileset.png")
 	defer rl.UnloadTexture(tileset)
 
-	ring_buffer := Ringuffer_t {
-		values = [MAX_NUM_BODY]cell_ghost_t{},
-		head   = 0,
-		tail   = 0,
-		count  = 0,
-	}
-
-
-	pj := Player {
-		head             = cell_t {
-			vec2_t{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2},
-			{0, -1},
-			0,
-			PLAYER_SIZE,
-			.NORMAL,
-		},
-		body             = [MAX_NUM_BODY]cell_t{},
-		health           = 3,
-		ghost_pieces     = &ring_buffer,
-		next_dir         = {0, 0},
-		rotation         = 0,
-		next_bullet_size = 0,
-	}
-
-	scene := scene(.ONE)
-
 	game := Game {
-		player             = &pj,
-		state              = .PLAY,
-		scene              = scene,
-		candy_respawn_time = 0,
-		enemy_respawn_time = 0,
+		player = &Player{ghost_pieces = &Ringuffer_t{}, body = [MAX_NUM_BODY]cell_t{}},
+		scene  = &scene_t{},
 	}
 
+	load_scene(&game, .ONE)
+	fmt.println("HERE WE GO1")
+	fmt.println(game)
 
 	for !rl.WindowShouldClose() {
 		if game.candy_respawn_time >= CANDY_RESPAWN_TIME {
@@ -92,8 +67,8 @@ main :: proc() {
 		draw_grid({100, 100, 100, 255})
 
 		draw_scene(&game)
-		draw_player(&pj)
-		draw_ghost_cells(pj.ghost_pieces)
+		draw_player(game.player)
+		draw_ghost_cells(game.player.ghost_pieces)
 
 		rl.EndDrawing()
 
@@ -780,4 +755,8 @@ shift_array_right :: proc(arr: ^[20]cell_t, count: int) {
 	for i := count - 1; i > 0; i -= 1 {
 		arr[i] = arr[i - 1]
 	}
+}
+
+oposite_directions :: proc(new, curr: vec2_t) -> bool {
+	return new.x == -curr.x && new.y == -curr.y
 }
