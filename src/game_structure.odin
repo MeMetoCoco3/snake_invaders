@@ -22,6 +22,13 @@ Shapes :: union #no_nil {
 	Rect,
 }
 
+GAME_STATE :: enum {
+	PLAY,
+	PAUSE,
+	DEAD,
+	QUIT,
+}
+
 Shape :: struct {
 	position: vec2_t,
 	shape:    Shapes,
@@ -45,6 +52,7 @@ KIND :: enum {
 	CANDY,
 	ENEMY,
 }
+
 CELL_STATE :: enum {
 	NORMAL,
 	GROW,
@@ -87,9 +95,11 @@ Player :: struct {
 }
 
 Game :: struct {
-	state:  bool,
-	player: ^Player,
-	scene:  ^scene_t,
+	state:              GAME_STATE,
+	player:             ^Player,
+	scene:              ^scene_t,
+	candy_respawn_time: int,
+	enemy_respawn_time: int,
 }
 
 

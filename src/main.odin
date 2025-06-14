@@ -14,7 +14,12 @@ MAX_NUM_MOVERS :: 100
 MAX_NUM_CANDIES :: 8
 CANDY_SIZE :: 8
 CANDY_RESPAWN_TIME :: 20
+
+
+MAX_NUM_ENEMIES :: 4
+ENEMY_RESPAWN_TIME :: 100
 ENEMY_SPEED :: 1
+
 EPSILON :: 0.5
 
 
@@ -57,18 +62,26 @@ main :: proc() {
 	scene := scene(.ONE)
 
 	game := Game {
-		player = &pj,
-		state  = true,
-		scene  = scene,
+		player             = &pj,
+		state              = .PLAY,
+		scene              = scene,
+		candy_respawn_time = 0,
+		enemy_respawn_time = 0,
 	}
 
-	time := 0
 
 	for !rl.WindowShouldClose() {
-		if time >= CANDY_RESPAWN_TIME {
-			time = 0
+		if game.candy_respawn_time >= CANDY_RESPAWN_TIME {
+			game.candy_respawn_time = 0
 			if game.scene.count_candies < MAX_NUM_CANDIES {
 				spawn_candy(&game)
+			}
+		}
+
+		if game.enemy_respawn_time >= ENEMY_RESPAWN_TIME {
+			game.enemy_respawn_time = 0
+			if game.scene.count_enemies < MAX_NUM_ENEMIES {
+				spawn_enemy(&game)
 			}
 		}
 
@@ -84,8 +97,8 @@ main :: proc() {
 
 		rl.EndDrawing()
 
-
-		time += 1
+		game.enemy_respawn_time += 1
+		game.candy_respawn_time += 1
 	}
 }
 
@@ -126,10 +139,7 @@ get_input :: proc(game: ^Game) {
 	}
 
 
-	if rl.IsKeyDown(.SPACE) &&
-	   (f32(player.num_cells) - player.next_bullet_size >= 0) &&
-	   player.num_cells > 0 &&
-	   player.next_bullet_size <= 3 {
+	if rl.IsKeyDown(.SPACE) && player.num_cells > 0 && player.next_bullet_size <= 3 {
 		fmt.println("SPACING")
 		last_cell := &game.player.body[game.player.num_cells - 1]
 		last_cell.size = math.lerp(last_cell.size, f32(0.0), f32(0.05))
@@ -391,28 +401,13 @@ spawn_enemy :: proc(game: ^Game) {
 
 spawn_bullet :: proc(game: ^Game) {
 	head := game.player.head
-	// x_position: f32
-	// y_position: f32
-	// switch head.direction {
-	// case {0, 1}:
-	// 	x_position = head.position.x
-	// 	y_position = head.position.y + PLAYER_SIZE
-	// case {0, -1}:
-	// 	x_position = head.position.x
-	// 	y_position = head.position.y
-	// case {1, 0}:
-	// 	x_position = head.position.x + PLAYER_SIZE
-	// 	y_position = head.position.y
-	// case {-1, 0}:
-	// 	x_position = head.position.x
-	// 	y_position = head.position.y
-	// }
 
 	bullet := new(Entity)
-	bullet.position = {head.position.x - PLAYER_SIZE / 2, head.position.y - PLAYER_SIZE / 2}
+	bullet.position = {head.position.x + PLAYER_SIZE / 2, head.position.y + PLAYER_SIZE / 2}
 	bullet.shape = Circle {
 		r = PLAYER_SIZE * (game.player.next_bullet_size / 2),
 	}
+
 	bullet.direction = head.direction
 	bullet.kind = .BULLET
 	bullet.speed = BULLET_SPEED
@@ -504,27 +499,6 @@ draw_scene :: proc(game: ^Game) {
 }
 
 draw_player :: proc(player: ^Player) {
-	src_rec := rl.Rectangle{0, 32, PLAYER_SIZE, PLAYER_SIZE}
-	switch player.head.direction {
-	case {0, 1}:
-		player.rotation = 270
-	case {0, -1}:
-		player.rotation = 90
-	case {1, 0}:
-		player.rotation = 180
-	case {-1, 0}:
-		player.rotation = 0
-	}
-
-	dst_rec := rl.Rectangle {
-		player.head.position.x + PLAYER_SIZE / 2,
-		player.head.position.y + PLAYER_SIZE / 2,
-		PLAYER_SIZE,
-		PLAYER_SIZE,
-	}
-	origin := rl.Vector2{PLAYER_SIZE / 2, PLAYER_SIZE / 2}
-	rl.DrawTexturePro(tileset, src_rec, dst_rec, origin, player.rotation, rl.WHITE)
-
 	for i in 0 ..< player.num_cells {
 		cell := player.body[i]
 
@@ -554,68 +528,30 @@ draw_player :: proc(player: ^Player) {
 			i32(math.round(y_size)),
 			rl.ORANGE,
 		)
-
-
-		// cell := player.body[i]
-		// if cell.size < PLAYER_SIZE {
-		// 	x_position: f32
-		// 	y_position: f32
-		// 	cell_size_x: i8
-		// 	cell_size_y: i8
-		// 	direction := player.body[i].direction
-		//
-		// 	piece_to_follow := (i == 0) ? player.head : player.body[i - 1]
-		//
-		// 	if player.ghost_pieces.count > 0 {
-		// 		ghost_piece :=
-		// 			player.ghost_pieces.values[get_ghost_piece_index(cell.count_turns_left, player.ghost_pieces.tail)]
-		// 		if rec_colliding(
-		// 			cell.position,
-		// 			PLAYER_SIZE,
-		// 			PLAYER_SIZE,
-		// 			ghost_piece.position,
-		// 			PLAYER_SIZE,
-		// 			PLAYER_SIZE,
-		// 		) {
-		// 			piece_to_follow = ghost_to_cell(ghost_piece)
-		// 		}
-		// 	}
-		//
-		//
-		// 	switch direction {
-		// 	case {0, 1}:
-		// 		x_position = piece_to_follow.position.x
-		// 		y_position = piece_to_follow.position.y - f32(cell.size)
-		// 	case {0, -1}:
-		// 		x_position = piece_to_follow.position.x
-		// 		y_position = piece_to_follow.position.y + PLAYER_SIZE
-		// 	case {1, 0}:
-		// 		x_position = piece_to_follow.position.x - f32(cell.size)
-		// 		y_position = piece_to_follow.position.y
-		// 	case {-1, 0}:
-		// 		x_position = piece_to_follow.position.x + PLAYER_SIZE
-		// 		y_position = piece_to_follow.position.y
-		// 	}
-		// 	cell_size_x = PLAYER_SIZE
-		// 	cell_size_y = cell.size
-		// 	rl.DrawRectangle(
-		// 		i32(x_position),
-		// 		i32(y_position),
-		// 		i32(cell_size_x),
-		// 		i32(cell_size_y),
-		// 		rl.PURPLE,
-		// 	)
-		// 	player.body[i].size += 2
-		// } else {
-		// 	rl.DrawRectangle(
-		// 		i32(cell.position.x),
-		// 		i32(cell.position.y),
-		// 		PLAYER_SIZE,
-		// 		PLAYER_SIZE,
-		// 		rl.ORANGE,
-		// 	)
-		// }
 	}
+
+	src_rec := rl.Rectangle{0, 32, PLAYER_SIZE, PLAYER_SIZE}
+	switch player.head.direction {
+	case {0, 1}:
+		player.rotation = 270
+	case {0, -1}:
+		player.rotation = 90
+	case {1, 0}:
+		player.rotation = 180
+	case {-1, 0}:
+		player.rotation = 0
+	}
+
+	dst_rec := rl.Rectangle {
+		player.head.position.x + PLAYER_SIZE / 2,
+		player.head.position.y + PLAYER_SIZE / 2,
+		PLAYER_SIZE,
+		PLAYER_SIZE,
+	}
+	origin := rl.Vector2{PLAYER_SIZE / 2, PLAYER_SIZE / 2}
+	rl.DrawTexturePro(tileset, src_rec, dst_rec, origin, player.rotation, rl.WHITE)
+
+
 }
 
 draw_ghost_cells :: proc(rb: ^Ringuffer_t) {
