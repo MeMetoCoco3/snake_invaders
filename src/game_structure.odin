@@ -98,6 +98,7 @@ Game :: struct {
 	state:              GAME_STATE,
 	player:             ^Player,
 	scene:              ^scene_t,
+	current_scene:      SCENES,
 	candy_respawn_time: int,
 	enemy_respawn_time: int,
 }
@@ -131,6 +132,7 @@ load_scene :: proc(game: ^Game, scene: SCENES) {
 
 	game.state = .PLAY
 	game.scene = load_scenario(scene)
+	game.current_scene = scene
 	game.candy_respawn_time = 0
 	game.enemy_respawn_time = 0
 }

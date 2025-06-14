@@ -42,8 +42,6 @@ main :: proc() {
 	}
 
 	load_scene(&game, .ONE)
-	fmt.println("HERE WE GO1")
-	fmt.println(game)
 
 	for !rl.WindowShouldClose() {
 		if game.candy_respawn_time >= CANDY_RESPAWN_TIME {
@@ -59,21 +57,33 @@ main :: proc() {
 				spawn_enemy(&game)
 			}
 		}
+		switch game.state {
+		case .PLAY:
+			update(&game)
 
-		update(&game)
+			rl.BeginDrawing()
+			draw_game(&game)
+			rl.ClearBackground(rl.BLACK)
+			rl.EndDrawing()
 
-		rl.BeginDrawing()
-		rl.ClearBackground(rl.BLACK)
-		draw_grid({100, 100, 100, 255})
+		case .PAUSE:
+			get_input_pause(&game)
+			rl.BeginDrawing()
+			rl.DrawText("PAUSED GAME", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 30, rl.RED)
+			rl.ClearBackground(rl.BLACK)
+			rl.EndDrawing()
 
-		draw_scene(&game)
-		draw_player(game.player)
-		draw_ghost_cells(game.player.ghost_pieces)
+		case .QUIT:
+			rl.CloseWindow()
+		case .DEAD:
+			get_input_pause(&game)
+			rl.BeginDrawing()
+			rl.DrawText("WANT TO PLAY AGAIN?", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 30, rl.RED)
+			rl.ClearBackground(rl.BLACK)
+			rl.EndDrawing()
+		}
 
-		rl.EndDrawing()
 
-		game.enemy_respawn_time += 1
-		game.candy_respawn_time += 1
 	}
 }
 
@@ -92,6 +102,8 @@ update :: proc(game: ^Game) {
 	update_player(game.player)
 	update_scene(game)
 
+	game.enemy_respawn_time += 1
+	game.candy_respawn_time += 1
 	TESTING(game)
 }
 
@@ -113,6 +125,9 @@ get_input :: proc(game: ^Game) {
 		spawn_enemy(game)
 	}
 
+	if rl.IsKeyPressed(.P) {
+		game.state = .PAUSE
+	}
 
 	if rl.IsKeyDown(.SPACE) && player.num_cells > 0 && player.next_bullet_size <= 3 {
 		fmt.println("SPACING")
@@ -145,9 +160,22 @@ get_input :: proc(game: ^Game) {
 		spawn_bullet(game)
 		player.next_bullet_size = 0
 	}
-
-
 }
+
+get_input_pause :: proc(game: ^Game) {
+	fmt.println(" WE PAUSE")
+	if (rl.IsKeyPressed(.ENTER)) {
+		fmt.println("WE ENTER")
+		if game.state == .DEAD {
+			load_scene(game, game.current_scene)
+		}
+		game.state = .PLAY
+	}
+	if (rl.IsKeyPressed(.Q)) {
+		game.state = .QUIT
+	}
+}
+
 
 try_set_dir :: proc(player: ^Player) -> bool {
 	prev_dir := player.head.direction
@@ -348,7 +376,6 @@ spawn_enemy :: proc(game: ^Game) {
 	random_index := rand.int31_max(i32(game.scene.count_spawners))
 	spawn_area := game.scene.spawn_areas[random_index]
 
-	// TODO: PUT CHECKERS FOR SPAWN_AREA UNION 
 	x_position :=
 		math.floor(
 			(spawn_area.position.x + rand.float32() * spawn_area.shape.(Rect).w) / PLAYER_SIZE,
@@ -392,8 +419,6 @@ spawn_bullet :: proc(game: ^Game) {
 	game.scene.count_entities += 1
 	game.scene.count_bullets += 1
 
-
-	//TODO: CHECK FOR GHOST PIECES WITH NO PARENTS 
 }
 
 spawn_candy :: proc(game: ^Game) {
@@ -419,6 +444,13 @@ spawn_candy :: proc(game: ^Game) {
 ////////////
 // RENDER //
 ////////////
+draw_game :: proc(game: ^Game) {
+	draw_grid({100, 100, 100, 255})
+	draw_scene(game)
+	draw_player(game.player)
+	draw_ghost_cells(game.player.ghost_pieces)
+}
+
 draw_scene :: proc(game: ^Game) {
 	for i in 0 ..< game.scene.count_scenario {
 		rectangle := game.scene.scenario[i]
@@ -597,7 +629,7 @@ check_collision :: proc(game: ^Game) {
 		case .ENEMY:
 			if vec2_distance(center_player, entity.position) < PLAYER_SIZE &&
 			   entity.state != .DEAD {
-				rl.CloseWindow()
+				game.state = .DEAD
 			}
 
 		}

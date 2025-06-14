@@ -4,9 +4,10 @@
     - ~We need to check ghost pieces when consuming~
     - ~We need to fix drawing position of pieces being consumed~
 
-
+- ~Add state to the game~
+- ~Load scenes.~
 - ~Change shotting so it works correctly.~
 - Add other objectives for player.
 - Add state to enemies.
 - Add visuals and sounds.
-- Move player to stack alloc
+- Move player to stack alloc.
