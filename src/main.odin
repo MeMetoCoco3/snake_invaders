@@ -30,20 +30,22 @@ tileset: rl.Texture2D
 
 main :: proc() {
 	rl.InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "snake_invaders")
-	defer rl.CloseWindow()
+	rl.InitAudioDevice()
+
 	rl.SetTargetFPS(60)
 
 	tileset = rl.LoadTexture("./assets/tileset.png")
-	defer rl.UnloadTexture(tileset)
 
 	game := Game {
 		player = &Player{ghost_pieces = &Ringuffer_t{}, body = [MAX_NUM_BODY]cell_t{}},
-		scene  = &scene_t{},
+		scene = &scene_t{},
+		audio = audio_system_t{fx = make([dynamic]^rl.Sound, 0, 20)},
 	}
 
 	load_scene(&game, .ONE)
 
 	for !rl.WindowShouldClose() {
+		// TODO: MOVE THIS SHIT OUT OF HERE
 		if game.candy_respawn_time >= CANDY_RESPAWN_TIME {
 			game.candy_respawn_time = 0
 			if game.scene.count_candies < MAX_NUM_CANDIES {
@@ -74,6 +76,7 @@ main :: proc() {
 			rl.EndDrawing()
 
 		case .QUIT:
+			clean_up(&game)
 			rl.CloseWindow()
 		case .DEAD:
 			get_input_pause(&game)
@@ -91,6 +94,8 @@ main :: proc() {
 // UPDATE //
 ////////////
 update :: proc(game: ^Game) {
+	rl.UpdateMusicStream(game.audio.bg_music)
+
 	get_input(game)
 	check_collision(game)
 
@@ -101,6 +106,13 @@ update :: proc(game: ^Game) {
 
 	update_player(game.player)
 	update_scene(game)
+
+
+	if len(game.audio.fx) > 0 {
+		fx := game.audio.fx[0]
+		unordered_remove(&game.audio.fx, 0)
+		rl.PlaySound(fx^)
+	}
 
 	game.enemy_respawn_time += 1
 	game.candy_respawn_time += 1
@@ -126,11 +138,11 @@ get_input :: proc(game: ^Game) {
 	}
 
 	if rl.IsKeyPressed(.P) {
+		rl.PauseAudioStream(game.audio.bg_music)
 		game.state = .PAUSE
 	}
 
 	if rl.IsKeyDown(.SPACE) && player.num_cells > 0 && player.next_bullet_size <= 3 {
-		fmt.println("SPACING")
 		last_cell := &game.player.body[game.player.num_cells - 1]
 		last_cell.size = math.lerp(last_cell.size, f32(0.0), f32(0.05))
 
@@ -157,19 +169,19 @@ get_input :: proc(game: ^Game) {
 		}
 	}
 	if (rl.IsKeyReleased(.SPACE)) && player.next_bullet_size > 0 {
+		add_sound(game, &sound_bank[FX.FX_SHOOT])
 		spawn_bullet(game)
 		player.next_bullet_size = 0
 	}
 }
 
 get_input_pause :: proc(game: ^Game) {
-	fmt.println(" WE PAUSE")
 	if (rl.IsKeyPressed(.ENTER)) {
-		fmt.println("WE ENTER")
 		if game.state == .DEAD {
 			load_scene(game, game.current_scene)
 		}
 		game.state = .PLAY
+		rl.ResumeMusicStream(game.audio.bg_music)
 	}
 	if (rl.IsKeyPressed(.Q)) {
 		game.state = .QUIT
@@ -298,34 +310,6 @@ clear_dead_entities :: proc(entities: ^[]Entity, count_entities: int) -> int {
 	return alive_count
 }
 
-// grow_body :: proc(player: ^Player) {
-// 	if player.num_cells < MAX_NUM_BODY {
-// 		direction: vec2_t
-// 		new_x, new_y: f32
-// 		size: f32
-//
-// 		if player.num_cells == 0 {
-// 			direction = player.head.direction
-// 			new_x = player.head.position.x - direction.x * PLAYER_SIZE
-// 			new_y = player.head.position.y - direction.y * PLAYER_SIZE
-// 		} else {
-// 			last := &player.body[player.num_cells - 1]
-// 			direction = last.direction
-// 			new_x = last.position.x - direction.x * PLAYER_SIZE
-// 			new_y = last.position.y - direction.y * PLAYER_SIZE
-// 		}
-// 		num_ghost_pieces := player.ghost_pieces.count
-//
-// 		new_cell := cell_t{{new_x, new_y}, direction, num_ghost_pieces, size, .GROW}
-// 		shift_array_right(&player.body, int(player.num_cells))
-// 		player.body[0] = new_cell
-// 		player.num_cells += 1
-// 		fmt.println("WE ARE GROWING NUM CELLS: ", player.num_cells)
-// 	} else {
-// 		fmt.println("WE DO NOT GROW!")
-// 	}
-// }
-
 grow_body :: proc(player: ^Player) {
 	if player.num_cells < MAX_NUM_BODY {
 		player.growing = true
@@ -371,7 +355,7 @@ dealing_ghost_piece :: proc(player: ^Player, last_piece: i8) {
 }
 
 spawn_enemy :: proc(game: ^Game) {
-	enemy := new(Entity)
+	enemy: Entity
 
 	random_index := rand.int31_max(i32(game.scene.count_spawners))
 	spawn_area := game.scene.spawn_areas[random_index]
@@ -396,7 +380,7 @@ spawn_enemy :: proc(game: ^Game) {
 
 	enemy.speed = ENEMY_SPEED
 
-	game.scene.entities[game.scene.count_entities] = enemy^
+	game.scene.entities[game.scene.count_entities] = enemy
 	game.scene.count_entities += 1
 	game.scene.count_enemies += 1
 }
@@ -404,7 +388,8 @@ spawn_enemy :: proc(game: ^Game) {
 spawn_bullet :: proc(game: ^Game) {
 	head := game.player.head
 
-	bullet := new(Entity)
+	bullet: Entity
+
 	bullet.position = {head.position.x + PLAYER_SIZE / 2, head.position.y + PLAYER_SIZE / 2}
 	bullet.shape = Circle {
 		r = PLAYER_SIZE * (game.player.next_bullet_size / 2),
@@ -415,14 +400,14 @@ spawn_bullet :: proc(game: ^Game) {
 	bullet.speed = BULLET_SPEED
 	bullet.state = .ALIVE
 
-	game.scene.entities[game.scene.count_entities] = bullet^
+	game.scene.entities[game.scene.count_entities] = bullet
 	game.scene.count_entities += 1
 	game.scene.count_bullets += 1
 
 }
 
 spawn_candy :: proc(game: ^Game) {
-	candy := new(Entity)
+	candy: Entity
 	x_position := f32((int(rand.float32() * SCREEN_WIDTH) % PLAYER_SIZE) * PLAYER_SIZE * 2)
 	y_position := f32((int(rand.float32() * SCREEN_HEIGHT) % PLAYER_SIZE) * PLAYER_SIZE * 2)
 	x_position += PLAYER_SIZE / 2
@@ -436,7 +421,7 @@ spawn_candy :: proc(game: ^Game) {
 		r = CANDY_SIZE,
 	}
 
-	game.scene.entities[game.scene.count_entities] = candy^
+	game.scene.entities[game.scene.count_entities] = candy
 	game.scene.count_entities += 1
 	game.scene.count_candies += 1
 }
@@ -607,6 +592,8 @@ check_collision :: proc(game: ^Game) {
 				game.scene.entities[i].state = .DEAD
 				game.scene.count_candies -= 1
 				fmt.println("BEFORE EATING CANDY WE GOT: ", game.player.num_cells)
+
+				add_sound(game, &sound_bank[FX.FX_EAT])
 				grow_body(game.player)
 			}
 

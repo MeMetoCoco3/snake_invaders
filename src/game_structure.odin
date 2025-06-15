@@ -1,6 +1,6 @@
 package main
 import "core:fmt"
-
+import rl "vendor:raylib"
 NUM_RECTANGLES_ON_SCENE :: 100
 NUM_ENTITIES :: 1000
 
@@ -80,6 +80,11 @@ cell_ghost_t :: struct {
 	position, direction: vec2_t,
 }
 
+audio_system_t :: struct {
+	bg_music: rl.Music,
+	fx:       [dynamic]^rl.Sound,
+}
+
 
 Player :: struct {
 	head:             cell_t,
@@ -101,10 +106,40 @@ Game :: struct {
 	current_scene:      SCENES,
 	candy_respawn_time: int,
 	enemy_respawn_time: int,
+	audio:              audio_system_t,
+}
+
+FX :: enum {
+	FX_EAT = 0,
+	FX_SHOOT,
+	FX_COUNT,
+}
+
+sound_bank: [FX.FX_COUNT]rl.Sound
+
+add_sound :: proc(game: ^Game, sound: ^rl.Sound) {
+	append(&game.audio.fx, sound)
+}
+
+load_sounds :: proc() {
+	sound_bank[FX.FX_EAT] = rl.LoadSound("assets/nom.mp3")
+	sound_bank[FX.FX_SHOOT] = rl.LoadSound("assets/pow.mp3")
+}
+
+unload_sounds :: proc() {
+	for i in 0 ..< int(FX.FX_COUNT) {
+		rl.UnloadSound(sound_bank[i])
+	}
 }
 
 load_scene :: proc(game: ^Game, scene: SCENES) {
 	old_ghost_pieces := game.player.ghost_pieces
+
+	game.audio.bg_music = rl.LoadMusicStream("assets/bg_music.mp3")
+	rl.SetMusicVolume(game.audio.bg_music, 0.001)
+	rl.PlayMusicStream(game.audio.bg_music)
+	load_sounds()
+
 
 	game.player^ = Player {
 		head             = cell_t {
@@ -135,4 +170,6 @@ load_scene :: proc(game: ^Game, scene: SCENES) {
 	game.current_scene = scene
 	game.candy_respawn_time = 0
 	game.enemy_respawn_time = 0
+
+
 }

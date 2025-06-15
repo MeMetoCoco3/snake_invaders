@@ -11,3 +11,4 @@
 - Add state to enemies.
 - Add visuals and sounds.
 - Move player to stack alloc.
+- Mkae use of odin vector multiplication

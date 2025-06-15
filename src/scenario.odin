@@ -1,6 +1,6 @@
 package main
 import "core:fmt"
-
+import rl "vendor:raylib"
 
 D_PLAYER_SIZE :: PLAYER_SIZE * 2
 
@@ -17,7 +17,7 @@ scene_t :: struct {
 }
 
 
-load_scenario :: proc(s: SCENES) -> ^scene_t {
+load_scenario :: proc(scene_to_load: SCENES) -> ^scene_t {
 	s := new(scene_t)
 
 	colliders := make([]Shape, NUM_RECTANGLES_ON_SCENE)
@@ -28,7 +28,6 @@ load_scenario :: proc(s: SCENES) -> ^scene_t {
 		{{0, 0}, Rect{w = PLAYER_SIZE, h = SCREEN_HEIGHT}},
 		{{SCREEN_WIDTH - PLAYER_SIZE, 0}, Rect{w = PLAYER_SIZE, h = SCREEN_HEIGHT}},
 	}
-
 
 	spawn_areas := make([]Shape, NUM_RECTANGLES_ON_SCENE)
 	spawn_areas_slice := []Shape {
@@ -72,6 +71,18 @@ load_scenario :: proc(s: SCENES) -> ^scene_t {
 	return s
 }
 
+clean_up :: proc(game: ^Game) {
+	free(game.scene)
+	unload_sounds()
+
+	rl.UnloadTexture(tileset)
+	rl.UnloadMusicStream(game.audio.bg_music)
+
+
+	rl.CloseAudioDevice()
+	rl.UnloadTexture(tileset)
+	rl.CloseWindow()
+}
 
 get_rec_from_cell :: proc(a, b, c, d: int) -> Shape {
 	x := a * PLAYER_SIZE
