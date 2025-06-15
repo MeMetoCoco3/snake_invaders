@@ -16,13 +16,14 @@ CANDY_SIZE :: 8
 CANDY_RESPAWN_TIME :: 20
 
 
-MAX_NUM_ENEMIES :: 4
-ENEMY_RESPAWN_TIME :: 100
+MAX_NUM_ENEMIES :: 40
+ENEMY_RESPAWN_TIME :: 10
 ENEMY_SPEED :: 1
+ENEMY_COLLIDER_THRESHOLD :: 4
 
 EPSILON :: 0.5
 
-
+SMOOTHING :: 0.1
 BULLET_SPEED :: 4
 BULLET_SIZE :: 16
 
@@ -45,20 +46,6 @@ main :: proc() {
 	load_scene(&game, .ONE)
 
 	for !rl.WindowShouldClose() {
-		// TODO: MOVE THIS SHIT OUT OF HERE
-		if game.candy_respawn_time >= CANDY_RESPAWN_TIME {
-			game.candy_respawn_time = 0
-			if game.scene.count_candies < MAX_NUM_CANDIES {
-				spawn_candy(&game)
-			}
-		}
-
-		if game.enemy_respawn_time >= ENEMY_RESPAWN_TIME {
-			game.enemy_respawn_time = 0
-			if game.scene.count_enemies < MAX_NUM_ENEMIES {
-				spawn_enemy(&game)
-			}
-		}
 		switch game.state {
 		case .PLAY:
 			update(&game)
@@ -77,11 +64,15 @@ main :: proc() {
 
 		case .QUIT:
 			clean_up(&game)
-			rl.CloseWindow()
 		case .DEAD:
+			// TODO:  rl.MeasureTextEx(
+			// measure_text := rl.MeasureTextEx(rl.GetFontDefault(), "WANT TO PLAY AGAIN?", 30, 6)
+			text_position := Vector2{SCREEN_WIDTH, SCREEN_HEIGHT} / 2
 			get_input_pause(&game)
 			rl.BeginDrawing()
-			rl.DrawText("WANT TO PLAY AGAIN?", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 30, rl.RED)
+
+
+			rl.DrawTextEx(rl.GetFontDefault(), "WANT TO PLAY AGAIN?", text_position, 30, 6, rl.RED)
 			rl.ClearBackground(rl.BLACK)
 			rl.EndDrawing()
 		}
@@ -107,12 +98,6 @@ update :: proc(game: ^Game) {
 	update_player(game.player)
 	update_scene(game)
 
-
-	if len(game.audio.fx) > 0 {
-		fx := game.audio.fx[0]
-		unordered_remove(&game.audio.fx, 0)
-		rl.PlaySound(fx^)
-	}
 
 	game.enemy_respawn_time += 1
 	game.candy_respawn_time += 1
@@ -144,7 +129,7 @@ get_input :: proc(game: ^Game) {
 
 	if rl.IsKeyDown(.SPACE) && player.num_cells > 0 && player.next_bullet_size <= 3 {
 		last_cell := &game.player.body[game.player.num_cells - 1]
-		last_cell.size = math.lerp(last_cell.size, f32(0.0), f32(0.05))
+		last_cell.size = math.lerp(last_cell.size, f32(0.0), f32(SMOOTHING / 2))
 
 		if last_cell.size < f32(EPSILON) {
 			last_ghost, ok := peek_cell(game.player.ghost_pieces)
@@ -158,12 +143,11 @@ get_input :: proc(game: ^Game) {
 			player.next_bullet_size += 1
 			game.player.num_cells -= 1
 
-			fmt.println("INCREASE BULLET SIZE TO: ", player.next_bullet_size)
 		}
 	} else if player.num_cells > 0 {
 		last_cell := &game.player.body[game.player.num_cells - 1]
 		if PLAYER_SIZE - last_cell.size > EPSILON {
-			last_cell.size = math.lerp(last_cell.size, f32(PLAYER_SIZE), f32(0.09))
+			last_cell.size = math.lerp(last_cell.size, f32(PLAYER_SIZE), f32(SMOOTHING / 2))
 		} else {
 			last_cell.size = PLAYER_SIZE
 		}
@@ -200,30 +184,38 @@ try_set_dir :: proc(player: ^Player) -> bool {
 }
 
 update_scene :: proc(game: ^Game) {
+
+	if game.candy_respawn_time >= CANDY_RESPAWN_TIME {
+		game.candy_respawn_time = 0
+		if game.scene.count_candies < MAX_NUM_CANDIES {
+			spawn_candy(game)
+		}
+	}
+
+	if game.enemy_respawn_time >= ENEMY_RESPAWN_TIME {
+		game.enemy_respawn_time = 0
+		if game.scene.count_enemies < MAX_NUM_ENEMIES {
+			spawn_enemy(game)
+		}
+	}
+
+
 	for i in 0 ..< game.scene.count_entities {
 		entity := &game.scene.entities[i]
 		switch entity.kind {
 		case .BULLET:
-			entity.position.x += (entity.speed * entity.direction.x)
-			entity.position.y += (entity.speed * entity.direction.y)
+			entity.position += (entity.speed * entity.direction)
 		case .CANDY:
 		case .STATIC:
 		case .ENEMY:
-			to_player: vec2_t = {
-				game.player.head.position.x - entity.position.x,
-				game.player.head.position.y - entity.position.y,
-			}
+			to_player := game.player.head.position - entity.position
 			distance := magnitude(to_player)
 
 			if distance > 0 {
-				desired_dir: vec2_t = {to_player.x / distance, to_player.y / distance}
+				desired_dir := to_player / distance
+				entity.direction = math.lerp(entity.direction, desired_dir, f32(SMOOTHING))
 
-				smoothing := 0.1
-				entity.direction.x = math.lerp(entity.direction.x, desired_dir.x, f32(smoothing))
-				entity.direction.y = math.lerp(entity.direction.y, desired_dir.y, f32(smoothing))
-
-				entity.position.x += entity.direction.x * entity.speed
-				entity.position.y += entity.direction.y * entity.speed
+				entity.position += entity.direction * entity.speed
 			}
 		}
 	}
@@ -241,8 +233,7 @@ update_player :: proc(player: ^Player) {
 		}
 	}
 
-	player.head.position.x += player.head.direction.x * PLAYER_SPEED
-	player.head.position.y += player.head.direction.y * PLAYER_SPEED
+	player.head.position += player.head.direction * PLAYER_SPEED
 
 	if player.head.direction != {0, 0} && !player.growing {
 		for i in 0 ..< player.num_cells {
@@ -276,9 +267,7 @@ update_player :: proc(player: ^Player) {
 				}
 
 			}
-			player.body[i].position.x += player.body[i].direction.x * PLAYER_SPEED
-			player.body[i].position.y += player.body[i].direction.y * PLAYER_SPEED
-
+			player.body[i].position += player.body[i].direction * PLAYER_SPEED
 		}
 	}
 
@@ -318,13 +307,7 @@ grow_body :: proc(player: ^Player) {
 			shift_array_right(&player.body, int(player.num_cells))
 		}
 
-		new_cell := cell_t {
-			{player.head.position.x, player.head.position.y},
-			{player.head.direction.x, player.head.direction.y},
-			0,
-			PLAYER_SIZE,
-			.NORMAL,
-		}
+		new_cell := cell_t{player.head.position, player.head.direction, 0, PLAYER_SIZE, .NORMAL}
 
 		player.body[0] = new_cell
 		fmt.println("WE ARE GROWING NUM CELLS: ", player.num_cells)
@@ -357,23 +340,22 @@ dealing_ghost_piece :: proc(player: ^Player, last_piece: i8) {
 spawn_enemy :: proc(game: ^Game) {
 	enemy: Entity
 
-	random_index := rand.int31_max(i32(game.scene.count_spawners))
+	random_index := rand.int_max(game.scene.count_spawners)
+	fmt.println(random_index)
+	fmt.println(game.scene.count_spawners)
+
 	spawn_area := game.scene.spawn_areas[random_index]
+	rect := spawn_area.shape.(Rect)
 
-	x_position :=
-		math.floor(
-			(spawn_area.position.x + rand.float32() * spawn_area.shape.(Rect).w) / PLAYER_SIZE,
-		) *
-		PLAYER_SIZE
-	y_position :=
-		math.floor(
-			(spawn_area.position.y + rand.float32() * spawn_area.shape.(Rect).h) / PLAYER_SIZE,
-		) *
-		PLAYER_SIZE
+	x := spawn_area.position.x + rand.float32() * rect.w
+	y := spawn_area.position.y + rand.float32() * rect.h
 
+	x = math.floor(x / PLAYER_SIZE) * PLAYER_SIZE
+	y = math.floor(y / PLAYER_SIZE) * PLAYER_SIZE
+
+	enemy.position = Vector2{x, y}
 	enemy.kind = .ENEMY
 	enemy.state = .ALIVE
-	enemy.position = {x_position + PLAYER_SIZE / 2, y_position + PLAYER_SIZE / 2}
 	enemy.shape = Circle {
 		r = PLAYER_SIZE / 2,
 	}
@@ -386,9 +368,9 @@ spawn_enemy :: proc(game: ^Game) {
 }
 
 spawn_bullet :: proc(game: ^Game) {
-	head := game.player.head
-
 	bullet: Entity
+
+	head := game.player.head
 
 	bullet.position = {head.position.x + PLAYER_SIZE / 2, head.position.y + PLAYER_SIZE / 2}
 	bullet.shape = Circle {
@@ -408,13 +390,23 @@ spawn_bullet :: proc(game: ^Game) {
 
 spawn_candy :: proc(game: ^Game) {
 	candy: Entity
-	x_position := f32((int(rand.float32() * SCREEN_WIDTH) % PLAYER_SIZE) * PLAYER_SIZE * 2)
-	y_position := f32((int(rand.float32() * SCREEN_HEIGHT) % PLAYER_SIZE) * PLAYER_SIZE * 2)
-	x_position += PLAYER_SIZE / 2
-	y_position += PLAYER_SIZE / 2
 
-	candy.position.x = clamp(x_position, PLAYER_SIZE * 2.5, SCREEN_WIDTH - PLAYER_SIZE * 2.5)
-	candy.position.y = clamp(y_position, PLAYER_SIZE * 2.5, SCREEN_HEIGHT - PLAYER_SIZE * 2.5)
+	pos_x := rand.int_max((SCREEN_WIDTH / (PLAYER_SIZE * 2)) - 1)
+	pos_y := rand.int_max((SCREEN_HEIGHT / (PLAYER_SIZE * 2)) - 1)
+
+	candy.position.x = clamp(
+		f32(pos_x * PLAYER_SIZE * 2 + PLAYER_SIZE / 2),
+		PLAYER_SIZE * 2.5,
+		SCREEN_WIDTH - PLAYER_SIZE * 2.5,
+	)
+
+	candy.position.y = clamp(
+		f32(pos_y * PLAYER_SIZE * 2 + PLAYER_SIZE / 2),
+		PLAYER_SIZE * 2.5,
+		SCREEN_HEIGHT - PLAYER_SIZE * 2.5,
+	)
+
+
 	candy.kind = .CANDY
 	candy.state = .ALIVE
 	candy.shape = Circle {
@@ -580,8 +572,7 @@ check_collision :: proc(game: ^Game) {
 	count_candies := game.scene.count_candies
 
 	center_player := player.head.position
-	center_player.x += PLAYER_SIZE / 2
-	center_player.y += PLAYER_SIZE / 2
+	center_player += PLAYER_SIZE / 2
 
 	for i in 0 ..< game.scene.count_entities {
 		entity := &game.scene.entities[i]
@@ -591,7 +582,6 @@ check_collision :: proc(game: ^Game) {
 			   entity.state != .DEAD {
 				game.scene.entities[i].state = .DEAD
 				game.scene.count_candies -= 1
-				fmt.println("BEFORE EATING CANDY WE GOT: ", game.player.num_cells)
 
 				add_sound(game, &sound_bank[FX.FX_EAT])
 				grow_body(game.player)
@@ -602,9 +592,16 @@ check_collision :: proc(game: ^Game) {
 				if game.scene.entities[j].kind == .ENEMY {
 					bullet := &game.scene.entities[i]
 					bullet_size := bullet.shape.(Circle).r
+
 					enemy := &game.scene.entities[j]
 					enemy_size := enemy.shape.(Circle).r
-					if circle_colliding(bullet.position, enemy.position, bullet_size, enemy_size) {
+
+					if circle_colliding(
+						bullet.position,
+						enemy.position,
+						bullet_size,
+						enemy_size - ENEMY_COLLIDER_THRESHOLD,
+					) {
 						bullet.state = .DEAD
 						enemy.state = .DEAD
 						game.scene.count_enemies -= 1
@@ -614,11 +611,11 @@ check_collision :: proc(game: ^Game) {
 			}
 		case .STATIC:
 		case .ENEMY:
-			if vec2_distance(center_player, entity.position) < PLAYER_SIZE &&
+			if vec2_distance(center_player, entity.position) <
+				   PLAYER_SIZE - ENEMY_COLLIDER_THRESHOLD &&
 			   entity.state != .DEAD {
 				game.state = .DEAD
 			}
-
 		}
 	}
 
@@ -639,15 +636,15 @@ check_collision :: proc(game: ^Game) {
 	}
 }
 
-aligned_to_grid :: proc(p: vec2_t) -> bool {
+aligned_to_grid :: proc(p: Vector2) -> bool {
 	return i32(p.x) % PLAYER_SIZE == 0 && i32(p.y) % PLAYER_SIZE == 0
 }
 
-circle_colliding :: proc(v0, v1: vec2_t, d0, d1: f32) -> bool {
+circle_colliding :: proc(v0, v1: Vector2, d0, d1: f32) -> bool {
 	return vec2_distance(v0, v1) < d0 + d1
 }
 
-rec_colliding :: proc(v0: vec2_t, w0: f32, h0: f32, v1: vec2_t, w1: f32, h1: f32) -> bool {
+rec_colliding :: proc(v0: Vector2, w0: f32, h0: f32, v1: Vector2, w1: f32, h1: f32) -> bool {
 	horizontal_in :=
 		(v0.x <= v1.x && v0.x + w0 >= v1.x) || (v0.x <= v1.x + w1 && v0.x + w0 >= v1.x + w1)
 	vertical_in :=
@@ -656,10 +653,10 @@ rec_colliding :: proc(v0: vec2_t, w0: f32, h0: f32, v1: vec2_t, w1: f32, h1: f32
 }
 
 rec_colliding_no_edges :: proc(
-	v0: vec2_t,
+	v0: Vector2,
 	w0: f32,
 	h0: f32,
-	v1: vec2_t,
+	v1: Vector2,
 	w1: f32,
 	h1: f32,
 ) -> bool {
@@ -670,7 +667,7 @@ rec_colliding_no_edges :: proc(
 }
 
 
-aligned :: proc(v0: vec2_t, v1: vec2_t) -> bool {
+aligned :: proc(v0: Vector2, v1: Vector2) -> bool {
 	return v0.x == v1.x || v0.y == v1.y
 }
 
@@ -688,18 +685,18 @@ ghost_to_cell :: proc(cell: cell_ghost_t) -> cell_t {
 	return cell_t{position = cell.position, direction = cell.direction}
 }
 
-vec2_distance :: proc(a, b: vec2_t) -> f32 {
+vec2_distance :: proc(a, b: Vector2) -> f32 {
 	return math.sqrt(math.pow(b.x - a.x, 2.0) + math.pow(b.y - a.y, 2.0))
 }
 
 
-get_cardinal_direction :: proc(from, to: vec2_t) -> vec2_t {
+get_cardinal_direction :: proc(from, to: Vector2) -> Vector2 {
 	dx := to.x - from.x
 	dy := to.y - from.y
 	if (abs(dx) > abs(dy)) {
-		return (dx > 0) ? vec2_t{1, 0} : vec2_t{-1, 0}
+		return (dx > 0) ? Vector2{1, 0} : Vector2{-1, 0}
 	} else {
-		return (dy > 0) ? vec2_t{0, 1} : vec2_t{0, -1}
+		return (dy > 0) ? Vector2{0, 1} : Vector2{0, -1}
 	}
 }
 
@@ -754,11 +751,11 @@ TESTING :: proc(game: ^Game) {
 	}
 }
 
-vec2_add :: proc(v0, v1: vec2_t) -> vec2_t {
+vec2_add :: proc(v0, v1: Vector2) -> Vector2 {
 	return {v0.x + v1.x, v0.y + v1.y}
 
 }
-vec2_mul_scalar :: proc(v: vec2_t, scalar: f32) -> vec2_t {
+vec2_mul_scalar :: proc(v: Vector2, scalar: f32) -> Vector2 {
 	return {v.x * scalar, v.y * scalar}
 }
 
@@ -766,7 +763,7 @@ sign :: proc(x: f32) -> f32 {
 	return (x > 0) ? 1 : (x < 0) ? -1 : 0
 }
 
-magnitude :: proc(v: vec2_t) -> f32 {
+magnitude :: proc(v: Vector2) -> f32 {
 	return math.sqrt(v.x * v.x + v.y * v.y)
 }
 
@@ -776,6 +773,6 @@ shift_array_right :: proc(arr: ^[20]cell_t, count: int) {
 	}
 }
 
-oposite_directions :: proc(new, curr: vec2_t) -> bool {
+oposite_directions :: proc(new, curr: Vector2) -> bool {
 	return new.x == -curr.x && new.y == -curr.y
 }

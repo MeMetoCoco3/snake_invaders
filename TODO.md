@@ -9,6 +9,6 @@
 - ~Change shotting so it works correctly.~
 - Add other objectives for player.
 - Add state to enemies.
-- Add visuals and sounds.
+- Add visuals ~and sounds.~
 - Move player to stack alloc.
-- Mkae use of odin vector multiplication
+- ~Mkae use of odin vector multiplication~

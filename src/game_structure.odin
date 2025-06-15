@@ -4,9 +4,12 @@ import rl "vendor:raylib"
 NUM_RECTANGLES_ON_SCENE :: 100
 NUM_ENTITIES :: 1000
 
+Vector2 :: [2]f32
+
+
 Entity :: struct {
 	using s:   Shape,
-	direction: vec2_t,
+	direction: Vector2,
 	kind:      KIND,
 	speed:     f32,
 	state:     STATE,
@@ -30,7 +33,7 @@ GAME_STATE :: enum {
 }
 
 Shape :: struct {
-	position: vec2_t,
+	position: Vector2,
 	shape:    Shapes,
 }
 
@@ -64,20 +67,16 @@ STATE :: enum {
 	ALIVE,
 }
 
-vec2_t :: struct {
-	x, y: f32,
-}
-
 
 cell_t :: struct {
-	position, direction: vec2_t,
+	position, direction: Vector2,
 	count_turns_left:    i8,
 	size:                f32,
 	state:               CELL_STATE,
 }
 
 cell_ghost_t :: struct {
-	position, direction: vec2_t,
+	position, direction: Vector2,
 }
 
 audio_system_t :: struct {
@@ -88,7 +87,7 @@ audio_system_t :: struct {
 
 Player :: struct {
 	head:             cell_t,
-	next_dir:         vec2_t,
+	next_dir:         Vector2,
 	body:             [MAX_NUM_BODY]cell_t,
 	health:           i8,
 	num_cells:        i8,
@@ -121,10 +120,22 @@ add_sound :: proc(game: ^Game, sound: ^rl.Sound) {
 	append(&game.audio.fx, sound)
 }
 
+play_sound :: proc(game: ^Game) {
+	if len(game.audio.fx) > 0 {
+		fx := game.audio.fx[0]
+		unordered_remove(&game.audio.fx, 0)
+		rl.PlaySound(fx^)
+	}
+}
+
 load_sounds :: proc() {
 	sound_bank[FX.FX_EAT] = rl.LoadSound("assets/nom.mp3")
 	sound_bank[FX.FX_SHOOT] = rl.LoadSound("assets/pow.mp3")
 }
+
+// load_font :: proc() {
+// 	rl.LoadFont("arial")
+// }
 
 unload_sounds :: proc() {
 	for i in 0 ..< int(FX.FX_COUNT) {
@@ -143,7 +154,7 @@ load_scene :: proc(game: ^Game, scene: SCENES) {
 
 	game.player^ = Player {
 		head             = cell_t {
-			vec2_t{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2},
+			Vector2{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2},
 			{0, -1},
 			0,
 			PLAYER_SIZE,
