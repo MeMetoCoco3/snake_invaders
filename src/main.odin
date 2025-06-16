@@ -16,7 +16,7 @@ CANDY_SIZE :: 8
 CANDY_RESPAWN_TIME :: 20
 
 
-MAX_NUM_ENEMIES :: 40
+MAX_NUM_ENEMIES :: 1
 ENEMY_RESPAWN_TIME :: 10
 ENEMY_SPEED :: 1
 ENEMY_COLLIDER_THRESHOLD :: 4
@@ -44,6 +44,16 @@ main :: proc() {
 	}
 
 	load_scene(&game, .ONE)
+
+	game.player.animation = animation_t {
+		image      = &texture_bank[TEXTURE.TX_PLAYER],
+		w          = 16,
+		h          = 16,
+		num_frames = 1,
+		padding    = {0, 0},
+		offset     = {0, 0},
+		repeat     = false,
+	}
 
 	for !rl.WindowShouldClose() {
 		switch game.state {
@@ -166,6 +176,8 @@ get_input_pause :: proc(game: ^Game) {
 		}
 		game.state = .PLAY
 		rl.ResumeMusicStream(game.audio.bg_music)
+		// TODO: ERROR HERE
+
 	}
 	if (rl.IsKeyPressed(.Q)) {
 		game.state = .QUIT
@@ -357,10 +369,22 @@ spawn_enemy :: proc(game: ^Game) {
 	enemy.kind = .ENEMY
 	enemy.state = .ALIVE
 	enemy.shape = Circle {
-		r = PLAYER_SIZE / 2,
+		r = PLAYER_SIZE,
 	}
 
 	enemy.speed = ENEMY_SPEED
+
+	enemy.animation = {
+		image         = &texture_bank[TEXTURE.TX_ENEMY],
+		w             = 32,
+		h             = 32,
+		current_frame = 0,
+		num_frames    = 4,
+		padding       = {0, 0},
+		offset        = {0, 0},
+		repeat        = true,
+	}
+
 
 	game.scene.entities[game.scene.count_entities] = enemy
 	game.scene.count_entities += 1
@@ -451,7 +475,7 @@ draw_scene :: proc(game: ^Game) {
 	}
 
 	for i in 0 ..< game.scene.count_entities {
-		entity := game.scene.entities[i]
+		entity := &game.scene.entities[i]
 		color: rl.Color
 		switch entity.kind {
 		case .STATIC:
@@ -461,7 +485,8 @@ draw_scene :: proc(game: ^Game) {
 		case .BULLET:
 			color = rl.BLUE
 		case .ENEMY:
-			color = rl.RED
+			// color = rl.RED
+			draw_entity(entity)
 		}
 
 		switch s in entity.shape {
@@ -513,28 +538,7 @@ draw_player :: proc(player: ^Player) {
 			rl.ORANGE,
 		)
 	}
-
-	src_rec := rl.Rectangle{0, 32, PLAYER_SIZE, PLAYER_SIZE}
-	switch player.head.direction {
-	case {0, 1}:
-		player.rotation = 270
-	case {0, -1}:
-		player.rotation = 90
-	case {1, 0}:
-		player.rotation = 180
-	case {-1, 0}:
-		player.rotation = 0
-	}
-
-	dst_rec := rl.Rectangle {
-		player.head.position.x + PLAYER_SIZE / 2,
-		player.head.position.y + PLAYER_SIZE / 2,
-		PLAYER_SIZE,
-		PLAYER_SIZE,
-	}
-	origin := rl.Vector2{PLAYER_SIZE / 2, PLAYER_SIZE / 2}
-	rl.DrawTexturePro(tileset, src_rec, dst_rec, origin, player.rotation, rl.WHITE)
-
+	draw_player_animation(player)
 
 }
 

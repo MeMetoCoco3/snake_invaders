@@ -1,5 +1,6 @@
 package main
 import "core:fmt"
+import "core:math"
 import rl "vendor:raylib"
 NUM_RECTANGLES_ON_SCENE :: 100
 NUM_ENTITIES :: 1000
@@ -13,7 +14,9 @@ Entity :: struct {
 	kind:      KIND,
 	speed:     f32,
 	state:     STATE,
+	animation: animation_t,
 }
+
 
 SCENES :: enum {
 	ONE,
@@ -96,6 +99,7 @@ Player :: struct {
 	rotation:         f32,
 	next_bullet_size: f32,
 	growing:          bool,
+	animation:        animation_t,
 }
 
 Game :: struct {
@@ -114,7 +118,73 @@ FX :: enum {
 	FX_COUNT,
 }
 
+TEXTURE :: enum {
+	TX_PLAYER = 0,
+	TX_ENEMY,
+	TX_COUNT,
+}
+
+
+texture_bank: [TEXTURE.TX_COUNT]rl.Texture2D
 sound_bank: [FX.FX_COUNT]rl.Sound
+
+animation_t :: struct {
+	image:                          ^rl.Texture2D,
+	w:                              int,
+	h:                              int,
+	current_frame, int, num_frames: int,
+	padding:                        Vector2,
+	offset:                         Vector2,
+	repeat:                         bool,
+}
+
+
+// TODO: DEPRECATE THIS FOR A MORE GENERAL DRAW_ENTITY or DRAW ANIMATION
+draw_player_animation :: proc(player: ^Player) {
+	src_rec := rl.Rectangle{0, 32, PLAYER_SIZE, PLAYER_SIZE}
+	switch player.head.direction {
+	case {0, 1}:
+		player.rotation = 270
+	case {0, -1}:
+		player.rotation = 90
+	case {1, 0}:
+		player.rotation = 180
+	case {-1, 0}:
+		player.rotation = 0
+	}
+
+	dst_rec := rl.Rectangle {
+		player.head.position.x + PLAYER_SIZE / 2,
+		player.head.position.y + PLAYER_SIZE / 2,
+		PLAYER_SIZE,
+		PLAYER_SIZE,
+	}
+	origin := rl.Vector2{PLAYER_SIZE / 2, PLAYER_SIZE / 2}
+	rl.DrawTexturePro(player.animation.image^, src_rec, dst_rec, origin, player.rotation, rl.WHITE)
+}
+// TODO: ADD FRAME DELAY
+draw_entity :: proc(entity: ^Entity) {
+	anim := &entity.animation
+	if anim.current_frame >= anim.num_frames {
+		if anim.repeat {
+			anim.current_frame = 0
+		} else {
+			// TODO: DO SOMETHING
+		}
+	}
+
+	src_rec := rl.Rectangle{f32(32 * anim.current_frame), 0, 32, 32}
+
+	angle := math.atan2(entity.direction.y, entity.direction.x) * 180 / math.PI
+
+	dst_rec := rl.Rectangle{entity.position.x, entity.position.y, 64, 64}
+
+	origin := Vector2{PLAYER_SIZE, PLAYER_SIZE}
+	rl.DrawTexturePro(anim.image^, src_rec, dst_rec, origin, angle, rl.WHITE)
+
+	anim.current_frame += 1
+}
+
 
 add_sound :: proc(game: ^Game, sound: ^rl.Sound) {
 	append(&game.audio.fx, sound)
@@ -132,10 +202,19 @@ load_sounds :: proc() {
 	sound_bank[FX.FX_EAT] = rl.LoadSound("assets/nom.mp3")
 	sound_bank[FX.FX_SHOOT] = rl.LoadSound("assets/pow.mp3")
 }
-
+load_textures :: proc() {
+	texture_bank[TEXTURE.TX_PLAYER] = rl.LoadTexture("assets/tileset.png")
+	texture_bank[TEXTURE.TX_ENEMY] = rl.LoadTexture("assets/ghost.png")
+}
 // load_font :: proc() {
 // 	rl.LoadFont("arial")
 // }
+unload_textures :: proc() {
+	for i in 0 ..< int(TEXTURE.TX_COUNT) {
+		rl.UnloadTexture(texture_bank[i])
+	}
+}
+
 
 unload_sounds :: proc() {
 	for i in 0 ..< int(FX.FX_COUNT) {
@@ -150,7 +229,7 @@ load_scene :: proc(game: ^Game, scene: SCENES) {
 	rl.SetMusicVolume(game.audio.bg_music, 0.001)
 	rl.PlayMusicStream(game.audio.bg_music)
 	load_sounds()
-
+	load_textures()
 
 	game.player^ = Player {
 		head             = cell_t {

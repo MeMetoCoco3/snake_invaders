@@ -74,8 +74,9 @@ load_scenario :: proc(scene_to_load: SCENES) -> ^scene_t {
 clean_up :: proc(game: ^Game) {
 	free(game.scene)
 	unload_sounds()
-
+	unload_textures()
 	rl.UnloadTexture(tileset)
+
 	rl.UnloadMusicStream(game.audio.bg_music)
 
 
