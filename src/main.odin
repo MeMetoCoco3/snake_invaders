@@ -35,38 +35,33 @@ main :: proc() {
 
 	rl.SetTargetFPS(60)
 
-	tileset = rl.LoadTexture("./assets/tileset.png")
+	load_sounds()
+	load_textures()
+
+	bg_music := rl.LoadMusicStream("assets/bg_music.mp3")
+	rl.SetMusicVolume(bg_music, 0.001)
+	rl.PlayMusicStream(bg_music)
+
 
 	game := Game {
 		player = &Player{ghost_pieces = &Ringuffer_t{}, body = [MAX_NUM_BODY]cell_t{}},
 		scene = &scene_t{},
-		audio = audio_system_t{fx = make([dynamic]^rl.Sound, 0, 20)},
+		audio = audio_system_t{fx = make([dynamic]^rl.Sound, 0, 20), bg_music = bg_music},
 	}
 
 	load_scene(&game, .ONE)
 
-	game.player.animation = {
-		image      = &texture_bank[TEXTURE.TX_PLAYER],
-		w          = 16,
-		h          = 16,
-		num_frames = 1,
-		kind       = .STATIC,
-		angle_type = .DIRECTIONAL,
-	}
-	fmt.println(game.player.animation)
+
 	for !rl.WindowShouldClose() {
 		switch game.state {
 		case .PLAY:
-			// fmt.println("BEFORE UPDATE")
 			update(&game)
 
-			// fmt.println("BEFORE BEGINDRAW")
 			rl.BeginDrawing()
 			draw_game(&game)
 			rl.ClearBackground(rl.BLACK)
 			rl.EndDrawing()
 
-		// fmt.println("after UPDATE")
 		case .PAUSE:
 			get_input_pause(&game)
 			rl.BeginDrawing()
@@ -84,10 +79,7 @@ main :: proc() {
 			rl.ClearBackground(rl.BLACK)
 			rl.EndDrawing()
 
-			fmt.println("ENDED DRAWING ")
 		}
-
-
 	}
 }
 
@@ -108,6 +100,7 @@ update :: proc(game: ^Game) {
 	update_player(game.player)
 	update_scene(game)
 
+	play_sound(game)
 
 	game.enemy_respawn_time += 1
 	game.candy_respawn_time += 1
@@ -182,7 +175,6 @@ get_input_pause :: proc(game: ^Game) {
 		}
 		game.state = .PLAY
 		rl.ResumeMusicStream(game.audio.bg_music)
-		// TODO: ERROR HERE
 
 	}
 	if (rl.IsKeyPressed(.Q)) {
@@ -460,6 +452,16 @@ spawn_candy :: proc(game: ^Game) {
 		r = CANDY_SIZE,
 	}
 
+	candy.animation = animation_t {
+		image       = &texture_bank[TEXTURE.TX_CANDY],
+		w           = 16,
+		h           = 16,
+		num_frames  = 16,
+		frame_delay = 4,
+		kind        = .REPEAT,
+		angle_type  = .IGNORE,
+	}
+
 	game.scene.entities[game.scene.count_entities] = candy
 	game.scene.count_entities += 1
 	game.scene.count_candies += 1
@@ -504,12 +506,13 @@ draw_scene :: proc(game: ^Game) {
 		case .STATIC:
 			color = rl.YELLOW
 		case .CANDY:
-			color = rl.WHITE
+			draw(entity)
+		// color = rl.WHITE
 		case .BULLET:
-			draw_entity(entity)
+			draw(entity)
 		// color = rl.BLUE
 		case .ENEMY:
-			draw_entity(entity)
+			draw(entity)
 		// color = rl.RED
 		}
 
@@ -562,9 +565,8 @@ draw_player :: proc(player: ^Player) {
 			rl.ORANGE,
 		)
 	}
-	draw_player_animation(player)
-	// draw_entity(player)
 
+	draw(player)
 }
 
 draw_ghost_cells :: proc(rb: ^Ringuffer_t) {
@@ -613,6 +615,7 @@ check_collision :: proc(game: ^Game) {
 				game.scene.count_candies -= 1
 
 				add_sound(game, &sound_bank[FX.FX_EAT])
+				fmt.println(game.audio.fx)
 				grow_body(game.player)
 			}
 

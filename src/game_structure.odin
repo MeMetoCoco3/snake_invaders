@@ -89,7 +89,7 @@ audio_system_t :: struct {
 
 // TODO: REFACTOR THIS
 Player :: struct {
-	head:             cell_t,
+	using head:       cell_t,
 	next_dir:         Vector2,
 	body:             [MAX_NUM_BODY]cell_t,
 	health:           i8,
@@ -123,12 +123,14 @@ TEXTURE :: enum {
 	TX_ENEMY,
 	TX_BULLET,
 	TX_BIG_EXPLOSION,
+	TX_CANDY,
 	TX_COUNT,
 }
 
 ANIM_DIRECTION :: enum {
 	DIRECTIONAL = 0,
 	LR,
+	IGNORE,
 }
 texture_bank: [TEXTURE.TX_COUNT]rl.Texture2D
 sound_bank: [FX.FX_COUNT]rl.Sound
@@ -154,7 +156,12 @@ ANIMATION_KIND :: enum {
 	NONREPEAT,
 }
 
-draw_entity :: proc(entity: ^Entity) {
+draw :: proc {
+	draw_entity_animation,
+	draw_player_animation,
+}
+
+draw_entity_animation :: proc(entity: ^Entity) {
 	anim := &entity.animation
 	if anim.current_frame >= anim.num_frames {
 		anim.current_frame = 0
@@ -170,9 +177,9 @@ draw_entity :: proc(entity: ^Entity) {
 			src_rec.width *= -1
 		}
 	case .DIRECTIONAL:
-		fmt.println(entity.direction)
 		angle = math.atan2(entity.direction.y, entity.direction.x) * 180 / math.PI
-		fmt.println("angle", angle)
+	case .IGNORE:
+
 	}
 
 
@@ -190,7 +197,6 @@ draw_entity :: proc(entity: ^Entity) {
 }
 
 
-// TODO: DEPRECATE THIS FOR A MORE GENERAL DRAW_ENTITY or DRAW ANIMATION
 draw_player_animation :: proc(player: ^Player) {
 	src_rec := rl.Rectangle{0, 32, PLAYER_SIZE, PLAYER_SIZE}
 	switch player.head.direction {
@@ -222,6 +228,7 @@ add_sound :: proc(game: ^Game, sound: ^rl.Sound) {
 
 play_sound :: proc(game: ^Game) {
 	if len(game.audio.fx) > 0 {
+		fmt.println("SOUND: ", game.audio.fx)
 		fx := game.audio.fx[0]
 		unordered_remove(&game.audio.fx, 0)
 		rl.PlaySound(fx^)
@@ -237,6 +244,7 @@ load_textures :: proc() {
 	texture_bank[TEXTURE.TX_PLAYER] = rl.LoadTexture("assets/tileset.png")
 	texture_bank[TEXTURE.TX_ENEMY] = rl.LoadTexture("assets/ghost.png")
 	texture_bank[TEXTURE.TX_BULLET] = rl.LoadTexture("assets/player-shoot.png")
+	texture_bank[TEXTURE.TX_CANDY] = rl.LoadTexture("assets/coin.png")
 	texture_bank[TEXTURE.TX_BIG_EXPLOSION] = rl.LoadTexture("assets/big-explosion.png")
 }
 
@@ -255,13 +263,6 @@ unload_sounds :: proc() {
 
 load_scene :: proc(game: ^Game, scene: SCENES) {
 	old_ghost_pieces := game.player.ghost_pieces
-
-	game.audio.bg_music = rl.LoadMusicStream("assets/bg_music.mp3")
-	rl.SetMusicVolume(game.audio.bg_music, 0.001)
-	rl.PlayMusicStream(game.audio.bg_music)
-	// TODO: TAKE THIS OUT OF HERE
-	load_sounds()
-	load_textures()
 
 	game.player^ = {
 		head = cell_t {

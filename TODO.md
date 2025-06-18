@@ -7,13 +7,17 @@
 - ~Add state to the game~
 - ~Load scenes.~
 - ~Change shotting so it works correctly.~
+- ~Add visuals and sounds.BANK OF ANIMATIONS~
+- ~Mkae use of odin vector multiplication~
+- NOT NECCESSSSSSARY~Compose player from entity~
+- ~BUG WHEN DEAD AND PRESS ENTER: animation was being overwritten on load scene~
+
+
+
+- Move player to stack alloc.
 - Add other objectives for player.
 - Add state to enemies.
-- Add visuals ~and sounds.~ BANK OF ANIMATIONS
-- Move player to stack alloc.
-- ~Mkae use of odin vector multiplication~
-- Compose player from entity
-- ~BUG WHEN DEAD AND PRESS ENTER: animation was being overwritten on load scene~
+
 
 			// TODO:  rl.MeasureTextEx(
 			// measure_text := rl.MeasureTextEx(rl.GetFontDefault(), "WANT TO PLAY AGAIN?", 30, 6)
