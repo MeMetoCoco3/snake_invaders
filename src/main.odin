@@ -53,17 +53,20 @@ main :: proc() {
 		kind       = .STATIC,
 		angle_type = .DIRECTIONAL,
 	}
-
+	fmt.println(game.player.animation)
 	for !rl.WindowShouldClose() {
 		switch game.state {
 		case .PLAY:
+			// fmt.println("BEFORE UPDATE")
 			update(&game)
 
+			// fmt.println("BEFORE BEGINDRAW")
 			rl.BeginDrawing()
 			draw_game(&game)
 			rl.ClearBackground(rl.BLACK)
 			rl.EndDrawing()
 
+		// fmt.println("after UPDATE")
 		case .PAUSE:
 			get_input_pause(&game)
 			rl.BeginDrawing()
@@ -168,17 +171,19 @@ get_input :: proc(game: ^Game) {
 
 get_input_pause :: proc(game: ^Game) {
 	if (rl.IsKeyPressed(.ENTER)) {
+		fmt.println(game.player)
 		if game.state == .DEAD {
-			fmt.println("%p", &game.state)
 			load_scene(game, game.current_scene)
-			fmt.println("SCENE LOADED") // IT IS LOADED
-			fmt.println("%p", game.state)
+
+			fmt.println()
+			fmt.println(game.player)
+
+			fmt.println("MUSIC RESUMED")
 		}
 		game.state = .PLAY
 		rl.ResumeMusicStream(game.audio.bg_music)
 		// TODO: ERROR HERE
 
-		fmt.println("MUSIC RESUMED")
 	}
 	if (rl.IsKeyPressed(.Q)) {
 		game.state = .QUIT
@@ -557,8 +562,8 @@ draw_player :: proc(player: ^Player) {
 			rl.ORANGE,
 		)
 	}
-	// draw_player_animation(player)
-	draw_entity(player)
+	draw_player_animation(player)
+	// draw_entity(player)
 
 }
 

@@ -89,7 +89,6 @@ audio_system_t :: struct {
 
 // TODO: REFACTOR THIS
 Player :: struct {
-	using e:          Entity,
 	head:             cell_t,
 	next_dir:         Vector2,
 	body:             [MAX_NUM_BODY]cell_t,
@@ -100,6 +99,7 @@ Player :: struct {
 	rotation:         f32,
 	next_bullet_size: f32,
 	growing:          bool,
+	animation:        animation_t,
 }
 
 Game :: struct {
@@ -170,6 +170,7 @@ draw_entity :: proc(entity: ^Entity) {
 			src_rec.width *= -1
 		}
 	case .DIRECTIONAL:
+		fmt.println(entity.direction)
 		angle = math.atan2(entity.direction.y, entity.direction.x) * 180 / math.PI
 		fmt.println("angle", angle)
 	}
@@ -262,19 +263,27 @@ load_scene :: proc(game: ^Game, scene: SCENES) {
 	load_sounds()
 	load_textures()
 
-	game.player^ = Player {
-		head             = cell_t {
+	game.player^ = {
+		head = cell_t {
 			Vector2{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2},
 			{0, -1},
 			0,
 			PLAYER_SIZE,
 			.NORMAL,
 		},
-		body             = [MAX_NUM_BODY]cell_t{},
-		health           = 3,
-		next_dir         = {0, 0},
-		rotation         = 0,
+		body = [MAX_NUM_BODY]cell_t{},
+		health = 3,
+		next_dir = {0, 0},
+		rotation = 0,
 		next_bullet_size = 0,
+		animation = {
+			image = &texture_bank[TEXTURE.TX_PLAYER],
+			w = 16,
+			h = 16,
+			num_frames = 1,
+			kind = .STATIC,
+			angle_type = .DIRECTIONAL,
+		},
 	}
 
 	game.player.ghost_pieces = old_ghost_pieces
