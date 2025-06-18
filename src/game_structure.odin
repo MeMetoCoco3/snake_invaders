@@ -87,8 +87,9 @@ audio_system_t :: struct {
 	fx:       [dynamic]^rl.Sound,
 }
 
-
+// TODO: REFACTOR THIS
 Player :: struct {
+	using e:          Entity,
 	head:             cell_t,
 	next_dir:         Vector2,
 	body:             [MAX_NUM_BODY]cell_t,
@@ -99,7 +100,6 @@ Player :: struct {
 	rotation:         f32,
 	next_bullet_size: f32,
 	growing:          bool,
-	animation:        animation_t,
 }
 
 Game :: struct {
@@ -121,21 +121,71 @@ FX :: enum {
 TEXTURE :: enum {
 	TX_PLAYER = 0,
 	TX_ENEMY,
+	TX_BULLET,
+	TX_BIG_EXPLOSION,
 	TX_COUNT,
 }
 
-
+ANIM_DIRECTION :: enum {
+	DIRECTIONAL = 0,
+	LR,
+}
 texture_bank: [TEXTURE.TX_COUNT]rl.Texture2D
 sound_bank: [FX.FX_COUNT]rl.Sound
 
+// TODO: SHOULD I HIDE SOME OF THIS SHIT BECAUSE IT IS NOT IMPORTANT TO HAVEIT OUTSIDEOF THE FUNCTIONS? like time on frame or current_frame
 animation_t :: struct {
-	image:                          ^rl.Texture2D,
-	w:                              int,
-	h:                              int,
-	current_frame, int, num_frames: int,
-	padding:                        Vector2,
-	offset:                         Vector2,
-	repeat:                         bool,
+	image:         ^rl.Texture2D,
+	w:             f32,
+	h:             f32,
+	current_frame: int,
+	num_frames:    int,
+	frame_delay:   int,
+	time_on_frame: int,
+	padding:       Vector2,
+	offset:        Vector2,
+	kind:          ANIMATION_KIND,
+	angle_type:    ANIM_DIRECTION,
+}
+
+ANIMATION_KIND :: enum {
+	STATIC,
+	REPEAT,
+	NONREPEAT,
+}
+
+draw_entity :: proc(entity: ^Entity) {
+	anim := &entity.animation
+	if anim.current_frame >= anim.num_frames {
+		anim.current_frame = 0
+	}
+	src_rec := rl.Rectangle{f32(32 * anim.current_frame), 0, anim.w, anim.h}
+
+	angle: f32
+	dst_width := anim.w
+
+	switch anim.angle_type {
+	case .LR:
+		if entity.direction.x > 0.1 {
+			src_rec.width *= -1
+		}
+	case .DIRECTIONAL:
+		angle = math.atan2(entity.direction.y, entity.direction.x) * 180 / math.PI
+		fmt.println("angle", angle)
+	}
+
+
+	// TODO: MAYBEHERE PUT ANIM TIMES THE SIZEOF THE ENTITY
+	dst_rec := rl.Rectangle{entity.position.x, entity.position.y, dst_width, anim.h}
+
+	origin := Vector2{anim.w / 2, anim.h / 2}
+	rl.DrawTexturePro(anim.image^, src_rec, dst_rec, origin, f32(angle), rl.WHITE)
+
+	if anim.time_on_frame >= anim.frame_delay && anim.kind != .STATIC {
+		anim.current_frame += 1
+		anim.time_on_frame = 0
+	}
+	anim.time_on_frame += 1
 }
 
 
@@ -151,6 +201,7 @@ draw_player_animation :: proc(player: ^Player) {
 		player.rotation = 180
 	case {-1, 0}:
 		player.rotation = 0
+
 	}
 
 	dst_rec := rl.Rectangle {
@@ -161,28 +212,6 @@ draw_player_animation :: proc(player: ^Player) {
 	}
 	origin := rl.Vector2{PLAYER_SIZE / 2, PLAYER_SIZE / 2}
 	rl.DrawTexturePro(player.animation.image^, src_rec, dst_rec, origin, player.rotation, rl.WHITE)
-}
-// TODO: ADD FRAME DELAY
-draw_entity :: proc(entity: ^Entity) {
-	anim := &entity.animation
-	if anim.current_frame >= anim.num_frames {
-		if anim.repeat {
-			anim.current_frame = 0
-		} else {
-			// TODO: DO SOMETHING
-		}
-	}
-
-	src_rec := rl.Rectangle{f32(32 * anim.current_frame), 0, 32, 32}
-
-	angle := math.atan2(entity.direction.y, entity.direction.x) * 180 / math.PI
-
-	dst_rec := rl.Rectangle{entity.position.x, entity.position.y, 64, 64}
-
-	origin := Vector2{PLAYER_SIZE, PLAYER_SIZE}
-	rl.DrawTexturePro(anim.image^, src_rec, dst_rec, origin, angle, rl.WHITE)
-
-	anim.current_frame += 1
 }
 
 
@@ -202,13 +231,14 @@ load_sounds :: proc() {
 	sound_bank[FX.FX_EAT] = rl.LoadSound("assets/nom.mp3")
 	sound_bank[FX.FX_SHOOT] = rl.LoadSound("assets/pow.mp3")
 }
+
 load_textures :: proc() {
 	texture_bank[TEXTURE.TX_PLAYER] = rl.LoadTexture("assets/tileset.png")
 	texture_bank[TEXTURE.TX_ENEMY] = rl.LoadTexture("assets/ghost.png")
+	texture_bank[TEXTURE.TX_BULLET] = rl.LoadTexture("assets/player-shoot.png")
+	texture_bank[TEXTURE.TX_BIG_EXPLOSION] = rl.LoadTexture("assets/big-explosion.png")
 }
-// load_font :: proc() {
-// 	rl.LoadFont("arial")
-// }
+
 unload_textures :: proc() {
 	for i in 0 ..< int(TEXTURE.TX_COUNT) {
 		rl.UnloadTexture(texture_bank[i])
@@ -228,6 +258,7 @@ load_scene :: proc(game: ^Game, scene: SCENES) {
 	game.audio.bg_music = rl.LoadMusicStream("assets/bg_music.mp3")
 	rl.SetMusicVolume(game.audio.bg_music, 0.001)
 	rl.PlayMusicStream(game.audio.bg_music)
+	// TODO: TAKE THIS OUT OF HERE
 	load_sounds()
 	load_textures()
 

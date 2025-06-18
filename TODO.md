@@ -13,4 +13,8 @@
 - Move player to stack alloc.
 - ~Mkae use of odin vector multiplication~
 - Compose player from entity
+
 - BUG WHEN DEAD AND PRESS ENTER
+
+			// TODO:  rl.MeasureTextEx(
+			// measure_text := rl.MeasureTextEx(rl.GetFontDefault(), "WANT TO PLAY AGAIN?", 30, 6)

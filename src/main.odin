@@ -11,13 +11,13 @@ PLAYER_SIZE :: 16
 PLAYER_SPEED :: 2
 MAX_NUM_BODY :: 20
 MAX_NUM_MOVERS :: 100
-MAX_NUM_CANDIES :: 8
+MAX_NUM_CANDIES :: 10
 CANDY_SIZE :: 8
 CANDY_RESPAWN_TIME :: 20
 
 
-MAX_NUM_ENEMIES :: 1
-ENEMY_RESPAWN_TIME :: 10
+MAX_NUM_ENEMIES :: 10
+ENEMY_RESPAWN_TIME :: 100
 ENEMY_SPEED :: 1
 ENEMY_COLLIDER_THRESHOLD :: 4
 
@@ -45,14 +45,13 @@ main :: proc() {
 
 	load_scene(&game, .ONE)
 
-	game.player.animation = animation_t {
+	game.player.animation = {
 		image      = &texture_bank[TEXTURE.TX_PLAYER],
 		w          = 16,
 		h          = 16,
 		num_frames = 1,
-		padding    = {0, 0},
-		offset     = {0, 0},
-		repeat     = false,
+		kind       = .STATIC,
+		angle_type = .DIRECTIONAL,
 	}
 
 	for !rl.WindowShouldClose() {
@@ -71,20 +70,18 @@ main :: proc() {
 			rl.DrawText("PAUSED GAME", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 30, rl.RED)
 			rl.ClearBackground(rl.BLACK)
 			rl.EndDrawing()
-
 		case .QUIT:
 			clean_up(&game)
 		case .DEAD:
-			// TODO:  rl.MeasureTextEx(
-			// measure_text := rl.MeasureTextEx(rl.GetFontDefault(), "WANT TO PLAY AGAIN?", 30, 6)
 			text_position := Vector2{SCREEN_WIDTH, SCREEN_HEIGHT} / 2
 			get_input_pause(&game)
 			rl.BeginDrawing()
 
-
 			rl.DrawTextEx(rl.GetFontDefault(), "WANT TO PLAY AGAIN?", text_position, 30, 6, rl.RED)
 			rl.ClearBackground(rl.BLACK)
 			rl.EndDrawing()
+
+			fmt.println("ENDED DRAWING ")
 		}
 
 
@@ -172,12 +169,16 @@ get_input :: proc(game: ^Game) {
 get_input_pause :: proc(game: ^Game) {
 	if (rl.IsKeyPressed(.ENTER)) {
 		if game.state == .DEAD {
+			fmt.println("%p", &game.state)
 			load_scene(game, game.current_scene)
+			fmt.println("SCENE LOADED") // IT IS LOADED
+			fmt.println("%p", game.state)
 		}
 		game.state = .PLAY
 		rl.ResumeMusicStream(game.audio.bg_music)
 		// TODO: ERROR HERE
 
+		fmt.println("MUSIC RESUMED")
 	}
 	if (rl.IsKeyPressed(.Q)) {
 		game.state = .QUIT
@@ -379,10 +380,13 @@ spawn_enemy :: proc(game: ^Game) {
 		w             = 32,
 		h             = 32,
 		current_frame = 0,
+		frame_delay   = 6,
+		time_on_frame = 0,
 		num_frames    = 4,
 		padding       = {0, 0},
 		offset        = {0, 0},
-		repeat        = true,
+		kind          = .REPEAT,
+		angle_type    = .LR,
 	}
 
 
@@ -405,6 +409,20 @@ spawn_bullet :: proc(game: ^Game) {
 	bullet.kind = .BULLET
 	bullet.speed = BULLET_SPEED
 	bullet.state = .ALIVE
+
+	bullet.animation = {
+		image       = &texture_bank[TEXTURE.TX_BULLET],
+		w           = 16,
+		h           = 16,
+		num_frames  = 4,
+		frame_delay = 6,
+		padding     = {0, 0},
+		offset      = {0, 0},
+		kind        = .REPEAT,
+		angle_type  = .DIRECTIONAL,
+	}
+
+	fmt.println(bullet.animation.image)
 
 	game.scene.entities[game.scene.count_entities] = bullet
 	game.scene.count_entities += 1
@@ -483,10 +501,11 @@ draw_scene :: proc(game: ^Game) {
 		case .CANDY:
 			color = rl.WHITE
 		case .BULLET:
-			color = rl.BLUE
-		case .ENEMY:
-			// color = rl.RED
 			draw_entity(entity)
+		// color = rl.BLUE
+		case .ENEMY:
+			draw_entity(entity)
+		// color = rl.RED
 		}
 
 		switch s in entity.shape {
@@ -538,7 +557,8 @@ draw_player :: proc(player: ^Player) {
 			rl.ORANGE,
 		)
 	}
-	draw_player_animation(player)
+	// draw_player_animation(player)
+	draw_entity(player)
 
 }
 
