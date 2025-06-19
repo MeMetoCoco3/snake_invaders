@@ -2,29 +2,17 @@ package main
 import "core:fmt"
 import "core:math"
 import rl "vendor:raylib"
-NUM_RECTANGLES_ON_SCENE :: 100
-NUM_ENTITIES :: 1000
 
 Vector2 :: [2]f32
 
-Entity :: struct {
-	using s:   Shape,
-	direction: Vector2,
-	kind:      KIND,
-	speed:     f32,
-	state:     ENTITY_STATE,
-	animation: animation_t,
-}
-
-
-SCENES :: enum {
-	ONE,
-}
-
-Shapes :: union #no_nil {
-	Circle,
-	Square,
-	Rect,
+Game :: struct {
+	state:              GAME_STATE,
+	player:             ^Player,
+	scene:              ^scene_t,
+	current_scene:      SCENES,
+	candy_respawn_time: int,
+	enemy_respawn_time: int,
+	audio:              audio_system_t,
 }
 
 GAME_STATE :: enum {
@@ -32,57 +20,6 @@ GAME_STATE :: enum {
 	PAUSE,
 	DEAD,
 	QUIT,
-}
-
-Shape :: struct {
-	position: Vector2,
-	shape:    Shapes,
-}
-
-Circle :: struct {
-	r: f32,
-}
-
-Square :: struct {
-	w: f32,
-}
-
-Rect :: struct {
-	w, h: f32,
-}
-
-KIND :: enum {
-	STATIC,
-	BULLET,
-	CANDY,
-	ENEMY,
-}
-
-
-ENTITY_STATE :: enum {
-	DEAD,
-	ALIVE,
-}
-
-PLAYER_STATE :: enum {
-	NORMAL,
-	DASH,
-}
-
-
-cell_t :: struct {
-	position, direction: Vector2,
-	count_turns_left:    i8,
-	size:                f32,
-}
-
-cell_ghost_t :: struct {
-	position, direction: Vector2,
-}
-
-audio_system_t :: struct {
-	bg_music: rl.Music,
-	fx:       [dynamic]^rl.Sound,
 }
 
 Player :: struct {
@@ -103,14 +40,73 @@ Player :: struct {
 	state:            PLAYER_STATE,
 }
 
-Game :: struct {
-	state:              GAME_STATE,
-	player:             ^Player,
-	scene:              ^scene_t,
-	current_scene:      SCENES,
-	candy_respawn_time: int,
-	enemy_respawn_time: int,
-	audio:              audio_system_t,
+PLAYER_STATE :: enum {
+	NORMAL,
+	DASH,
+}
+
+cell_t :: struct {
+	position, direction: Vector2,
+	count_turns_left:    i8,
+	size:                f32,
+}
+
+cell_ghost_t :: struct {
+	position, direction: Vector2,
+}
+
+Entity :: struct {
+	using s:   Shape,
+	direction: Vector2,
+	kind:      ENTITY_KIND,
+	speed:     f32,
+	state:     ENTITY_STATE,
+	animation: animation_t,
+}
+
+ENTITY_KIND :: enum {
+	STATIC,
+	BULLET,
+	CANDY,
+	ENEMY,
+}
+
+
+ENTITY_STATE :: enum {
+	DEAD,
+	ALIVE,
+}
+
+
+// TODO: MANDAR A TOMAR POR CULO ESTO
+Shape :: struct {
+	position: Vector2,
+	shape:    Shapes,
+}
+
+Shapes :: union #no_nil {
+	Circle,
+	Square,
+	Rect,
+}
+
+
+Circle :: struct {
+	r: f32,
+}
+
+Square :: struct {
+	w: f32,
+}
+
+Rect :: struct {
+	w, h: f32,
+}
+
+
+audio_system_t :: struct {
+	bg_music: rl.Music,
+	fx:       [dynamic]^rl.Sound,
 }
 
 FX :: enum {
@@ -118,23 +114,6 @@ FX :: enum {
 	FX_SHOOT,
 	FX_COUNT,
 }
-
-TEXTURE :: enum {
-	TX_PLAYER = 0,
-	TX_ENEMY,
-	TX_BULLET,
-	TX_BIG_EXPLOSION,
-	TX_CANDY,
-	TX_COUNT,
-}
-
-ANIM_DIRECTION :: enum {
-	DIRECTIONAL = 0,
-	LR,
-	IGNORE,
-}
-texture_bank: [TEXTURE.TX_COUNT]rl.Texture2D
-sound_bank: [FX.FX_COUNT]rl.Sound
 
 animation_t :: struct {
 	image:          ^rl.Texture2D,
@@ -155,6 +134,25 @@ ANIMATION_KIND :: enum {
 	REPEAT,
 	NONREPEAT,
 }
+
+ANIM_DIRECTION :: enum {
+	DIRECTIONAL = 0,
+	LR,
+	IGNORE,
+}
+
+TEXTURE :: enum {
+	TX_PLAYER = 0,
+	TX_ENEMY,
+	TX_BULLET,
+	TX_BIG_EXPLOSION,
+	TX_CANDY,
+	TX_COUNT,
+}
+
+texture_bank: [TEXTURE.TX_COUNT]rl.Texture2D
+sound_bank: [FX.FX_COUNT]rl.Sound
+
 
 draw :: proc {
 	draw_entity_animation,
@@ -300,12 +298,9 @@ load_scene :: proc(game: ^Game, scene: SCENES) {
 		count  = 0,
 	}
 
-
 	game.state = .PLAY
 	game.scene = load_scenario(scene)
 	game.current_scene = scene
 	game.candy_respawn_time = 0
 	game.enemy_respawn_time = 0
-
-
 }

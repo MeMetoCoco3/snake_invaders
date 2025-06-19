@@ -16,13 +16,17 @@ scene_t :: struct {
 	count_scenario: int,
 }
 
+SCENES :: enum {
+	ONE,
+}
+
 
 load_scenario :: proc(scene_to_load: SCENES) -> ^scene_t {
 	s := new(scene_t)
 
 	colliders := make([]Shape, NUM_RECTANGLES_ON_SCENE)
 
-	colliders_slice := []Shape {
+	colliders_slice := [?]Shape {
 		{{0, 0}, Rect{w = SCREEN_WIDTH, h = PLAYER_SIZE}},
 		{{0, SCREEN_HEIGHT - PLAYER_SIZE}, Rect{w = SCREEN_WIDTH, h = PLAYER_SIZE}},
 		{{0, 0}, Rect{w = PLAYER_SIZE, h = SCREEN_HEIGHT}},
@@ -75,13 +79,11 @@ clean_up :: proc(game: ^Game) {
 	free(game.scene)
 	unload_sounds()
 	unload_textures()
-	rl.UnloadTexture(tileset)
 
 	rl.UnloadMusicStream(game.audio.bg_music)
 
 
 	rl.CloseAudioDevice()
-	rl.UnloadTexture(tileset)
 	rl.CloseWindow()
 }
 
