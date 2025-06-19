@@ -7,13 +7,12 @@ NUM_ENTITIES :: 1000
 
 Vector2 :: [2]f32
 
-
 Entity :: struct {
 	using s:   Shape,
 	direction: Vector2,
 	kind:      KIND,
 	speed:     f32,
-	state:     STATE,
+	state:     ENTITY_STATE,
 	animation: animation_t,
 }
 
@@ -59,15 +58,15 @@ KIND :: enum {
 	ENEMY,
 }
 
-CELL_STATE :: enum {
-	NORMAL,
-	GROW,
-	SHRINK,
-}
 
-STATE :: enum {
+ENTITY_STATE :: enum {
 	DEAD,
 	ALIVE,
+}
+
+PLAYER_STATE :: enum {
+	NORMAL,
+	DASH,
 }
 
 
@@ -75,7 +74,6 @@ cell_t :: struct {
 	position, direction: Vector2,
 	count_turns_left:    i8,
 	size:                f32,
-	state:               CELL_STATE,
 }
 
 cell_ghost_t :: struct {
@@ -87,11 +85,13 @@ audio_system_t :: struct {
 	fx:       [dynamic]^rl.Sound,
 }
 
-// TODO: REFACTOR THIS
 Player :: struct {
 	using head:       cell_t,
 	next_dir:         Vector2,
 	body:             [MAX_NUM_BODY]cell_t,
+	speed:            i8,
+	can_dash:         bool,
+	time_on_dash:     i16,
 	health:           i8,
 	num_cells:        i8,
 	num_ghost_pieces: i8,
@@ -100,6 +100,7 @@ Player :: struct {
 	next_bullet_size: f32,
 	growing:          bool,
 	animation:        animation_t,
+	state:            PLAYER_STATE,
 }
 
 Game :: struct {
@@ -135,19 +136,18 @@ ANIM_DIRECTION :: enum {
 texture_bank: [TEXTURE.TX_COUNT]rl.Texture2D
 sound_bank: [FX.FX_COUNT]rl.Sound
 
-// TODO: SHOULD I HIDE SOME OF THIS SHIT BECAUSE IT IS NOT IMPORTANT TO HAVEIT OUTSIDEOF THE FUNCTIONS? like time on frame or current_frame
 animation_t :: struct {
-	image:         ^rl.Texture2D,
-	w:             f32,
-	h:             f32,
-	current_frame: int,
-	num_frames:    int,
-	frame_delay:   int,
-	time_on_frame: int,
-	padding:       Vector2,
-	offset:        Vector2,
-	kind:          ANIMATION_KIND,
-	angle_type:    ANIM_DIRECTION,
+	image:          ^rl.Texture2D,
+	w:              f32,
+	h:              f32,
+	_current_frame: int,
+	num_frames:     int,
+	frame_delay:    int,
+	_time_on_frame: int,
+	padding:        Vector2,
+	offset:         Vector2,
+	kind:           ANIMATION_KIND,
+	angle_type:     ANIM_DIRECTION,
 }
 
 ANIMATION_KIND :: enum {
@@ -163,14 +163,12 @@ draw :: proc {
 
 draw_entity_animation :: proc(entity: ^Entity) {
 	anim := &entity.animation
-	if anim.current_frame >= anim.num_frames {
-		anim.current_frame = 0
+	if anim._current_frame >= anim.num_frames {
+		anim._current_frame = 0
 	}
-	src_rec := rl.Rectangle{f32(32 * anim.current_frame), 0, anim.w, anim.h}
+	src_rec := rl.Rectangle{f32(32 * anim._current_frame), 0, anim.w, anim.h}
 
 	angle: f32
-	dst_width := anim.w
-
 	switch anim.angle_type {
 	case .LR:
 		if entity.direction.x > 0.1 {
@@ -179,21 +177,30 @@ draw_entity_animation :: proc(entity: ^Entity) {
 	case .DIRECTIONAL:
 		angle = math.atan2(entity.direction.y, entity.direction.x) * 180 / math.PI
 	case .IGNORE:
+	}
 
+	entity_size: [2]f32
+
+	switch s in entity.shape {
+	case Circle:
+		entity_size = {s.r, s.r}
+	case Rect:
+		entity_size = {s.w, s.h}
+	case Square:
+		entity_size = {s.w, s.w}
 	}
 
 
-	// TODO: MAYBEHERE PUT ANIM TIMES THE SIZEOF THE ENTITY
-	dst_rec := rl.Rectangle{entity.position.x, entity.position.y, dst_width, anim.h}
+	dst_rec := rl.Rectangle{entity.position.x, entity.position.y, entity_size.x, entity_size.y}
 
-	origin := Vector2{anim.w / 2, anim.h / 2}
+	origin := Vector2{entity_size.x / 2, entity_size.y / 2}
 	rl.DrawTexturePro(anim.image^, src_rec, dst_rec, origin, f32(angle), rl.WHITE)
 
-	if anim.time_on_frame >= anim.frame_delay && anim.kind != .STATIC {
-		anim.current_frame += 1
-		anim.time_on_frame = 0
+	if anim._time_on_frame >= anim.frame_delay && anim.kind != .STATIC {
+		anim._current_frame += 1
+		anim._time_on_frame = 0
 	}
-	anim.time_on_frame += 1
+	anim._time_on_frame += 1
 }
 
 
@@ -265,18 +272,13 @@ load_scene :: proc(game: ^Game, scene: SCENES) {
 	old_ghost_pieces := game.player.ghost_pieces
 
 	game.player^ = {
-		head = cell_t {
-			Vector2{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2},
-			{0, -1},
-			0,
-			PLAYER_SIZE,
-			.NORMAL,
-		},
+		head = cell_t{Vector2{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2}, {0, -1}, 0, PLAYER_SIZE},
 		body = [MAX_NUM_BODY]cell_t{},
 		health = 3,
 		next_dir = {0, 0},
 		rotation = 0,
 		next_bullet_size = 0,
+		speed = PLAYER_SPEED,
 		animation = {
 			image = &texture_bank[TEXTURE.TX_PLAYER],
 			w = 16,
@@ -285,6 +287,9 @@ load_scene :: proc(game: ^Game, scene: SCENES) {
 			kind = .STATIC,
 			angle_type = .DIRECTIONAL,
 		},
+		can_dash = true,
+		time_on_dash = RECOVER_DASH_TIME,
+		state = .NORMAL,
 	}
 
 	game.player.ghost_pieces = old_ghost_pieces

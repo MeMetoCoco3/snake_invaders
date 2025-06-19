@@ -9,10 +9,13 @@ SCREEN_WIDTH :: 800
 SCREEN_HEIGHT :: 800
 PLAYER_SIZE :: 16
 PLAYER_SPEED :: 2
+DASH_DURATION :: 30
+RECOVER_DASH_TIME :: 240
+
 MAX_NUM_BODY :: 20
 MAX_NUM_MOVERS :: 100
 MAX_NUM_CANDIES :: 10
-CANDY_SIZE :: 8
+CANDY_SIZE :: 16
 CANDY_RESPAWN_TIME :: 20
 
 
@@ -53,8 +56,10 @@ main :: proc() {
 
 
 	for !rl.WindowShouldClose() {
+		rl.UpdateMusicStream(game.audio.bg_music)
 		switch game.state {
 		case .PLAY:
+			get_input(&game)
 			update(&game)
 
 			rl.BeginDrawing()
@@ -87,9 +92,7 @@ main :: proc() {
 // UPDATE //
 ////////////
 update :: proc(game: ^Game) {
-	rl.UpdateMusicStream(game.audio.bg_music)
 
-	get_input(game)
 	check_collision(game)
 
 	game.scene.count_entities = clear_dead_entities(
@@ -121,16 +124,21 @@ get_input :: proc(game: ^Game) {
 	if (rl.IsKeyPressed(.K) || rl.IsKeyPressed(.UP)) {
 		player.next_dir = {0, -1}
 	}
-	if rl.IsKeyPressed(.T) {
-		spawn_enemy(game)
-	}
+
 
 	if rl.IsKeyPressed(.P) {
 		rl.PauseAudioStream(game.audio.bg_music)
 		game.state = .PAUSE
 	}
 
-	if rl.IsKeyDown(.SPACE) && player.num_cells > 0 && player.next_bullet_size <= 3 {
+	if player.can_dash && rl.IsKeyPressed(.X) {
+		player.speed = PLAYER_SPEED * 2
+		player.can_dash = false
+		player.time_on_dash = 0
+		player.state = .DASH
+	}
+
+	if rl.IsKeyDown(.Z) && player.num_cells > 0 && player.next_bullet_size <= 3 {
 		last_cell := &game.player.body[game.player.num_cells - 1]
 		last_cell.size = math.lerp(last_cell.size, f32(0.0), f32(SMOOTHING / 2))
 
@@ -155,7 +163,7 @@ get_input :: proc(game: ^Game) {
 			last_cell.size = PLAYER_SIZE
 		}
 	}
-	if (rl.IsKeyReleased(.SPACE)) && player.next_bullet_size > 0 {
+	if (rl.IsKeyReleased(.Z)) && player.next_bullet_size > 0 {
 		add_sound(game, &sound_bank[FX.FX_SHOOT])
 		spawn_bullet(game)
 		player.next_bullet_size = 0
@@ -194,6 +202,20 @@ try_set_dir :: proc(player: ^Player) -> bool {
 }
 
 update_scene :: proc(game: ^Game) {
+	player := game.player
+
+	if !player.can_dash {
+		player.time_on_dash += 1
+	}
+
+	if player.time_on_dash >= DASH_DURATION {
+		player.speed = PLAYER_SPEED
+		player.state = .NORMAL
+		if player.time_on_dash >= RECOVER_DASH_TIME {
+			player.can_dash = true
+		}
+	}
+
 
 	if game.candy_respawn_time >= CANDY_RESPAWN_TIME {
 		game.candy_respawn_time = 0
@@ -243,7 +265,7 @@ update_player :: proc(player: ^Player) {
 		}
 	}
 
-	player.head.position += player.head.direction * PLAYER_SPEED
+	player.head.position += player.head.direction * f32(player.speed)
 
 	if player.head.direction != {0, 0} && !player.growing {
 		for i in 0 ..< player.num_cells {
@@ -277,7 +299,7 @@ update_player :: proc(player: ^Player) {
 				}
 
 			}
-			player.body[i].position += player.body[i].direction * PLAYER_SPEED
+			player.body[i].position += player.body[i].direction * f32(player.speed)
 		}
 	}
 
@@ -317,7 +339,7 @@ grow_body :: proc(player: ^Player) {
 			shift_array_right(&player.body, int(player.num_cells))
 		}
 
-		new_cell := cell_t{player.head.position, player.head.direction, 0, PLAYER_SIZE, .NORMAL}
+		new_cell := cell_t{player.head.position, player.head.direction, 0, PLAYER_SIZE}
 
 		player.body[0] = new_cell
 		fmt.println("WE ARE GROWING NUM CELLS: ", player.num_cells)
@@ -367,23 +389,19 @@ spawn_enemy :: proc(game: ^Game) {
 	enemy.kind = .ENEMY
 	enemy.state = .ALIVE
 	enemy.shape = Circle {
-		r = PLAYER_SIZE,
+		r = PLAYER_SIZE * 2,
 	}
 
 	enemy.speed = ENEMY_SPEED
 
 	enemy.animation = {
-		image         = &texture_bank[TEXTURE.TX_ENEMY],
-		w             = 32,
-		h             = 32,
-		current_frame = 0,
-		frame_delay   = 6,
-		time_on_frame = 0,
-		num_frames    = 4,
-		padding       = {0, 0},
-		offset        = {0, 0},
-		kind          = .REPEAT,
-		angle_type    = .LR,
+		image       = &texture_bank[TEXTURE.TX_ENEMY],
+		w           = 32,
+		h           = 32,
+		frame_delay = 6,
+		num_frames  = 4,
+		kind        = .REPEAT,
+		angle_type  = .LR,
 	}
 
 
@@ -413,13 +431,10 @@ spawn_bullet :: proc(game: ^Game) {
 		h           = 16,
 		num_frames  = 4,
 		frame_delay = 6,
-		padding     = {0, 0},
-		offset      = {0, 0},
 		kind        = .REPEAT,
 		angle_type  = .DIRECTIONAL,
 	}
 
-	fmt.println(bullet.animation.image)
 
 	game.scene.entities[game.scene.count_entities] = bullet
 	game.scene.count_entities += 1
@@ -506,29 +521,25 @@ draw_scene :: proc(game: ^Game) {
 		case .STATIC:
 			color = rl.YELLOW
 		case .CANDY:
-			draw(entity)
-		// color = rl.WHITE
+			color = rl.WHITE
 		case .BULLET:
-			draw(entity)
-		// color = rl.BLUE
+			color = rl.BLUE
 		case .ENEMY:
-			draw(entity)
-		// color = rl.RED
+			color = rl.RED
 		}
 
 		switch s in entity.shape {
 		case Circle:
-			r := entity.shape.(Circle).r
-			rl.DrawCircle(i32(entity.position.x), i32(entity.position.y), r, color)
+			rl.DrawCircle(i32(entity.position.x), i32(entity.position.y), s.r / 2, color)
+			draw(entity)
 		case Square:
-			w := entity.shape.(Square).w
-			rec := rl.Rectangle{entity.position.x, entity.position.y, w, w}
+			rec := rl.Rectangle{entity.position.x, entity.position.y, s.w, s.w}
 			rl.DrawRectangleRec(rec, color)
+			draw(entity)
 		case Rect:
-			w := entity.shape.(Rect).w
-			h := entity.shape.(Rect).h
-			rec := rl.Rectangle{entity.position.x, entity.position.y, w, h}
+			rec := rl.Rectangle{entity.position.x, entity.position.y, s.w, s.h}
 			rl.DrawRectangleRec(rec, color)
+			draw(entity)
 		}
 
 	}
@@ -598,7 +609,10 @@ draw_grid :: proc(col: rl.Color) {
 /////////////
 check_collision :: proc(game: ^Game) {
 	player := game.player
-	future_pos := vec2_add(player.head.position, vec2_mul_scalar(player.next_dir, PLAYER_SPEED))
+	future_pos := vec2_add(
+		player.head.position,
+		vec2_mul_scalar(player.next_dir, f32(player.speed)),
+	)
 
 	count_candies := game.scene.count_candies
 
@@ -615,7 +629,6 @@ check_collision :: proc(game: ^Game) {
 				game.scene.count_candies -= 1
 
 				add_sound(game, &sound_bank[FX.FX_EAT])
-				fmt.println(game.audio.fx)
 				grow_body(game.player)
 			}
 
@@ -646,7 +659,17 @@ check_collision :: proc(game: ^Game) {
 			if vec2_distance(center_player, entity.position) <
 				   PLAYER_SIZE - ENEMY_COLLIDER_THRESHOLD &&
 			   entity.state != .DEAD {
-				game.state = .DEAD
+				switch player.state {
+				case .NORMAL:
+					game.state = .DEAD
+				case .DASH:
+					game.scene.entities[i].state = .DEAD
+
+					add_sound(game, &sound_bank[FX.FX_EAT])
+					grow_body(game.player)
+					game.scene.count_enemies -= 1
+				}
+
 			}
 		}
 	}
