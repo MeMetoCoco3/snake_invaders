@@ -5,6 +5,7 @@ import rl "vendor:raylib"
 
 Vector2 :: [2]f32
 
+
 Game :: struct {
 	state:              GAME_STATE,
 	player:             ^Player,
@@ -66,15 +67,104 @@ Entity :: struct {
 
 ENTITY_KIND :: enum {
 	STATIC,
-	BULLET,
 	CANDY,
-	ENEMY,
 }
 
 
 ENTITY_STATE :: enum {
 	DEAD,
 	ALIVE,
+}
+
+
+Enemy :: struct {
+	using entity:          Entity,
+	behavior:              ENEMY_BEHAVIOR,
+	reload_time:           f32,
+	minimum_distance:      f32,
+	maximum_distance:      f32,
+	time_for_change_state: int,
+}
+
+
+ENEMY_BEHAVIOR :: enum {
+	APROACH,
+	SHOT,
+	GOAWAY,
+}
+
+
+Bullet :: struct {
+	using entity: Entity,
+	team:         BULLET_TEAM,
+}
+
+BULLET_TEAM :: enum {
+	GOOD,
+	BAD,
+}
+
+
+ENEMY_SIZE_BULLET :: 16
+TIME_TO_CHANGE_STATE :: 300
+
+
+update_enemy :: proc(game: ^Game, enemy: ^Enemy) {
+	distance_to_player := vec2_distance(game.player.position, enemy.position)
+
+	if enemy.time_for_change_state > TIME_TO_CHANGE_STATE {
+		enemy.time_for_change_state = 0
+		switch {
+		case distance_to_player > enemy.maximum_distance:
+			enemy.behavior = .APROACH
+		case distance_to_player < enemy.minimum_distance:
+			enemy.behavior = .GOAWAY
+		case:
+			enemy.behavior = .SHOT
+		}} else {
+		enemy.time_for_change_state += 1
+	}
+
+	direction := (game.player.position - enemy.position) / distance_to_player
+
+	switch enemy.behavior {
+	case .APROACH:
+		enemy.direction = direction
+	case .GOAWAY:
+		enemy.direction = -direction
+	case .SHOT:
+		enemy.direction = {0, 0}
+		if enemy.reload_time >= ENEMY_TIME_RELOAD {
+			spawn_bullet(game, enemy.position, ENEMY_SIZE_BULLET, direction, .BAD)
+			enemy.reload_time = 0
+		} else {
+			enemy.reload_time += 1
+		}
+	}
+
+
+	enemy.position += (enemy.direction * enemy.speed)
+}
+
+radians_from_vector :: proc(v: Vector2) -> f32 {
+	return math.atan2_f32(v.y, v.x)
+
+}
+
+vec2_normalize :: proc(v: ^Vector2) {
+	x, y: f32
+	if v.x == 0 {
+		x = 0
+	} else {
+		x = v.x / abs(v.x)
+	}
+	if v.y == 0 {
+		y = 0
+	} else {
+		y = v.y / abs(v.y)
+	}
+	v.x = x
+	v.y = y
 }
 
 
@@ -152,7 +242,7 @@ TEXTURE :: enum {
 
 texture_bank: [TEXTURE.TX_COUNT]rl.Texture2D
 sound_bank: [FX.FX_COUNT]rl.Sound
-
+bg_music: rl.Music
 
 draw :: proc {
 	draw_entity_animation,
@@ -233,7 +323,6 @@ add_sound :: proc(game: ^Game, sound: ^rl.Sound) {
 
 play_sound :: proc(game: ^Game) {
 	if len(game.audio.fx) > 0 {
-		fmt.println("SOUND: ", game.audio.fx)
 		fx := game.audio.fx[0]
 		unordered_remove(&game.audio.fx, 0)
 		rl.PlaySound(fx^)
@@ -241,6 +330,8 @@ play_sound :: proc(game: ^Game) {
 }
 
 load_sounds :: proc() {
+	bg_music = rl.LoadMusicStream("assets/bg_music.mp3")
+
 	sound_bank[FX.FX_EAT] = rl.LoadSound("assets/nom.mp3")
 	sound_bank[FX.FX_SHOOT] = rl.LoadSound("assets/pow.mp3")
 }

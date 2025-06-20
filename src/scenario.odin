@@ -2,12 +2,12 @@ package main
 import "core:fmt"
 import rl "vendor:raylib"
 
-D_PLAYER_SIZE :: PLAYER_SIZE * 2
-
 scene_t :: struct {
 	scenario:       []Shape,
 	entities:       []Entity,
 	spawn_areas:    []Shape,
+	enemies:        []Enemy,
+	bullets:        []Bullet,
 	count_entities: int,
 	count_enemies:  int,
 	count_candies:  int,
@@ -69,8 +69,11 @@ load_scenario :: proc(scene_to_load: SCENES) -> ^scene_t {
 	s.spawn_areas = spawn_areas
 
 	s.entities = make([]Entity, NUM_ENTITIES)
+	s.enemies = make([]Enemy, NUM_ENTITIES)
+	s.bullets = make([]Bullet, NUM_ENTITIES)
+	s.count_bullets = 0
 	s.count_entities = 0
-
+	s.count_enemies = 0
 
 	return s
 }

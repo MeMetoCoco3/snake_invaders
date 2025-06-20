@@ -18,14 +18,14 @@ MAX_NUM_CANDIES :: 10
 CANDY_SIZE :: 16
 CANDY_RESPAWN_TIME :: 20
 
-
-MAX_NUM_ENEMIES :: 10
-ENEMY_RESPAWN_TIME :: 100
+MAX_NUM_ENEMIES :: 1
+ENEMY_RESPAWN_TIME :: 10
 ENEMY_SPEED :: 1
 ENEMY_COLLIDER_THRESHOLD :: 4
+ENEMY_TIME_RELOAD :: 60
 
 EPSILON :: 0.5
-
+EPSILON_COLISION :: 4
 SMOOTHING :: 0.1
 BULLET_SPEED :: 4
 BULLET_SIZE :: 16
@@ -43,7 +43,7 @@ main :: proc() {
 	load_sounds()
 	load_textures()
 
-	bg_music := rl.LoadMusicStream("assets/bg_music.mp3")
+	bg_music := bg_music
 	rl.SetMusicVolume(bg_music, 0.001)
 	rl.PlayMusicStream(bg_music)
 
