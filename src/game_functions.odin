@@ -150,7 +150,6 @@ update_scene :: proc(game: ^Game) {
 		}
 	}
 
-	// TODO: THINK ABOUT THIS
 	// for i in 0 ..< game.scene.count_entities {
 	// 	entity := &game.scene.entities[i]
 	// 	switch entity.kind {
@@ -493,7 +492,12 @@ draw_scene :: proc(game: ^Game) {
 
 	for i in 0 ..< game.scene.count_enemies {
 		enemy := &game.scene.enemies[i]
-		rl.DrawCircle(i32(enemy.position.x), i32(enemy.position.y), enemy.shape.(Circle).r, rl.RED)
+		rl.DrawCircle(
+			i32(enemy.position.x),
+			i32(enemy.position.y),
+			enemy.shape.(Circle).r / 2 - EPSILON_COLISION,
+			rl.RED,
+		)
 		draw(enemy)
 
 	}
@@ -502,7 +506,7 @@ draw_scene :: proc(game: ^Game) {
 		rl.DrawCircle(
 			i32(bullet.position.x),
 			i32(bullet.position.y),
-			bullet.shape.(Circle).r,
+			bullet.shape.(Circle).r / 2 - EPSILON_COLISION,
 			rl.BLUE,
 		)
 		draw(bullet)
@@ -567,12 +571,7 @@ draw_ghost_cells :: proc(rb: ^Ringuffer_t) {
 check_collision :: proc(game: ^Game) {
 	player := game.player
 
-
-	// TODO: Get this future pos less creepy
 	future_pos := player.head.position + player.next_dir * f32(player.speed)
-
-
-	count_candies := game.scene.count_candies
 
 	center_player := player.head.position
 	center_player += PLAYER_SIZE / 2
@@ -581,7 +580,7 @@ check_collision :: proc(game: ^Game) {
 		entity := &game.scene.entities[i]
 		switch entity.kind {
 		case .CANDY:
-			if vec2_distance(center_player, entity.position) + 4 < PLAYER_SIZE &&
+			if vec2_distance(center_player, entity.position) + EPSILON_COLISION < PLAYER_SIZE &&
 			   entity.state != .DEAD {
 				game.scene.entities[i].state = .DEAD
 				game.scene.count_candies -= 1
@@ -597,9 +596,10 @@ check_collision :: proc(game: ^Game) {
 
 	for i in 0 ..< game.scene.count_enemies {
 		enemy := &game.scene.enemies[i]
+		distance_to_player := vec2_distance(center_player, enemy.position)
+		direction := (game.player.position - enemy.position) / distance_to_player
 
-		if vec2_distance(center_player, enemy.position) < PLAYER_SIZE - ENEMY_COLLIDER_THRESHOLD &&
-		   enemy.state != .DEAD {
+		if distance_to_player < PLAYER_SIZE - EPSILON_COLISION && enemy.state != .DEAD {
 			switch player.state {
 			case .NORMAL:
 				game.state = .DEAD
@@ -614,6 +614,14 @@ check_collision :: proc(game: ^Game) {
 			}
 		}
 
+		switch enemy.behavior {
+		case .APROACH:
+			direction = direction
+		case .GOAWAY:
+			direction = -direction
+		case .SHOT:
+			direction = Vector2{0, 0}
+		}
 
 		for j in 0 ..< game.scene.count_scenario {
 			rectangle := game.scene.scenario[j]
@@ -626,35 +634,25 @@ check_collision :: proc(game: ^Game) {
 				enemy.shape.(Circle).r,
 				enemy.shape.(Circle).r,
 			) {
-				enemy.direction = {0, 0}
-			}
-
-
-			if rec_colliding_no_edges(
-				rectangle.position,
-				rectangle.shape.(Rect).w,
-				rectangle.shape.(Rect).h,
-				future_pos,
-				PLAYER_SIZE,
-				PLAYER_SIZE,
-			) {
-				player.next_dir = {0, 0}
+				direction = Vector2{0, 0}
+				break
 			}
 		}
+		enemy.direction = direction
 
 		for j in 0 ..< game.scene.count_bullets {
 			bullet := &game.scene.bullets[j]
 			if bullet.team == .BAD {
 				sum_radius_player := bullet.shape.(Circle).r + PLAYER_SIZE / 2
-				if vec2_distance(bullet.position, center_player) <=
-				   sum_radius_player - EPSILON_COLISION {
+				if vec2_distance(bullet.position, center_player) + EPSILON_COLISION <=
+				   sum_radius_player {
 					game.state = .DEAD
 				}
 				continue
 			}
 
 			sum_radius := bullet.shape.(Circle).r + enemy.shape.(Circle).r
-			if vec2_distance(bullet.position, enemy.position) <= sum_radius - EPSILON_COLISION {
+			if vec2_distance(bullet.position, enemy.position) + EPSILON_COLISION <= sum_radius {
 				bullet.state = .DEAD
 				enemy.state = .DEAD
 
@@ -674,9 +672,23 @@ check_collision :: proc(game: ^Game) {
 					bullet.shape.(Circle).r,
 					bullet.shape.(Circle).r,
 				) {
+					fmt.println("BOOM ROASTED")
 					bullet.state = .DEAD
 				}
 			}
+		}
+	}
+	for i in 0 ..< game.scene.count_scenario {
+		rectangle := game.scene.scenario[i]
+		if rec_colliding_no_edges(
+			rectangle.position,
+			rectangle.shape.(Rect).w,
+			rectangle.shape.(Rect).h,
+			future_pos,
+			PLAYER_SIZE,
+			PLAYER_SIZE,
+		) {
+			player.next_dir = {0, 0}
 		}
 	}
 }

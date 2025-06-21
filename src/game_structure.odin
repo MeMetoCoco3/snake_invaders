@@ -125,24 +125,20 @@ update_enemy :: proc(game: ^Game, enemy: ^Enemy) {
 		enemy.time_for_change_state += 1
 	}
 
-	direction := (game.player.position - enemy.position) / distance_to_player
 
-	switch enemy.behavior {
-	case .APROACH:
-		enemy.direction = direction
-	case .GOAWAY:
-		enemy.direction = -direction
-	case .SHOT:
+	direction := (game.player.position - enemy.position) / distance_to_player
+	if enemy.behavior == .SHOT {
 		enemy.direction = {0, 0}
 		if enemy.reload_time >= ENEMY_TIME_RELOAD {
 			spawn_bullet(game, enemy.position, ENEMY_SIZE_BULLET, direction, .BAD)
+			fmt.println(game.scene.count_bullets)
 			enemy.reload_time = 0
 		} else {
 			enemy.reload_time += 1
 		}
 	}
 
-
+	fmt.println("ENEMY DIRECTION", enemy.direction)
 	enemy.position += (enemy.direction * enemy.speed)
 }
 
