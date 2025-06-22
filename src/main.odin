@@ -27,7 +27,7 @@ ENEMY_TIME_RELOAD :: 60
 EPSILON :: 0.5
 EPSILON_COLISION :: 4
 SMOOTHING :: 0.1
-BULLET_SPEED :: 4
+BULLET_SPEED :: 2
 BULLET_SIZE :: 16
 
 NUM_RECTANGLES_ON_SCENE :: 100
@@ -47,9 +47,9 @@ main :: proc() {
 	rl.SetMusicVolume(bg_music, 0.001)
 	rl.PlayMusicStream(bg_music)
 
-
 	game := Game {
 		player = &Player{ghost_pieces = &Ringuffer_t{}, body = [MAX_NUM_BODY]cell_t{}},
+		world = new_world(),
 		scene = &scene_t{},
 		audio = audio_system_t{fx = make([dynamic]^rl.Sound, 0, 20), bg_music = bg_music},
 	}

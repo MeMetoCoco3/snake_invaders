@@ -149,15 +149,6 @@ update_scene :: proc(game: ^Game) {
 			spawn_enemy(game)
 		}
 	}
-
-	// for i in 0 ..< game.scene.count_entities {
-	// 	entity := &game.scene.entities[i]
-	// 	switch entity.kind {
-	// 	case .CANDY:
-	// 	case .STATIC:
-	// 	}
-	// }
-
 }
 
 update_player :: proc(player: ^Player) {
@@ -363,6 +354,9 @@ spawn_bullet :: proc(
 	angle: Vector2,
 	team: BULLET_TEAM,
 ) {
+	add_entity(game.world, .VELOCITY | .ANIMATION)
+
+
 	bullet: Bullet
 
 	bullet.position = origin
@@ -598,8 +592,8 @@ check_collision :: proc(game: ^Game) {
 		enemy := &game.scene.enemies[i]
 		distance_to_player := vec2_distance(center_player, enemy.position)
 		direction := (game.player.position - enemy.position) / distance_to_player
-
-		if distance_to_player < PLAYER_SIZE - EPSILON_COLISION && enemy.state != .DEAD {
+		sum_radius := (PLAYER_SIZE / 2 + enemy.shape.(Circle).r / 2) - EPSILON_COLISION
+		if distance_to_player < sum_radius && enemy.state != .DEAD {
 			switch player.state {
 			case .NORMAL:
 				game.state = .DEAD
@@ -643,16 +637,17 @@ check_collision :: proc(game: ^Game) {
 		for j in 0 ..< game.scene.count_bullets {
 			bullet := &game.scene.bullets[j]
 			if bullet.team == .BAD {
-				sum_radius_player := bullet.shape.(Circle).r + PLAYER_SIZE / 2
-				if vec2_distance(bullet.position, center_player) + EPSILON_COLISION <=
-				   sum_radius_player {
+				sum_radius_player :=
+					(bullet.shape.(Circle).r / 2 + PLAYER_SIZE / 2) - EPSILON_COLISION
+				if vec2_distance(bullet.position, center_player) <= sum_radius_player {
 					game.state = .DEAD
 				}
 				continue
 			}
 
-			sum_radius := bullet.shape.(Circle).r + enemy.shape.(Circle).r
-			if vec2_distance(bullet.position, enemy.position) + EPSILON_COLISION <= sum_radius {
+			sum_radius :=
+				(bullet.shape.(Circle).r / 2 + enemy.shape.(Circle).r / 2) - EPSILON_COLISION
+			if vec2_distance(bullet.position, enemy.position) <= sum_radius {
 				bullet.state = .DEAD
 				enemy.state = .DEAD
 

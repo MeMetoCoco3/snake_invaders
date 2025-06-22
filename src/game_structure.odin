@@ -14,6 +14,7 @@ Game :: struct {
 	candy_respawn_time: int,
 	enemy_respawn_time: int,
 	audio:              audio_system_t,
+	world:              ^World,
 }
 
 GAME_STATE :: enum {
@@ -22,6 +23,7 @@ GAME_STATE :: enum {
 	DEAD,
 	QUIT,
 }
+
 
 Player :: struct {
 	using head:       cell_t,
@@ -37,7 +39,7 @@ Player :: struct {
 	rotation:         f32,
 	next_bullet_size: f32,
 	growing:          bool,
-	animation:        animation_t,
+	animation:        Animation,
 	state:            PLAYER_STATE,
 }
 
@@ -51,59 +53,59 @@ cell_t :: struct {
 	count_turns_left:    i8,
 	size:                f32,
 }
-
-cell_ghost_t :: struct {
-	position, direction: Vector2,
-}
-
-Entity :: struct {
-	using s:   Shape,
-	direction: Vector2,
-	kind:      ENTITY_KIND,
-	speed:     f32,
-	state:     ENTITY_STATE,
-	animation: animation_t,
-}
-
-ENTITY_KIND :: enum {
-	STATIC,
-	CANDY,
-}
-
-
-ENTITY_STATE :: enum {
-	DEAD,
-	ALIVE,
-}
-
-
-Enemy :: struct {
-	using entity:          Entity,
-	behavior:              ENEMY_BEHAVIOR,
-	reload_time:           f32,
-	minimum_distance:      f32,
-	maximum_distance:      f32,
-	time_for_change_state: int,
-}
-
-
-ENEMY_BEHAVIOR :: enum {
-	APROACH,
-	SHOT,
-	GOAWAY,
-}
-
-
-Bullet :: struct {
-	using entity: Entity,
-	team:         BULLET_TEAM,
-}
-
-BULLET_TEAM :: enum {
-	GOOD,
-	BAD,
-}
-
+//
+// cell_ghost_t :: struct {
+// 	position, direction: Vector2,
+// }
+// //
+// // Entity :: struct {
+// // 	using s:   Shape,
+// // 	direction: Vector2,
+// // 	kind:      ENTITY_KIND,
+// // 	speed:     f32,
+// // 	state:     ENTITY_STATE,
+// // 	animation: animation_t,
+// // }
+//
+// ENTITY_KIND :: enum {
+// 	STATIC,
+// 	CANDY,
+// }
+//
+//
+// ENTITY_STATE :: enum {
+// 	DEAD,
+// 	ALIVE,
+// }
+//
+//
+// Enemy :: struct {
+// 	using entity:          Entity,
+// 	behavior:              ENEMY_BEHAVIOR,
+// 	reload_time:           f32,
+// 	minimum_distance:      f32,
+// 	maximum_distance:      f32,
+// 	time_for_change_state: int,
+// }
+//
+//
+// ENEMY_BEHAVIOR :: enum {
+// 	APROACH,
+// 	SHOT,
+// 	GOAWAY,
+// }
+//
+//
+// Bullet :: struct {
+// 	using entity: Entity,
+// 	team:         BULLET_TEAM,
+// }
+//
+// BULLET_TEAM :: enum {
+// 	GOOD,
+// 	BAD,
+// }
+//
 
 ENEMY_SIZE_BULLET :: 16
 TIME_TO_CHANGE_STATE :: 300
@@ -165,67 +167,56 @@ vec2_normalize :: proc(v: ^Vector2) {
 
 
 // TODO: MANDAR A TOMAR POR CULO ESTO
-Shape :: struct {
-	position: Vector2,
-	shape:    Shapes,
-}
+// Shape :: struct {
+// 	position: Vector2,
+// 	shape:    Shapes,
+// }
+//
+// Shapes :: union #no_nil {
+// 	Circle,
+// 	Square,
+// 	Rect,
+// }
+//
+//
+// Circle :: struct {
+// 	r: f32,
+// }
+//
+// Square :: struct {
+// 	w: f32,
+// }
+//
+// Rect :: struct {
+// 	w, h: f32,
+// }
 
-Shapes :: union #no_nil {
-	Circle,
-	Square,
-	Rect,
-}
 
-
-Circle :: struct {
-	r: f32,
-}
-
-Square :: struct {
-	w: f32,
-}
-
-Rect :: struct {
-	w, h: f32,
-}
-
-
-audio_system_t :: struct {
-	bg_music: rl.Music,
-	fx:       [dynamic]^rl.Sound,
-}
-
-FX :: enum {
-	FX_EAT = 0,
-	FX_SHOOT,
-	FX_COUNT,
-}
-
-animation_t :: struct {
-	image:          ^rl.Texture2D,
-	w:              f32,
-	h:              f32,
-	_current_frame: int,
-	num_frames:     int,
-	frame_delay:    int,
-	_time_on_frame: int,
-	padding:        Vector2,
-	offset:         Vector2,
-	kind:           ANIMATION_KIND,
-	angle_type:     ANIM_DIRECTION,
-}
-
-ANIMATION_KIND :: enum {
-	STATIC,
-	REPEAT,
-	NONREPEAT,
-}
-
-ANIM_DIRECTION :: enum {
-	DIRECTIONAL = 0,
-	LR,
-	IGNORE,
-}
+// animation_t :: struct {
+// 	image:          ^rl.texture2d,
+// 	w:              f32,
+// 	h:              f32,
+// 	_current_frame: int,
+// 	num_frames:     int,
+// 	frame_delay:    int,
+// 	_time_on_frame: int,
+// 	padding:        vector2,
+// 	offset:         vector2,
+// 	kind:           animation_kind,
+// 	angle_type:     anim_direction,
+// }
+//
+// ANIMATION_KIND :: enum {
+// 	STATIC,
+// 	REPEAT,
+// 	NONREPEAT,
+// }
+//
+// ANIM_DIRECTION :: enum {
+// 	DIRECTIONAL = 0,
+// 	LR,
+// 	IGNORE,
+// }
 
 TEXTURE :: enum {
 	TX_PLAYER = 0,
