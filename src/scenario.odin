@@ -2,39 +2,57 @@ package main
 import "core:fmt"
 import rl "vendor:raylib"
 
-scene_t :: struct {
-	scenario:       []Shape,
-	entities:       []Entity,
-	spawn_areas:    []Shape,
-	enemies:        []Enemy,
-	bullets:        []Bullet,
-	count_entities: int,
-	count_enemies:  int,
-	count_candies:  int,
-	count_bullets:  int,
-	count_spawners: int,
-	count_scenario: int,
-}
 
 SCENES :: enum {
 	ONE,
 }
 
 
-load_scenario :: proc(scene_to_load: SCENES) -> ^scene_t {
-	s := new(scene_t)
+load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
+	world := game.world
 
-	colliders := make([]Shape, NUM_RECTANGLES_ON_SCENE)
+	mask := COMPONENT_ID.COLLIDER | .SPRITE | .DATA
+	arquetype := world.archetypes[mask]
 
-	colliders_slice := [?]Shape {
-		{{0, 0}, Rect{w = SCREEN_WIDTH, h = PLAYER_SIZE}},
-		{{0, SCREEN_HEIGHT - PLAYER_SIZE}, Rect{w = SCREEN_WIDTH, h = PLAYER_SIZE}},
-		{{0, 0}, Rect{w = PLAYER_SIZE, h = SCREEN_HEIGHT}},
-		{{SCREEN_WIDTH - PLAYER_SIZE, 0}, Rect{w = PLAYER_SIZE, h = SCREEN_HEIGHT}},
+
+	id := add_entity(world, mask)
+	arquetype.colliders[id] = Collider{{0, 0}, SCREEN_WIDTH, PLAYER_SIZE}
+	arquetype.sprites[id] = Sprite {
+		&texture_bank[TEXTURE.TX_PLAYER],
+		{SCREEN_WIDTH, PLAYER_SIZE},
+		{0, 0},
 	}
+	arquetype.data[id] = Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL}
 
-	spawn_areas := make([]Shape, NUM_RECTANGLES_ON_SCENE)
-	spawn_areas_slice := []Shape {
+	id = add_entity(world, mask)
+	arquetype.colliders[id] = Collider{{0, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE}
+	arquetype.sprites[id] = Sprite {
+		&texture_bank[TEXTURE.TX_PLAYER],
+		{SCREEN_WIDTH, PLAYER_SIZE},
+		{0, 0},
+	}
+	arquetype.data[id] = Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL}
+
+	id = add_entity(world, mask)
+	arquetype.colliders[id] = Collider{{0, 0}, PLAYER_SIZE, SCREEN_HEIGHT}
+	arquetype.sprites[id] = Sprite {
+		&texture_bank[TEXTURE.TX_PLAYER],
+		{PLAYER_SIZE, SCREEN_HEIGHT},
+		{0, 0},
+	}
+	arquetype.data[id] = Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL}
+
+	id = add_entity(world, mask)
+	arquetype.colliders[id] = Collider{{SCREEN_WIDTH - PLAYER_SIZE, 0}, PLAYER_SIZE, SCREEN_HEIGHT}
+	arquetype.sprites[id] = Sprite {
+		&texture_bank[TEXTURE.TX_PLAYER],
+		{PLAYER_SIZE, SCREEN_HEIGHT},
+		{0, 0},
+	}
+	arquetype.data[id] = Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL}
+
+	spawn_areas := make([]rl.Rectangle, NUM_RECTANGLES_ON_SCENE)
+	spawn_areas_slice := []rl.Rectangle {
 		get_rec_from_cell(10, (SCREEN_WIDTH / PLAYER_SIZE) - 20, 2, 2),
 		get_rec_from_cell(
 			10,
@@ -51,51 +69,32 @@ load_scenario :: proc(scene_to_load: SCENES) -> ^scene_t {
 		),
 	}
 
-	cnt: int
-	for i in 0 ..< len(colliders_slice) {
-		colliders[i] = colliders_slice[i]
-		cnt += 1
-	}
-
-	s.count_scenario = cnt
-	s.scenario = colliders
-
-	cnt = 0
+	cnt := 0
 	for i in 0 ..< len(spawn_areas_slice) {
 		spawn_areas[i] = spawn_areas_slice[i]
 		cnt += 1
 	}
-	s.count_spawners = cnt
-	s.spawn_areas = spawn_areas
 
-	s.entities = make([]Entity, NUM_ENTITIES)
-	s.enemies = make([]Enemy, NUM_ENTITIES)
-	s.bullets = make([]Bullet, NUM_ENTITIES)
-	s.count_bullets = 0
-	s.count_entities = 0
-	s.count_enemies = 0
-
-	return s
+	game.spawn_areas = spawn_areas
 }
 
 clean_up :: proc(game: ^Game) {
-	free(game.scene)
+	free(game)
 	unload_sounds()
 	unload_textures()
 
 	rl.UnloadMusicStream(game.audio.bg_music)
 
-
 	rl.CloseAudioDevice()
 	rl.CloseWindow()
 }
 
-get_rec_from_cell :: proc(a, b, c, d: int) -> Shape {
+get_rec_from_cell :: proc(a, b, c, d: int) -> rl.Rectangle {
 	x := a * PLAYER_SIZE
 	y := c * PLAYER_SIZE
 
 	w := (b * PLAYER_SIZE)
 	h := (d * PLAYER_SIZE)
 
-	return Shape{{f32(x), f32(y)}, Rect{w = f32(w), h = f32(h)}}
+	return rl.Rectangle{f32(x), f32(y), f32(w), f32(h)}
 }

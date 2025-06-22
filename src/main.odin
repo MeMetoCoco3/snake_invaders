@@ -20,9 +20,12 @@ CANDY_RESPAWN_TIME :: 20
 
 MAX_NUM_ENEMIES :: 1
 ENEMY_RESPAWN_TIME :: 10
+ENEMY_SIZE :: 16
 ENEMY_SPEED :: 1
 ENEMY_COLLIDER_THRESHOLD :: 4
 ENEMY_TIME_RELOAD :: 60
+ENEMY_SIZE_BULLET :: 16
+TIME_TO_CHANGE_STATE :: 300
 
 EPSILON :: 0.5
 EPSILON_COLISION :: 4
@@ -50,7 +53,6 @@ main :: proc() {
 	game := Game {
 		player = &Player{ghost_pieces = &Ringuffer_t{}, body = [MAX_NUM_BODY]cell_t{}},
 		world = new_world(),
-		scene = &scene_t{},
 		audio = audio_system_t{fx = make([dynamic]^rl.Sound, 0, 20), bg_music = bg_music},
 	}
 
@@ -61,7 +63,14 @@ main :: proc() {
 		rl.UpdateMusicStream(game.audio.bg_music)
 		switch game.state {
 		case .PLAY:
+			clear_dead(&game)
+
 			get_input(&game)
+
+			IASystem(&game)
+			CollisionSystem(&game)
+			VelocitySystem(&game)
+
 			update(&game)
 
 			rl.BeginDrawing()

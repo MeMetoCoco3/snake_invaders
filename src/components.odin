@@ -6,11 +6,17 @@ init_component :: proc(archetype: ^Archetype, component: COMPONENT_ID) {
 	case .POSITION:
 		archetype.positions = make([dynamic]Position, 0, 64)
 	case .VELOCITY:
-		archetype.positions = make([dynamic]Position, 0, 64)
+		archetype.velocities = make([dynamic]Velocity, 0, 64)
 	case .SPRITE:
-		archetype.positions = make([dynamic]Position, 0, 64)
+		archetype.sprites = make([dynamic]Sprite, 0, 64)
 	case .ANIMATION:
-		archetype.positions = make([dynamic]Position, 0, 64)
+		archetype.animations = make([dynamic]Animation, 0, 64)
+	case .DATA:
+		archetype.data = make([dynamic]Data, 0, 64)
+	case .COLLIDER:
+		archetype.colliders = make([dynamic]Collider, 0, 64)
+	case .IA:
+		archetype.ias = make([dynamic]IA, 0, 64)
 	case .COUNT:
 	}
 }
@@ -21,8 +27,10 @@ COMPONENT_ID :: enum u64 {
 	VELOCITY  = 2,
 	SPRITE    = 4,
 	ANIMATION = 8,
-	KIND      = 16,
-	COUNT     = 32,
+	DATA      = 16,
+	COLLIDER  = 32,
+	IA        = 64,
+	COUNT     = 128,
 }
 
 Component :: union #no_nil {
@@ -30,8 +38,9 @@ Component :: union #no_nil {
 	Velocity,
 	Sprite,
 	Animation,
-	Collider,
 	Data,
+	Collider,
+	IA,
 }
 
 Position :: struct {
@@ -44,7 +53,9 @@ Velocity :: struct {
 }
 
 Sprite :: struct {
-	texture_id: TEXTURE,
+	texture_id:      ^rl.Texture2D,
+	source_position: Vector2,
+	size:            Vector2,
 }
 
 Animation :: struct {
@@ -74,19 +85,35 @@ ANIM_DIRECTION :: enum {
 }
 
 Collider :: struct {
-	x, y: int,
-	w, h: int,
+	position: Vector2,
+	w, h:     int,
 }
 
 Data :: struct {
-	kind:  ENTITY_KIND,
-	state: ENTITY_STATE,
-	team:  ENTITY_TEAM,
+	kind:         ENTITY_KIND,
+	state:        ENTITY_STATE,
+	team:         ENTITY_TEAM,
+	player_state: PLAYER_STATE,
+}
+
+IA :: struct {
+	behavior:               ENEMY_BEHAVIOR,
+	reload_time:            f32,
+	minimum_distance:       f32,
+	maximum_distance:       f32,
+	_time_for_change_state: int,
+}
+
+ENEMY_BEHAVIOR :: enum {
+	APPROACH,
+	SHOT,
+	GOAWAY,
 }
 
 
 ENTITY_KIND :: enum {
 	STATIC,
+	PLAYER,
 	CANDY,
 	ENEMY,
 	BULLET,
@@ -100,4 +127,5 @@ ENTITY_STATE :: enum {
 ENTITY_TEAM :: enum {
 	GOOD,
 	BAD,
+	NEUTRAL,
 }

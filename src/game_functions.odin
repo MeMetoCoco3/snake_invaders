@@ -89,63 +89,82 @@ get_input_pause :: proc(game: ^Game) {
 // UPDATE //
 ////////////
 update :: proc(game: ^Game) {
-	check_collision(game)
-
-	game.scene.count_entities = clear_dead(&game.scene.entities, game.scene.count_entities)
-	game.scene.count_bullets = clear_dead(&game.scene.bullets, game.scene.count_bullets)
-	game.scene.count_enemies = clear_dead(&game.scene.enemies, game.scene.count_enemies)
-
 	update_player(game.player)
 	update_scene(game)
-	update_enemies(game)
-	update_bullets(game)
+
 	play_sound(game)
 
 	game.enemy_respawn_time += 1
 	game.candy_respawn_time += 1
 	TESTING(game)
 }
-update_enemies :: proc(game: ^Game) {
-	for i in 0 ..< game.scene.count_enemies {
-		update_enemy(game, &game.scene.enemies[i])
+
+
+clear_dead :: proc(game: ^Game) {
+	archetypes := query_archetype(game.world, COMPONENT_ID.DATA)
+	for archetype in archetypes {
+		data := archetype.data
+
+		for i := 0; i < len(archetype.entities_id); {
+			if data[i].state == .DEAD {
+				unordered_remove(&archetype.entities_id, i)
+				for component, index in COMPONENT_ID {
+					if (component & archetype.component_mask) == component {
+						switch component {
+						case .POSITION:
+							unordered_remove(&archetype.positions, i)
+						case .VELOCITY:
+							unordered_remove(&archetype.velocities, i)
+						case .SPRITE:
+							unordered_remove(&archetype.sprites, i)
+						case .ANIMATION:
+							unordered_remove(&archetype.animations, i)
+						case .DATA:
+							unordered_remove(&archetype.data, i)
+						case .COLLIDER:
+							unordered_remove(&archetype.colliders, i)
+						case .IA:
+							unordered_remove(&archetype.ias, i)
+						case .COUNT:
+						}
+
+					}
+				}
+			} else {
+				i += 1
+			}
+		}
+
 	}
+
 }
 
 
-update_bullets :: proc(game: ^Game) {
-	for i in 0 ..< game.scene.count_bullets {
-		bullet := &game.scene.bullets[i]
-		bullet.position += (bullet.direction * bullet.speed)
-	}
-}
-
+// update_enemies :: proc(game: ^Game) {
+// 	for i in 0 ..< game.scene.count_enemies {
+// 		update_enemy(game, &game.scene.enemies[i])
+// 	}
+// }
+//
+//
+// update_bullets :: proc(game: ^Game) {
+// 	for i in 0 ..< game.scene.count_bullets {
+// 		bullet := &game.scene.bullets[i]
+// 		bullet.position += (bullet.direction * bullet.speed)
+// 	}
+// }
 
 update_scene :: proc(game: ^Game) {
-	player := game.player
-
-	if !player.can_dash {
-		player.time_on_dash += 1
-	}
-
-	if player.time_on_dash >= DASH_DURATION {
-		player.speed = PLAYER_SPEED
-		player.state = .NORMAL
-		if player.time_on_dash >= RECOVER_DASH_TIME {
-			player.can_dash = true
-		}
-	}
-
-
 	if game.candy_respawn_time >= CANDY_RESPAWN_TIME {
 		game.candy_respawn_time = 0
-		if game.scene.count_candies < MAX_NUM_CANDIES {
+		if game.count_candies < MAX_NUM_CANDIES {
 			spawn_candy(game)
 		}
 	}
 
 	if game.enemy_respawn_time >= ENEMY_RESPAWN_TIME {
 		game.enemy_respawn_time = 0
-		if game.scene.count_enemies < MAX_NUM_ENEMIES {
+		if game.count_enemies < MAX_NUM_ENEMIES {
 			spawn_enemy(game)
 		}
 	}
@@ -212,55 +231,68 @@ update_player :: proc(player: ^Player) {
 
 		if distance >= PLAYER_SIZE {player.growing = false}
 	}
-}
 
-clear_dead :: proc {
-	clear_dead_entities,
-	clear_dead_enemies,
-	clear_dead_bullets,
-}
 
-clear_dead_entities :: proc(entities: ^[]Entity, count_entities: int) -> int {
-	alive_count := 0
+	if !player.can_dash {
+		player.time_on_dash += 1
+	}
 
-	for i in 0 ..< count_entities {
-		if entities^[i].state == .ALIVE {
-			if i != alive_count {
-				entities^[alive_count], entities^[i] = entities^[i], entities^[alive_count]
-			}
-			alive_count += 1
+	if player.time_on_dash >= DASH_DURATION {
+		player.speed = PLAYER_SPEED
+		player.state = .NORMAL
+		if player.time_on_dash >= RECOVER_DASH_TIME {
+			player.can_dash = true
 		}
 	}
-	return alive_count
 }
 
-clear_dead_enemies :: proc(enemies: ^[]Enemy, count_entities: int) -> int {
-	alive_count := 0
-
-	for i in 0 ..< count_entities {
-		if enemies^[i].state == .ALIVE {
-			if i != alive_count {
-				enemies^[alive_count], enemies^[i] = enemies^[i], enemies^[alive_count]
-			}
-			alive_count += 1
-		}
-	}
-	return alive_count
-}
-
-clear_dead_bullets :: proc(bullets: ^[]Bullet, count_entities: int) -> int {
-	alive_count := 0
-
-	for i in 0 ..< count_entities {
-		if bullets^[i].state == .ALIVE {
-			if i != alive_count {
-				bullets^[alive_count], bullets^[i] = bullets^[i], bullets^[alive_count]
-			}
-			alive_count += 1
-		}
-	}
-	return alive_count
-}
+// clear_dead :: proc {
+// 	clear_dead_entities,
+// 	clear_dead_enemies,
+// 	clear_dead_bullets,
+// }
+//
+// clear_dead_entities :: proc(entities: ^[]Entity, count_entities: int) -> int {
+// 	alive_count := 0
+//
+// 	for i in 0 ..< count_entities {
+// 		if entities^[i].state == .ALIVE {
+// 			if i != alive_count {
+// 				entities^[alive_count], entities^[i] = entities^[i], entities^[alive_count]
+// 			}
+// 			alive_count += 1
+// 		}
+// 	}
+// 	return alive_count
+// }
+//
+// clear_dead_enemies :: proc(enemies: ^[]Enemy, count_entities: int) -> int {
+// 	alive_count := 0
+//
+// 	for i in 0 ..< count_entities {
+// 		if enemies^[i].state == .ALIVE {
+// 			if i != alive_count {
+// 				enemies^[alive_count], enemies^[i] = enemies^[i], enemies^[alive_count]
+// 			}
+// 			alive_count += 1
+// 		}
+// 	}
+// 	return alive_count
+// }
+//
+// clear_dead_bullets :: proc(bullets: ^[]Bullet, count_entities: int) -> int {
+// 	alive_count := 0
+//
+// 	for i in 0 ..< count_entities {
+// 		if bullets^[i].state == .ALIVE {
+// 			if i != alive_count {
+// 				bullets^[alive_count], bullets^[i] = bullets^[i], bullets^[alive_count]
+// 			}
+// 			alive_count += 1
+// 		}
+// 	}
+// 	return alive_count
+// }
 
 
 grow_body :: proc(player: ^Player) {
@@ -305,124 +337,140 @@ dealing_ghost_piece :: proc(player: ^Player, last_piece: i8) {
 // SPAWN //
 ///////////
 spawn_enemy :: proc(game: ^Game) {
-	enemy: Enemy
+	random_index := rand.int_max(len(game.spawn_areas))
 
-	random_index := rand.int_max(game.scene.count_spawners)
+	rect := game.spawn_areas[random_index]
 
-	spawn_area := game.scene.spawn_areas[random_index]
-	rect := spawn_area.shape.(Rect)
 
-	x := spawn_area.position.x + rand.float32() * rect.w
-	y := spawn_area.position.y + rand.float32() * rect.h
+	x := rect.x + rand.float32() * rect.width
+	y := rect.y + rand.float32() * rect.height
 
 	x = math.floor(x / PLAYER_SIZE) * PLAYER_SIZE
 	y = math.floor(y / PLAYER_SIZE) * PLAYER_SIZE
 
-	enemy.position = Vector2{x, y}
-	enemy.state = .ALIVE
-	enemy.shape = Circle {
-		r = PLAYER_SIZE * 2,
-	}
+	mask := (COMPONENT_ID.POSITION | .VELOCITY | .ANIMATION | .COLLIDER | .DATA | .IA)
+	add_entity(game.world, mask)
 
-	enemy.behavior = .APROACH
-	enemy.reload_time = 60
-	enemy.maximum_distance = 500
-	enemy.minimum_distance = 100
+	archetype := game.world.archetypes[mask]
 
-
-	enemy.speed = ENEMY_SPEED
-
-	enemy.animation = {
-		image       = &texture_bank[TEXTURE.TX_ENEMY],
-		w           = 32,
-		h           = 32,
-		frame_delay = 6,
-		num_frames  = 4,
-		kind        = .REPEAT,
-		angle_type  = .LR,
-	}
+	append(&archetype.positions, Position{{x, y}})
+	append(&archetype.velocities, Velocity{{0, 0}, ENEMY_SPEED})
+	append(
+		&archetype.animations,
+		Animation {
+			image = &texture_bank[TEXTURE.TX_ENEMY],
+			w = 32,
+			h = 32,
+			frame_delay = 6,
+			num_frames = 4,
+			kind = .REPEAT,
+			angle_type = .LR,
+		},
+	)
 
 
-	game.scene.enemies[game.scene.count_enemies] = enemy
-	game.scene.count_enemies += 1
+	colision_origin := Vector2{x, y} + EPSILON_COLISION
+	append(
+		&archetype.colliders,
+		Collider {
+			colision_origin,
+			ENEMY_SIZE - EPSILON_COLISION * 2,
+			ENEMY_SIZE - EPSILON_COLISION * 2,
+		},
+	)
+
+	append(&archetype.data, Data{.ENEMY, .ALIVE, .BAD, .NORMAL})
+	append(&archetype.ias, IA{.APPROACH, 60, 100, 500, 0})
 }
 
 spawn_bullet :: proc(
 	game: ^Game,
 	origin: Vector2,
 	bullet_size: f32,
-	angle: Vector2,
-	team: BULLET_TEAM,
+	direction: Vector2,
+	team: ENTITY_TEAM,
 ) {
-	add_entity(game.world, .VELOCITY | .ANIMATION)
+	mask := (COMPONENT_ID.POSITION | .VELOCITY | .ANIMATION | .COLLIDER | .DATA)
+	add_entity(game.world, mask)
 
+	archetype := game.world.archetypes[mask]
 
-	bullet: Bullet
-
-	bullet.position = origin
-	bullet.shape = Circle {
-		r = bullet_size,
-	}
-
-	bullet.direction = angle
-	bullet.speed = BULLET_SPEED
-	bullet.state = .ALIVE
-
-	bullet.animation = {
-		image       = &texture_bank[TEXTURE.TX_BULLET],
-		w           = 16,
-		h           = 16,
-		num_frames  = 4,
-		frame_delay = 6,
-		kind        = .REPEAT,
-		angle_type  = .DIRECTIONAL,
-	}
-
-	bullet.team = team
-
-	game.scene.bullets[game.scene.count_bullets] = bullet
-	game.scene.count_bullets += 1
+	append(&archetype.positions, Position{origin})
+	append(&archetype.velocities, Velocity{direction, BULLET_SPEED})
+	append(
+		&archetype.animations,
+		Animation {
+			image = &texture_bank[TEXTURE.TX_BULLET],
+			w = 16,
+			h = 16,
+			num_frames = 4,
+			frame_delay = 6,
+			kind = .REPEAT,
+			angle_type = .DIRECTIONAL,
+		},
+	)
+	append(
+		&archetype.colliders,
+		Collider {
+			origin + EPSILON_COLISION,
+			BULLET_SIZE - EPSILON_COLISION * 2,
+			BULLET_SIZE - EPSILON_COLISION * 2,
+		},
+	)
+	append(&archetype.data, Data{.BULLET, .ALIVE, team, .NORMAL})
 
 }
 
 spawn_candy :: proc(game: ^Game) {
-	candy: Entity
+	mask := (COMPONENT_ID.POSITION | .ANIMATION | .COLLIDER | .DATA)
+	add_entity(game.world, mask)
+
+	archetype := game.world.archetypes[mask]
 
 	pos_x := rand.int_max((SCREEN_WIDTH / (PLAYER_SIZE * 2)) - 1)
+	pos_x = int(
+		clamp(
+			f32(pos_x * PLAYER_SIZE * 2 + PLAYER_SIZE / 2),
+			PLAYER_SIZE * 2.5,
+			SCREEN_WIDTH - PLAYER_SIZE * 2.5,
+		),
+	)
+
 	pos_y := rand.int_max((SCREEN_HEIGHT / (PLAYER_SIZE * 2)) - 1)
-
-	candy.position.x = clamp(
-		f32(pos_x * PLAYER_SIZE * 2 + PLAYER_SIZE / 2),
-		PLAYER_SIZE * 2.5,
-		SCREEN_WIDTH - PLAYER_SIZE * 2.5,
+	pos_y = int(
+		clamp(
+			f32(pos_y * PLAYER_SIZE * 2 + PLAYER_SIZE / 2),
+			PLAYER_SIZE * 2.5,
+			SCREEN_HEIGHT - PLAYER_SIZE * 2.5,
+		),
 	)
 
-	candy.position.y = clamp(
-		f32(pos_y * PLAYER_SIZE * 2 + PLAYER_SIZE / 2),
-		PLAYER_SIZE * 2.5,
-		SCREEN_HEIGHT - PLAYER_SIZE * 2.5,
+	append(&archetype.positions, Position{{f32(pos_x), f32(pos_y)}})
+	append(&archetype.data, Data{.CANDY, .ALIVE, .GOOD, .NORMAL})
+	append(
+		&archetype.animations,
+		Animation {
+			image = &texture_bank[TEXTURE.TX_CANDY],
+			w = 16,
+			h = 16,
+			num_frames = 16,
+			frame_delay = 4,
+			kind = .REPEAT,
+			angle_type = .IGNORE,
+		},
 	)
 
+	collider_position := Vector2{f32(pos_x), f32(pos_y)} + EPSILON_COLISION
 
-	candy.kind = .CANDY
-	candy.state = .ALIVE
-	candy.shape = Circle {
-		r = CANDY_SIZE,
-	}
+	append(
+		&archetype.colliders,
+		Collider {
+			collider_position,
+			CANDY_SIZE - EPSILON_COLISION * 2,
+			CANDY_SIZE - EPSILON_COLISION * 2,
+		},
+	)
 
-	candy.animation = animation_t {
-		image       = &texture_bank[TEXTURE.TX_CANDY],
-		w           = 16,
-		h           = 16,
-		num_frames  = 16,
-		frame_delay = 4,
-		kind        = .REPEAT,
-		angle_type  = .IGNORE,
-	}
-
-	game.scene.entities[game.scene.count_entities] = candy
-	game.scene.count_entities += 1
-	game.scene.count_candies += 1
 }
 
 ////////////
@@ -430,82 +478,83 @@ spawn_candy :: proc(game: ^Game) {
 ////////////
 draw_game :: proc(game: ^Game) {
 	draw_grid({100, 100, 100, 255})
-	draw_scene(game)
+	// draw_scene(game)
 	draw_player(game.player)
 	draw_ghost_cells(game.player.ghost_pieces)
+	RenderingSystem(game)
 }
 
-draw_scene :: proc(game: ^Game) {
-	for i in 0 ..< game.scene.count_scenario {
-		rectangle := game.scene.scenario[i]
-		rec := rl.Rectangle {
-			rectangle.position.x,
-			rectangle.position.y,
-			rectangle.shape.(Rect).w,
-			rectangle.shape.(Rect).h,
-		}
-		rl.DrawRectangleRec(rec, rl.YELLOW)
-	}
-
-	for i in 0 ..< game.scene.count_spawners {
-		rectangle := game.scene.spawn_areas[i]
-		rec := rl.Rectangle {
-			rectangle.position.x,
-			rectangle.position.y,
-			rectangle.shape.(Rect).w,
-			rectangle.shape.(Rect).h,
-		}
-		rl.DrawRectangleRec(rec, rl.PINK)
-	}
-
-	for i in 0 ..< game.scene.count_entities {
-		entity := &game.scene.entities[i]
-		color: rl.Color
-
-		switch entity.kind {
-		case .STATIC:
-			color = rl.YELLOW
-		case .CANDY:
-			color = rl.WHITE
-		}
-		switch s in entity.shape {
-		case Circle:
-			rl.DrawCircle(i32(entity.position.x), i32(entity.position.y), s.r / 2, color)
-			draw(entity)
-		case Square:
-			rec := rl.Rectangle{entity.position.x, entity.position.y, s.w, s.w}
-			rl.DrawRectangleRec(rec, color)
-			draw(entity)
-		case Rect:
-			rec := rl.Rectangle{entity.position.x, entity.position.y, s.w, s.h}
-			rl.DrawRectangleRec(rec, color)
-			draw(entity)
-		}
-
-	}
-
-	for i in 0 ..< game.scene.count_enemies {
-		enemy := &game.scene.enemies[i]
-		rl.DrawCircle(
-			i32(enemy.position.x),
-			i32(enemy.position.y),
-			enemy.shape.(Circle).r / 2 - EPSILON_COLISION,
-			rl.RED,
-		)
-		draw(enemy)
-
-	}
-	for i in 0 ..< game.scene.count_bullets {
-		bullet := &game.scene.bullets[i]
-		rl.DrawCircle(
-			i32(bullet.position.x),
-			i32(bullet.position.y),
-			bullet.shape.(Circle).r / 2 - EPSILON_COLISION,
-			rl.BLUE,
-		)
-		draw(bullet)
-	}
-}
+// draw_scene :: proc(game: ^Game) {
+// 	for i in 0 ..< game.scene.count_scenario {
+// 		rectangle := game.scene.scenario[i]
+// 		rec := rl.Rectangle {
+// 			rectangle.position.x,
+// 			rectangle.position.y,
+// 			rectangle.shape.(Rect).w,
+// 			rectangle.shape.(Rect).h,
+// 		}
+// 		rl.DrawRectangleRec(rec, rl.YELLOW)
+// 	}
+//
+// 	for i in 0 ..< game.scene.count_spawners {
+// 		rectangle := game.scene.spawn_areas[i]
+// 		rec := rl.Rectangle {
+// 			rectangle.position.x,
+// 			rectangle.position.y,
+// 			rectangle.shape.(Rect).w,
+// 			rectangle.shape.(Rect).h,
+// 		}
+// 		rl.DrawRectangleRec(rec, rl.PINK)
+// 	}
+//
+// 	for i in 0 ..< game.scene.count_entities {
+// 		entity := &game.scene.entities[i]
+// 		color: rl.Color
+//
+// 		switch entity.kind {
+// 		case .STATIC:
+// 			color = rl.YELLOW
+// 		case .CANDY:
+// 			color = rl.WHITE
+// 		}
+// 		switch s in entity.shape {
+// 		case Circle:
+// 			rl.DrawCircle(i32(entity.position.x), i32(entity.position.y), s.r / 2, color)
+// 			draw(entity)
+// 		case Square:
+// 			rec := rl.Rectangle{entity.position.x, entity.position.y, s.w, s.w}
+// 			rl.DrawRectangleRec(rec, color)
+// 			draw(entity)
+// 		case Rect:
+// 			rec := rl.Rectangle{entity.position.x, entity.position.y, s.w, s.h}
+// 			rl.DrawRectangleRec(rec, color)
+// 			draw(entity)
+// 		}
+//
+// 	}
+//
+// 	for i in 0 ..< game.scene.count_enemies {
+// 		enemy := &game.scene.enemies[i]
+// 		rl.DrawCircle(
+// 			i32(enemy.position.x),
+// 			i32(enemy.position.y),
+// 			enemy.shape.(Circle).r / 2 - EPSILON_COLISION,
+// 			rl.RED,
+// 		)
+// 		draw(enemy)
+//
+// 	}
+// 	for i in 0 ..< game.scene.count_bullets {
+// 		bullet := &game.scene.bullets[i]
+// 		rl.DrawCircle(
+// 			i32(bullet.position.x),
+// 			i32(bullet.position.y),
+// 			bullet.shape.(Circle).r / 2 - EPSILON_COLISION,
+// 			rl.BLUE,
+// 		)
+// 		draw(bullet)
+// 	}
+// }
 
 draw_player :: proc(player: ^Player) {
 	for i in 0 ..< player.num_cells {
@@ -562,131 +611,131 @@ draw_ghost_cells :: proc(rb: ^Ringuffer_t) {
 /////////////
 // COLLIDE //
 /////////////
-check_collision :: proc(game: ^Game) {
-	player := game.player
-
-	future_pos := player.head.position + player.next_dir * f32(player.speed)
-
-	center_player := player.head.position
-	center_player += PLAYER_SIZE / 2
-
-	for i in 0 ..< game.scene.count_entities {
-		entity := &game.scene.entities[i]
-		switch entity.kind {
-		case .CANDY:
-			if vec2_distance(center_player, entity.position) + EPSILON_COLISION < PLAYER_SIZE &&
-			   entity.state != .DEAD {
-				game.scene.entities[i].state = .DEAD
-				game.scene.count_candies -= 1
-
-				add_sound(game, &sound_bank[FX.FX_EAT])
-				grow_body(game.player)
-			}
-		case .STATIC:
-		}
-
-	}
-
-
-	for i in 0 ..< game.scene.count_enemies {
-		enemy := &game.scene.enemies[i]
-		distance_to_player := vec2_distance(center_player, enemy.position)
-		direction := (game.player.position - enemy.position) / distance_to_player
-		sum_radius := (PLAYER_SIZE / 2 + enemy.shape.(Circle).r / 2) - EPSILON_COLISION
-		if distance_to_player < sum_radius && enemy.state != .DEAD {
-			switch player.state {
-			case .NORMAL:
-				game.state = .DEAD
-				break
-			case .DASH:
-				game.scene.entities[i].state = .DEAD
-
-				add_sound(game, &sound_bank[FX.FX_EAT])
-				grow_body(game.player)
-				game.scene.count_enemies -= 1
-				continue
-			}
-		}
-
-		switch enemy.behavior {
-		case .APROACH:
-			direction = direction
-		case .GOAWAY:
-			direction = -direction
-		case .SHOT:
-			direction = Vector2{0, 0}
-		}
-
-		for j in 0 ..< game.scene.count_scenario {
-			rectangle := game.scene.scenario[j]
-			future_pos_enemy := enemy.position + (enemy.direction * enemy.speed)
-			if rec_colliding_no_edges(
-				rectangle.position,
-				rectangle.shape.(Rect).w,
-				rectangle.shape.(Rect).h,
-				future_pos_enemy,
-				enemy.shape.(Circle).r,
-				enemy.shape.(Circle).r,
-			) {
-				direction = Vector2{0, 0}
-				break
-			}
-		}
-		enemy.direction = direction
-
-		for j in 0 ..< game.scene.count_bullets {
-			bullet := &game.scene.bullets[j]
-			if bullet.team == .BAD {
-				sum_radius_player :=
-					(bullet.shape.(Circle).r / 2 + PLAYER_SIZE / 2) - EPSILON_COLISION
-				if vec2_distance(bullet.position, center_player) <= sum_radius_player {
-					game.state = .DEAD
-				}
-				continue
-			}
-
-			sum_radius :=
-				(bullet.shape.(Circle).r / 2 + enemy.shape.(Circle).r / 2) - EPSILON_COLISION
-			if vec2_distance(bullet.position, enemy.position) <= sum_radius {
-				bullet.state = .DEAD
-				enemy.state = .DEAD
-
-				game.scene.count_enemies -= 1
-				game.scene.count_bullets -= 1
-				continue
-			}
-
-			for k in 0 ..< game.scene.count_scenario {
-				rectangle := game.scene.scenario[k]
-				future_pos_bullet := bullet.position + (bullet.direction * bullet.speed)
-				if rec_colliding_no_edges(
-					rectangle.position,
-					rectangle.shape.(Rect).w,
-					rectangle.shape.(Rect).h,
-					future_pos_bullet,
-					bullet.shape.(Circle).r,
-					bullet.shape.(Circle).r,
-				) {
-					fmt.println("BOOM ROASTED")
-					bullet.state = .DEAD
-				}
-			}
-		}
-	}
-	for i in 0 ..< game.scene.count_scenario {
-		rectangle := game.scene.scenario[i]
-		if rec_colliding_no_edges(
-			rectangle.position,
-			rectangle.shape.(Rect).w,
-			rectangle.shape.(Rect).h,
-			future_pos,
-			PLAYER_SIZE,
-			PLAYER_SIZE,
-		) {
-			player.next_dir = {0, 0}
-		}
-	}
-}
+// check_collision :: proc(game: ^Game) {
+// 	player := game.player
+//
+// 	future_pos := player.head.position + player.next_dir * f32(player.speed)
+//
+// 	center_player := player.head.position
+// 	center_player += PLAYER_SIZE / 2
+//
+// 	for i in 0 ..< game.scene.count_entities {
+// 		entity := &game.scene.entities[i]
+// 		switch entity.kind {
+// 		case .CANDY:
+// 			if vec2_distance(center_player, entity.position) + EPSILON_COLISION < PLAYER_SIZE &&
+// 			   entity.state != .DEAD {
+// 				game.scene.entities[i].state = .DEAD
+// 				game.scene.count_candies -= 1
+//
+// 				add_sound(game, &sound_bank[FX.FX_EAT])
+// 				grow_body(game.player)
+// 			}
+// 		case .STATIC:
+// 		}
+//
+// 	}
+//
+//
+// 	for i in 0 ..< game.scene.count_enemies {
+// 		enemy := &game.scene.enemies[i]
+// 		distance_to_player := vec2_distance(center_player, enemy.position)
+// 		direction := (game.player.position - enemy.position) / distance_to_player
+// 		sum_radius := (PLAYER_SIZE / 2 + enemy.shape.(Circle).r / 2) - EPSILON_COLISION
+// 		if distance_to_player < sum_radius && enemy.state != .DEAD {
+// 			switch player.state {
+// 			case .NORMAL:
+// 				game.state = .DEAD
+// 				break
+// 			case .DASH:
+// 				game.scene.entities[i].state = .DEAD
+//
+// 				add_sound(game, &sound_bank[FX.FX_EAT])
+// 				grow_body(game.player)
+// 				game.scene.count_enemies -= 1
+// 				continue
+// 			}
+// 		}
+//
+// 		switch enemy.behavior {
+// 		case .APROACH:
+// 			direction = direction
+// 		case .GOAWAY:
+// 			direction = -direction
+// 		case .SHOT:
+// 			direction = Vector2{0, 0}
+// 		}
+//
+// 		for j in 0 ..< game.scene.count_scenario {
+// 			rectangle := game.scene.scenario[j]
+// 			future_pos_enemy := enemy.position + (enemy.direction * enemy.speed)
+// 			if rec_colliding_no_edges(
+// 				rectangle.position,
+// 				rectangle.shape.(Rect).w,
+// 				rectangle.shape.(Rect).h,
+// 				future_pos_enemy,
+// 				enemy.shape.(Circle).r,
+// 				enemy.shape.(Circle).r,
+// 			) {
+// 				direction = Vector2{0, 0}
+// 				break
+// 			}
+// 		}
+// 		enemy.direction = direction
+//
+// 		for j in 0 ..< game.scene.count_bullets {
+// 			bullet := &game.scene.bullets[j]
+// 			if bullet.team == .BAD {
+// 				sum_radius_player :=
+// 					(bullet.shape.(Circle).r / 2 + PLAYER_SIZE / 2) - EPSILON_COLISION
+// 				if vec2_distance(bullet.position, center_player) <= sum_radius_player {
+// 					game.state = .DEAD
+// 				}
+// 				continue
+// 			}
+//
+// 			sum_radius :=
+// 				(bullet.shape.(Circle).r / 2 + enemy.shape.(Circle).r / 2) - EPSILON_COLISION
+// 			if vec2_distance(bullet.position, enemy.position) <= sum_radius {
+// 				bullet.state = .DEAD
+// 				enemy.state = .DEAD
+//
+// 				game.scene.count_enemies -= 1
+// 				game.scene.count_bullets -= 1
+// 				continue
+// 			}
+//
+// 			for k in 0 ..< game.scene.count_scenario {
+// 				rectangle := game.scene.scenario[k]
+// 				future_pos_bullet := bullet.position + (bullet.direction * bullet.speed)
+// 				if rec_colliding_no_edges(
+// 					rectangle.position,
+// 					rectangle.shape.(Rect).w,
+// 					rectangle.shape.(Rect).h,
+// 					future_pos_bullet,
+// 					bullet.shape.(Circle).r,
+// 					bullet.shape.(Circle).r,
+// 				) {
+// 					fmt.println("BOOM ROASTED")
+// 					bullet.state = .DEAD
+// 				}
+// 			}
+// 		}
+// 	}
+// 	for i in 0 ..< game.scene.count_scenario {
+// 		rectangle := game.scene.scenario[i]
+// 		if rec_colliding_no_edges(
+// 			rectangle.position,
+// 			rectangle.shape.(Rect).w,
+// 			rectangle.shape.(Rect).h,
+// 			future_pos,
+// 			PLAYER_SIZE,
+// 			PLAYER_SIZE,
+// 		) {
+// 			player.next_dir = {0, 0}
+// 		}
+// 	}
+// }
 
 aligned_to_grid :: proc(p: Vector2) -> bool {
 	return i32(p.x) % PLAYER_SIZE == 0 && i32(p.y) % PLAYER_SIZE == 0

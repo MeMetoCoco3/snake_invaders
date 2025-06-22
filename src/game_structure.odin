@@ -9,10 +9,12 @@ Vector2 :: [2]f32
 Game :: struct {
 	state:              GAME_STATE,
 	player:             ^Player,
-	scene:              ^scene_t,
+	spawn_areas:        []rl.Rectangle,
 	current_scene:      SCENES,
 	candy_respawn_time: int,
 	enemy_respawn_time: int,
+	count_enemies:      int,
+	count_candies:      int,
 	audio:              audio_system_t,
 	world:              ^World,
 }
@@ -53,10 +55,10 @@ cell_t :: struct {
 	count_turns_left:    i8,
 	size:                f32,
 }
-//
-// cell_ghost_t :: struct {
-// 	position, direction: Vector2,
-// }
+
+cell_ghost_t :: struct {
+	position, direction: Vector2,
+}
 // //
 // // Entity :: struct {
 // // 	using s:   Shape,
@@ -107,43 +109,40 @@ cell_t :: struct {
 // }
 //
 
-ENEMY_SIZE_BULLET :: 16
-TIME_TO_CHANGE_STATE :: 300
 
-
-update_enemy :: proc(game: ^Game, enemy: ^Enemy) {
-	distance_to_player := vec2_distance(game.player.position, enemy.position)
-
-	if enemy.time_for_change_state > TIME_TO_CHANGE_STATE {
-		enemy.time_for_change_state = 0
-		switch {
-		case distance_to_player > enemy.maximum_distance:
-			enemy.behavior = .APROACH
-		case distance_to_player < enemy.minimum_distance:
-			enemy.behavior = .GOAWAY
-		case:
-			enemy.behavior = .SHOT
-		}} else {
-		enemy.time_for_change_state += 1
-	}
-
-
-	direction := (game.player.position - enemy.position) / distance_to_player
-	if enemy.behavior == .SHOT {
-		enemy.direction = {0, 0}
-		if enemy.reload_time >= ENEMY_TIME_RELOAD {
-			spawn_bullet(game, enemy.position, ENEMY_SIZE_BULLET, direction, .BAD)
-			fmt.println(game.scene.count_bullets)
-			enemy.reload_time = 0
-		} else {
-			enemy.reload_time += 1
-		}
-	}
-
-	fmt.println("ENEMY DIRECTION", enemy.direction)
-	enemy.position += (enemy.direction * enemy.speed)
-}
-
+// update_enemy :: proc(game: ^Game, enemy: ^Enemy) {
+// 	distance_to_player := vec2_distance(game.player.position, enemy.position)
+//
+// 	if enemy.time_for_change_state > TIME_TO_CHANGE_STATE {
+// 		enemy.time_for_change_state = 0
+// 		switch {
+// 		case distance_to_player > enemy.maximum_distance:
+// 			enemy.behavior = .APROACH
+// 		case distance_to_player < enemy.minimum_distance:
+// 			enemy.behavior = .GOAWAY
+// 		case:
+// 			enemy.behavior = .SHOT
+// 		}} else {
+// 		enemy.time_for_change_state += 1
+// 	}
+//
+//
+// 	direction := (game.player.position - enemy.position) / distance_to_player
+// 	if enemy.behavior == .SHOT {
+// 		enemy.direction = {0, 0}
+// 		if enemy.reload_time >= ENEMY_TIME_RELOAD {
+// 			spawn_bullet(game, enemy.position, ENEMY_SIZE_BULLET, direction, .BAD)
+// 			fmt.println(game.scene.count_bullets)
+// 			enemy.reload_time = 0
+// 		} else {
+// 			enemy.reload_time += 1
+// 		}
+// 	}
+//
+// 	fmt.println("ENEMY DIRECTION", enemy.direction)
+// 	enemy.position += (enemy.direction * enemy.speed)
+// }
+//
 radians_from_vector :: proc(v: Vector2) -> f32 {
 	return math.atan2_f32(v.y, v.x)
 
@@ -165,59 +164,6 @@ vec2_normalize :: proc(v: ^Vector2) {
 	v.y = y
 }
 
-
-// TODO: MANDAR A TOMAR POR CULO ESTO
-// Shape :: struct {
-// 	position: Vector2,
-// 	shape:    Shapes,
-// }
-//
-// Shapes :: union #no_nil {
-// 	Circle,
-// 	Square,
-// 	Rect,
-// }
-//
-//
-// Circle :: struct {
-// 	r: f32,
-// }
-//
-// Square :: struct {
-// 	w: f32,
-// }
-//
-// Rect :: struct {
-// 	w, h: f32,
-// }
-
-
-// animation_t :: struct {
-// 	image:          ^rl.texture2d,
-// 	w:              f32,
-// 	h:              f32,
-// 	_current_frame: int,
-// 	num_frames:     int,
-// 	frame_delay:    int,
-// 	_time_on_frame: int,
-// 	padding:        vector2,
-// 	offset:         vector2,
-// 	kind:           animation_kind,
-// 	angle_type:     anim_direction,
-// }
-//
-// ANIMATION_KIND :: enum {
-// 	STATIC,
-// 	REPEAT,
-// 	NONREPEAT,
-// }
-//
-// ANIM_DIRECTION :: enum {
-// 	DIRECTIONAL = 0,
-// 	LR,
-// 	IGNORE,
-// }
-
 TEXTURE :: enum {
 	TX_PLAYER = 0,
 	TX_ENEMY,
@@ -231,53 +177,100 @@ texture_bank: [TEXTURE.TX_COUNT]rl.Texture2D
 sound_bank: [FX.FX_COUNT]rl.Sound
 bg_music: rl.Music
 
-draw :: proc {
-	draw_entity_animation,
+draw :: proc {// draw_entity_animation,
 	draw_player_animation,
+	draw_sprite,
+	draw_animated_sprite,
 }
 
-draw_entity_animation :: proc(entity: ^Entity) {
-	anim := &entity.animation
-	if anim._current_frame >= anim.num_frames {
-		anim._current_frame = 0
+
+draw_animated_sprite :: proc(position: Position, animation: ^Animation, velocity: Velocity) {
+	if animation._current_frame >= animation.num_frames {
+		animation._current_frame = 0
 	}
-	src_rec := rl.Rectangle{f32(32 * anim._current_frame), 0, anim.w, anim.h}
+	src_rec := rl.Rectangle{f32(32 * animation._current_frame), 0, animation.w, animation.h}
 
 	angle: f32
-	switch anim.angle_type {
+	switch animation.angle_type {
 	case .LR:
-		if entity.direction.x > 0.1 {
+		if radians_from_vector(velocity.direction) > 0.1 {
 			src_rec.width *= -1
 		}
 	case .DIRECTIONAL:
-		angle = math.atan2(entity.direction.y, entity.direction.x) * 180 / math.PI
+		angle = math.atan2(velocity.direction.y, velocity.direction.x) * 180 / math.PI
 	case .IGNORE:
 	}
 
-	entity_size: [2]f32
+	dst_rec := rl.Rectangle{position.position.x, position.position.y, animation.w, animation.h}
 
-	switch s in entity.shape {
-	case Circle:
-		entity_size = {s.r, s.r}
-	case Rect:
-		entity_size = {s.w, s.h}
-	case Square:
-		entity_size = {s.w, s.w}
+	origin := Vector2{position.position.x + animation.w / 2, position.position.y + animation.h / 2}
+	rl.DrawTexturePro(animation.image^, src_rec, dst_rec, origin, f32(angle), rl.WHITE)
+
+	if animation._time_on_frame >= animation.frame_delay && animation.kind != .STATIC {
+		animation._current_frame += 1
+		animation._time_on_frame = 0
 	}
 
-
-	dst_rec := rl.Rectangle{entity.position.x, entity.position.y, entity_size.x, entity_size.y}
-
-	origin := Vector2{entity_size.x / 2, entity_size.y / 2}
-	rl.DrawTexturePro(anim.image^, src_rec, dst_rec, origin, f32(angle), rl.WHITE)
-
-	if anim._time_on_frame >= anim.frame_delay && anim.kind != .STATIC {
-		anim._current_frame += 1
-		anim._time_on_frame = 0
-	}
-	anim._time_on_frame += 1
+	animation._time_on_frame += 1
 }
 
+draw_sprite :: proc(position: Position, sprite: Sprite) {
+	src_rec := rl.Rectangle {
+		sprite.source_position.x,
+		sprite.source_position.y,
+		sprite.size[0],
+		sprite.size[1],
+	}
+
+	dst_rec := rl.Rectangle{position.position.x, position.position.y, sprite.size.x, sprite.size.y}
+
+	origin := Vector2{sprite.size.x / 2, sprite.size.y / 2}
+	rl.DrawTexturePro(sprite.texture_id^, src_rec, dst_rec, origin, 0, rl.WHITE)
+}
+
+
+// draw_entity_animation :: proc(entity: ^Entity) {
+// 	anim := &entity.animation
+// 	if anim._current_frame >= anim.num_frames {
+// 		anim._current_frame = 0
+// 	}
+// 	src_rec := rl.Rectangle{f32(32 * anim._current_frame), 0, anim.w, anim.h}
+//
+// 	angle: f32
+// 	switch anim.angle_type {
+// 	case .LR:
+// 		if entity.direction.x > 0.1 {
+// 			src_rec.width *= -1
+// 		}
+// 	case .DIRECTIONAL:
+// 		angle = math.atan2(entity.direction.y, entity.direction.x) * 180 / math.PI
+// 	case .IGNORE:
+// 	}
+//
+// 	entity_size: [2]f32
+//
+// 	switch s in entity.shape {
+// 	case Circle:
+// 		entity_size = {s.r, s.r}
+// 	case Rect:
+// 		entity_size = {s.w, s.h}
+// 	case Square:
+// 		entity_size = {s.w, s.w}
+// 	}
+//
+//
+// 	dst_rec := rl.Rectangle{entity.position.x, entity.position.y, entity_size.x, entity_size.y}
+//
+// 	origin := Vector2{entity_size.x / 2, entity_size.y / 2}
+// 	rl.DrawTexturePro(anim.image^, src_rec, dst_rec, origin, f32(angle), rl.WHITE)
+//
+// 	if anim._time_on_frame >= anim.frame_delay && anim.kind != .STATIC {
+// 		anim._current_frame += 1
+// 		anim._time_on_frame = 0
+// 	}
+// 	anim._time_on_frame += 1
+// }
+//
 
 draw_player_animation :: proc(player: ^Player) {
 	src_rec := rl.Rectangle{0, 32, PLAYER_SIZE, PLAYER_SIZE}
@@ -377,7 +370,6 @@ load_scene :: proc(game: ^Game, scene: SCENES) {
 	}
 
 	game.state = .PLAY
-	game.scene = load_scenario(scene)
 	game.current_scene = scene
 	game.candy_respawn_time = 0
 	game.enemy_respawn_time = 0
