@@ -1,6 +1,8 @@
 
 package main
 import rl "vendor:raylib"
+
+
 Archetype :: struct {
 	component_mask: COMPONENT_ID,
 	entities_id:    [dynamic]u32,
@@ -16,7 +18,6 @@ Archetype :: struct {
 Entity :: struct {
 	id:        u32,
 	archetype: ^Archetype,
-	// index:     u64,
 }
 
 World :: struct {
@@ -44,17 +45,6 @@ add_entity :: proc(world: ^World, mask: COMPONENT_ID) -> u32 {
 
 	append(&arch.entities_id, entity_id)
 	return entity_id
-	// for component in components {
-	// 	switch type in component {
-	// 	case Position:
-	// 		append(&arch.positions, component.(Position))
-	// 	case Velocity:
-	// 		append(&arch.velocities, component.(Velocity))
-	// 	case Sprite:
-	// 		append(&arch.sprites, component.(Sprite))
-	// 	}
-	// }
-	//
 }
 
 

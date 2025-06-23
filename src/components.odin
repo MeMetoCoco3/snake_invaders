@@ -44,7 +44,8 @@ Component :: union #no_nil {
 }
 
 Position :: struct {
-	position: Vector2,
+	pos:  Vector2,
+	size: Vector2,
 }
 
 Velocity :: struct {

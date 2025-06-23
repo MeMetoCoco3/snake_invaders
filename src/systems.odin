@@ -1,5 +1,5 @@
 package main
-
+import "core:fmt"
 import rl "vendor:raylib"
 
 
@@ -16,7 +16,6 @@ FX :: enum {
 
 
 CollisionSystem :: proc(game: ^Game) {
-
 	arquetypesA, is_empty := query_archetype(
 		game.world,
 		COMPONENT_ID.COLLIDER | .DATA | .VELOCITY | .POSITION,
@@ -27,7 +26,6 @@ CollisionSystem :: proc(game: ^Game) {
 
 	// No need to check 2 colliders if either have velocity
 	arquetypesB, _ := query_archetype(game.world, COMPONENT_ID.COLLIDER | .DATA | .POSITION)
-
 	for archetypeA in arquetypesA {
 		for i in 0 ..< len(archetypeA.entities_id) {
 			colliderA := &archetypeA.colliders[i]
@@ -63,6 +61,7 @@ CollisionSystem :: proc(game: ^Game) {
 
 					switch dataB.kind {
 					case .CANDY:
+						fmt.println("JJJJ")
 						center_candy :=
 							colliderB.position + ({f32(colliderB.w), f32(colliderB.h)} / 2)
 						if vec2_distance(centerA, center_candy) + EPSILON_COLISION < PLAYER_SIZE &&
@@ -73,6 +72,23 @@ CollisionSystem :: proc(game: ^Game) {
 							grow_body(game.player)
 
 						}
+
+						///////////////
+
+
+						player := game.player.head
+						centerPJ := player.position + PLAYER_SIZE / 2
+						if vec2_distance(center_candy, centerPJ) + EPSILON_COLISION <
+							   PLAYER_SIZE &&
+						   dataB.state != .DEAD {
+
+							add_sound(game, &sound_bank[FX.FX_EAT])
+							grow_body(game.player)
+
+						}
+
+
+					///////////////
 
 					case .STATIC:
 						if rec_colliding_no_edges(
@@ -143,14 +159,16 @@ IASystem :: proc(game: ^Game) {
 	center_player := game.player.position + PLAYER_SIZE / 2
 
 	for arquetype in arquetypes {
-		velocities := arquetype.velocities
-		positions := arquetype.positions
-		ias := arquetype.ias
+		velocities := &arquetype.velocities
+		positions := &arquetype.positions
+		ias := &arquetype.ias
 
 		for i in 0 ..< len(arquetype.entities_id) {
-			center_enemy := positions[i].position + ENEMY_SIZE / 2
+			center_enemy := positions[i].pos + ENEMY_SIZE / 2
 			distance_to_player := vec2_distance(center_player, center_enemy)
+
 			if ias[i]._time_for_change_state > TIME_TO_CHANGE_STATE {
+				ias[i]._time_for_change_state = 0
 				switch {
 				case distance_to_player > ias[i].maximum_distance:
 					ias[i].behavior = .APPROACH
@@ -164,14 +182,20 @@ IASystem :: proc(game: ^Game) {
 
 			direction := (center_player - center_enemy) / distance_to_player
 
-			if ias[i].behavior == .SHOT {
+
+			switch ias[i].behavior {
+			case .SHOT:
 				velocities[i].direction = {0, 0}
 				if ias[i].reload_time >= ENEMY_TIME_RELOAD {
-					spawn_bullet(game, positions[i].position, ENEMY_SIZE_BULLET, direction, .BAD)
+					spawn_bullet(game, positions[i].pos, ENEMY_SIZE_BULLET, direction, .BAD)
 					ias[i].reload_time = 0
 				} else {
 					ias[i].reload_time += 1
 				}
+			case .APPROACH:
+				velocities[i].direction = direction
+			case .GOAWAY:
+				velocities[i].direction = -direction
 			}
 
 		}
@@ -187,13 +211,12 @@ VelocitySystem :: proc(game: ^Game) {
 	if is_empty {
 		return
 	}
-
 	for arquetype in arquetypes {
 		velocities := arquetype.velocities
 		positions := arquetype.positions
 
 		for i in 0 ..< len(arquetype.entities_id) {
-			positions[i].position += (velocities[i].direction * velocities[i].speed)
+			positions[i].pos += (velocities[i].direction * velocities[i].speed)
 		}
 	}
 
@@ -208,16 +231,12 @@ RenderingSystem :: proc(game: ^Game) {
 	for arquetype in arquetypes {
 		positions := arquetype.positions
 		sprites := arquetype.sprites
-
 		for i in 0 ..< len(arquetype.entities_id) {
 			draw(positions[i], sprites[i])
 		}
 	}
 
-	arquetypes, is_empty = query_archetype(
-		game.world,
-		COMPONENT_ID.POSITION | .ANIMATION | .VELOCITY,
-	)
+	arquetypes, is_empty = query_archetype(game.world, COMPONENT_ID.POSITION | .ANIMATION)
 	if is_empty {
 		return
 	}
@@ -233,10 +252,11 @@ RenderingSystem :: proc(game: ^Game) {
 		}
 
 		for i in 0 ..< len(arquetype.entities_id) {
+			fmt.println(i)
 			if update_velocity {
 				velocity = arquetype.velocities[i]
 			}
-
+			fmt.println(velocity)
 			draw(positions[i], &animations[i], velocity)
 		}
 	}

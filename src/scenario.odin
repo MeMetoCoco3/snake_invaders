@@ -11,44 +11,71 @@ SCENES :: enum {
 load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 	world := game.world
 
-	mask := COMPONENT_ID.COLLIDER | .SPRITE | .DATA
+	mask := COMPONENT_ID.COLLIDER | .SPRITE | .DATA | .POSITION
 
 	add_entity(world, mask)
 	arquetype := world.archetypes[mask]
+
+	append(&arquetype.positions, Position{{0, 0}, {SCREEN_WIDTH, PLAYER_SIZE}})
 	append(&arquetype.colliders, Collider{{0, 0}, SCREEN_WIDTH, PLAYER_SIZE})
 	append(
 		&arquetype.sprites,
-		Sprite{&texture_bank[TEXTURE.TX_PLAYER], {SCREEN_WIDTH, PLAYER_SIZE}, {0, 0}},
+		Sprite {
+			&texture_bank[TEXTURE.TX_ENEMY],
+			{SCREEN_WIDTH, PLAYER_SIZE},
+			{SCREEN_WIDTH, PLAYER_SIZE},
+		},
 	)
 	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL})
 
 	add_entity(world, mask)
+	append(
+		&arquetype.positions,
+		Position{{0, SCREEN_HEIGHT - PLAYER_SIZE}, {SCREEN_WIDTH, PLAYER_SIZE}},
+	)
 	append(
 		&arquetype.colliders,
 		Collider{{0, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE},
 	)
 	append(
 		&arquetype.sprites,
-		Sprite{&texture_bank[TEXTURE.TX_PLAYER], {SCREEN_WIDTH, PLAYER_SIZE}, {0, 0}},
+		Sprite {
+			&texture_bank[TEXTURE.TX_ENEMY],
+			{SCREEN_WIDTH, PLAYER_SIZE},
+			{SCREEN_WIDTH, PLAYER_SIZE},
+		},
 	)
 	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL})
 
 	add_entity(world, mask)
+	append(&arquetype.positions, Position{{0, 0}, {PLAYER_SIZE, SCREEN_HEIGHT}})
 	append(&arquetype.colliders, Collider{{0, 0}, PLAYER_SIZE, SCREEN_HEIGHT})
 	append(
 		&arquetype.sprites,
-		Sprite{&texture_bank[TEXTURE.TX_PLAYER], {PLAYER_SIZE, SCREEN_HEIGHT}, {0, 0}},
+		Sprite {
+			&texture_bank[TEXTURE.TX_ENEMY],
+			{PLAYER_SIZE, SCREEN_HEIGHT},
+			{PLAYER_SIZE, SCREEN_HEIGHT},
+		},
 	)
 	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL})
 
 	add_entity(world, mask)
+	append(
+		&arquetype.positions,
+		Position{{SCREEN_WIDTH - PLAYER_SIZE, 0}, {PLAYER_SIZE, SCREEN_HEIGHT}},
+	)
 	append(
 		&arquetype.colliders,
 		Collider{{SCREEN_WIDTH - PLAYER_SIZE, 0}, PLAYER_SIZE, SCREEN_HEIGHT},
 	)
 	append(
 		&arquetype.sprites,
-		Sprite{&texture_bank[TEXTURE.TX_PLAYER], {PLAYER_SIZE, SCREEN_HEIGHT}, {0, 0}},
+		Sprite {
+			&texture_bank[TEXTURE.TX_ENEMY],
+			{PLAYER_SIZE, SCREEN_HEIGHT},
+			{PLAYER_SIZE, SCREEN_HEIGHT},
+		},
 	)
 	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL})
 

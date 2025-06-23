@@ -162,6 +162,7 @@ update_scene :: proc(game: ^Game) {
 	if game.candy_respawn_time >= CANDY_RESPAWN_TIME {
 		game.candy_respawn_time = 0
 		if game.count_candies < MAX_NUM_CANDIES {
+			fmt.println("SPAWN THE CANDYYY")
 			spawn_candy(game)
 		}
 	}
@@ -341,7 +342,6 @@ dealing_ghost_piece :: proc(player: ^Player, last_piece: i8) {
 // SPAWN //
 ///////////
 spawn_enemy :: proc(game: ^Game) {
-	fmt.println(game.count_spawn_areas)
 	random_index := rand.int_max(n = game.count_spawn_areas)
 
 	rect := game.spawn_areas[random_index]
@@ -357,7 +357,7 @@ spawn_enemy :: proc(game: ^Game) {
 
 	archetype := game.world.archetypes[mask]
 
-	append(&archetype.positions, Position{{x, y}})
+	append(&archetype.positions, Position{{x, y}, {ENEMY_SIZE, ENEMY_SIZE}})
 	append(&archetype.velocities, Velocity{{0, 0}, ENEMY_SPEED})
 	append(
 		&archetype.animations,
@@ -385,6 +385,12 @@ spawn_enemy :: proc(game: ^Game) {
 
 	append(&archetype.data, Data{.ENEMY, .ALIVE, .BAD, .NORMAL})
 	append(&archetype.ias, IA{.APPROACH, 60, 100, 500, 0})
+
+	game.count_enemies += 1
+
+	fmt.println("APPENDED NEW ENEMY")
+
+
 }
 
 spawn_bullet :: proc(
@@ -399,7 +405,7 @@ spawn_bullet :: proc(
 
 	archetype := game.world.archetypes[mask]
 
-	append(&archetype.positions, Position{origin})
+	append(&archetype.positions, Position{origin, {BULLET_SIZE, BULLET_SIZE}})
 	append(&archetype.velocities, Velocity{direction, BULLET_SPEED})
 	append(
 		&archetype.animations,
@@ -449,7 +455,7 @@ spawn_candy :: proc(game: ^Game) {
 		),
 	)
 
-	append(&archetype.positions, Position{{f32(pos_x), f32(pos_y)}})
+	append(&archetype.positions, Position{{f32(pos_x), f32(pos_y)}, {CANDY_SIZE, CANDY_SIZE}})
 	append(&archetype.data, Data{.CANDY, .ALIVE, .GOOD, .NORMAL})
 	append(
 		&archetype.animations,
@@ -474,7 +480,7 @@ spawn_candy :: proc(game: ^Game) {
 			CANDY_SIZE - EPSILON_COLISION * 2,
 		},
 	)
-
+	game.count_candies += 1
 }
 
 ////////////
