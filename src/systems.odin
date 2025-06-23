@@ -17,13 +17,16 @@ FX :: enum {
 
 CollisionSystem :: proc(game: ^Game) {
 
-	arquetypesA := query_archetype(
+	arquetypesA, is_empty := query_archetype(
 		game.world,
 		COMPONENT_ID.COLLIDER | .DATA | .VELOCITY | .POSITION,
 	)
-	// No need to check 2 colliders if either have velocity
-	arquetypesB := query_archetype(game.world, COMPONENT_ID.COLLIDER | .DATA)
+	if is_empty {
+		return
+	}
 
+	// No need to check 2 colliders if either have velocity
+	arquetypesB, _ := query_archetype(game.world, COMPONENT_ID.COLLIDER | .DATA | .POSITION)
 
 	for archetypeA in arquetypesA {
 		for i in 0 ..< len(archetypeA.entities_id) {
@@ -37,7 +40,6 @@ CollisionSystem :: proc(game: ^Game) {
 			if dataA.kind == .PLAYER {
 				is_player = true
 			}
-
 
 			centerA := Vector2 {
 				colliderA.position.x - f32(colliderA.w),
@@ -57,7 +59,6 @@ CollisionSystem :: proc(game: ^Game) {
 					}
 
 					colliderB := &archetypeB.colliders[j]
-					velocityB := &archetypeB.velocities[j]
 					positionB := &archetypeB.positions[j]
 
 					switch dataB.kind {
@@ -134,7 +135,10 @@ CollisionSystem :: proc(game: ^Game) {
 
 
 IASystem :: proc(game: ^Game) {
-	arquetypes := query_archetype(game.world, COMPONENT_ID.IA | .VELOCITY | .POSITION)
+	arquetypes, is_empty := query_archetype(game.world, COMPONENT_ID.IA | .VELOCITY | .POSITION)
+	if is_empty {
+		return
+	}
 
 	center_player := game.player.position + PLAYER_SIZE / 2
 
@@ -176,7 +180,13 @@ IASystem :: proc(game: ^Game) {
 
 
 VelocitySystem :: proc(game: ^Game) {
-	arquetypes := query_archetype(game.world, COMPONENT_ID.VELOCITY | COMPONENT_ID.POSITION)
+	arquetypes, is_empty := query_archetype(
+		game.world,
+		COMPONENT_ID.VELOCITY | COMPONENT_ID.POSITION,
+	)
+	if is_empty {
+		return
+	}
 
 	for arquetype in arquetypes {
 		velocities := arquetype.velocities
@@ -190,7 +200,10 @@ VelocitySystem :: proc(game: ^Game) {
 }
 
 RenderingSystem :: proc(game: ^Game) {
-	arquetypes := query_archetype(game.world, COMPONENT_ID.POSITION | .SPRITE)
+	arquetypes, is_empty := query_archetype(game.world, COMPONENT_ID.POSITION | .SPRITE)
+	if is_empty {
+		return
+	}
 
 	for arquetype in arquetypes {
 		positions := arquetype.positions
@@ -201,7 +214,14 @@ RenderingSystem :: proc(game: ^Game) {
 		}
 	}
 
-	arquetypes = query_archetype(game.world, COMPONENT_ID.POSITION | .ANIMATION | .VELOCITY)
+	arquetypes, is_empty = query_archetype(
+		game.world,
+		COMPONENT_ID.POSITION | .ANIMATION | .VELOCITY,
+	)
+	if is_empty {
+		return
+	}
+
 
 	for arquetype in arquetypes {
 		positions := arquetype.positions

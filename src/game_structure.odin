@@ -10,6 +10,7 @@ Game :: struct {
 	state:              GAME_STATE,
 	player:             ^Player,
 	spawn_areas:        []rl.Rectangle,
+	count_spawn_areas:  int,
 	current_scene:      SCENES,
 	candy_respawn_time: int,
 	enemy_respawn_time: int,
@@ -373,4 +374,8 @@ load_scene :: proc(game: ^Game, scene: SCENES) {
 	game.current_scene = scene
 	game.candy_respawn_time = 0
 	game.enemy_respawn_time = 0
+
+	load_scenario(game, scene)
+
+
 }

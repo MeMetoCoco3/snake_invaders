@@ -101,7 +101,11 @@ update :: proc(game: ^Game) {
 
 
 clear_dead :: proc(game: ^Game) {
-	archetypes := query_archetype(game.world, COMPONENT_ID.DATA)
+	archetypes, is_empty := query_archetype(game.world, COMPONENT_ID.DATA)
+	if is_empty {
+		return
+	}
+
 	for archetype in archetypes {
 		data := archetype.data
 
@@ -337,10 +341,10 @@ dealing_ghost_piece :: proc(player: ^Player, last_piece: i8) {
 // SPAWN //
 ///////////
 spawn_enemy :: proc(game: ^Game) {
-	random_index := rand.int_max(len(game.spawn_areas))
+	fmt.println(game.count_spawn_areas)
+	random_index := rand.int_max(n = game.count_spawn_areas)
 
 	rect := game.spawn_areas[random_index]
-
 
 	x := rect.x + rand.float32() * rect.width
 	y := rect.y + rand.float32() * rect.height

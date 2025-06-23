@@ -12,47 +12,49 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 	world := game.world
 
 	mask := COMPONENT_ID.COLLIDER | .SPRITE | .DATA
+
+	add_entity(world, mask)
 	arquetype := world.archetypes[mask]
+	append(&arquetype.colliders, Collider{{0, 0}, SCREEN_WIDTH, PLAYER_SIZE})
+	append(
+		&arquetype.sprites,
+		Sprite{&texture_bank[TEXTURE.TX_PLAYER], {SCREEN_WIDTH, PLAYER_SIZE}, {0, 0}},
+	)
+	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL})
 
+	add_entity(world, mask)
+	append(
+		&arquetype.colliders,
+		Collider{{0, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE},
+	)
+	append(
+		&arquetype.sprites,
+		Sprite{&texture_bank[TEXTURE.TX_PLAYER], {SCREEN_WIDTH, PLAYER_SIZE}, {0, 0}},
+	)
+	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL})
 
-	id := add_entity(world, mask)
-	arquetype.colliders[id] = Collider{{0, 0}, SCREEN_WIDTH, PLAYER_SIZE}
-	arquetype.sprites[id] = Sprite {
-		&texture_bank[TEXTURE.TX_PLAYER],
-		{SCREEN_WIDTH, PLAYER_SIZE},
-		{0, 0},
-	}
-	arquetype.data[id] = Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL}
+	add_entity(world, mask)
+	append(&arquetype.colliders, Collider{{0, 0}, PLAYER_SIZE, SCREEN_HEIGHT})
+	append(
+		&arquetype.sprites,
+		Sprite{&texture_bank[TEXTURE.TX_PLAYER], {PLAYER_SIZE, SCREEN_HEIGHT}, {0, 0}},
+	)
+	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL})
 
-	id = add_entity(world, mask)
-	arquetype.colliders[id] = Collider{{0, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE}
-	arquetype.sprites[id] = Sprite {
-		&texture_bank[TEXTURE.TX_PLAYER],
-		{SCREEN_WIDTH, PLAYER_SIZE},
-		{0, 0},
-	}
-	arquetype.data[id] = Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL}
+	add_entity(world, mask)
+	append(
+		&arquetype.colliders,
+		Collider{{SCREEN_WIDTH - PLAYER_SIZE, 0}, PLAYER_SIZE, SCREEN_HEIGHT},
+	)
+	append(
+		&arquetype.sprites,
+		Sprite{&texture_bank[TEXTURE.TX_PLAYER], {PLAYER_SIZE, SCREEN_HEIGHT}, {0, 0}},
+	)
+	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL})
 
-	id = add_entity(world, mask)
-	arquetype.colliders[id] = Collider{{0, 0}, PLAYER_SIZE, SCREEN_HEIGHT}
-	arquetype.sprites[id] = Sprite {
-		&texture_bank[TEXTURE.TX_PLAYER],
-		{PLAYER_SIZE, SCREEN_HEIGHT},
-		{0, 0},
-	}
-	arquetype.data[id] = Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL}
-
-	id = add_entity(world, mask)
-	arquetype.colliders[id] = Collider{{SCREEN_WIDTH - PLAYER_SIZE, 0}, PLAYER_SIZE, SCREEN_HEIGHT}
-	arquetype.sprites[id] = Sprite {
-		&texture_bank[TEXTURE.TX_PLAYER],
-		{PLAYER_SIZE, SCREEN_HEIGHT},
-		{0, 0},
-	}
-	arquetype.data[id] = Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL}
 
 	spawn_areas := make([]rl.Rectangle, NUM_RECTANGLES_ON_SCENE)
-	spawn_areas_slice := []rl.Rectangle {
+	spawn_areas_slice := [?]rl.Rectangle {
 		get_rec_from_cell(10, (SCREEN_WIDTH / PLAYER_SIZE) - 20, 2, 2),
 		get_rec_from_cell(
 			10,
@@ -76,6 +78,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 	}
 
 	game.spawn_areas = spawn_areas
+	game.count_spawn_areas = cnt
 }
 
 clean_up :: proc(game: ^Game) {
