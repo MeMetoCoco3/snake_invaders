@@ -7,7 +7,8 @@ Vector2 :: [2]f32
 
 Game :: struct {
 	state:              GAME_STATE,
-	player:             ^Player,
+	player_position:    ^Position,
+	player_body:        Body,
 	spawn_areas:        []rl.Rectangle,
 	count_spawn_areas:  int,
 	current_scene:      SCENES,
@@ -19,6 +20,14 @@ Game :: struct {
 	world:              ^World,
 }
 
+Body :: struct {
+	cells:            [MAX_NUM_BODY]cell_t,
+	num_cells:        i8,
+	ghost_pieces:     ^Ringuffer_t,
+	num_ghost_pieces: i8,
+	growing:          bool,
+}
+
 GAME_STATE :: enum {
 	PLAY,
 	PAUSE,
@@ -27,23 +36,22 @@ GAME_STATE :: enum {
 }
 
 
-Player :: struct {
-	using head:       cell_t,
-	next_dir:         Vector2,
-	body:             [MAX_NUM_BODY]cell_t,
-	speed:            i8,
-	can_dash:         bool,
-	time_on_dash:     i16,
-	health:           i8,
-	num_cells:        i8,
-	num_ghost_pieces: i8,
-	ghost_pieces:     ^Ringuffer_t,
-	rotation:         f32,
-	next_bullet_size: f32,
-	growing:          bool,
-	animation:        Animation,
-	state:            PLAYER_STATE,
-}
+// Player :: struct {
+// 	using head:       cell_t,
+// 	next_dir:         Vector2,
+// 	speed:            i8,
+// 	can_dash:         bool,
+// 	time_on_dash:     i16,
+// 	health:           i8,
+// 	num_cells:        i8,
+// 	num_ghost_pieces: i8,
+// 	ghost_pieces:     ^Ringuffer_t,
+// 	rotation:         f32,
+// 	next_bullet_size: f32,
+// 	growing:          bool,
+// 	animation:        Animation,
+// 	state:            PLAYER_STATE,
+// }
 
 PLAYER_STATE :: enum {
 	NORMAL,
@@ -95,7 +103,7 @@ sound_bank: [FX.FX_COUNT]rl.Sound
 bg_music: rl.Music
 
 draw :: proc {// draw_entity_animation,
-	draw_player_animation,
+	// draw_player_animation,
 	draw_sprite,
 	draw_animated_sprite,
 }
@@ -144,31 +152,31 @@ draw_sprite :: proc(position: Position, sprite: Sprite) {
 	rl.DrawTexturePro(sprite.texture_id^, src_rec, dst_rec, {0, 0}, 0, rl.WHITE)
 }
 
-
-draw_player_animation :: proc(player: ^Player) {
-	src_rec := rl.Rectangle{0, 32, PLAYER_SIZE, PLAYER_SIZE}
-	switch player.head.direction {
-	case {0, 1}:
-		player.rotation = 270
-	case {0, -1}:
-		player.rotation = 90
-	case {1, 0}:
-		player.rotation = 180
-	case {-1, 0}:
-		player.rotation = 0
-
-	}
-
-	dst_rec := rl.Rectangle {
-		player.head.position.x + PLAYER_SIZE / 2,
-		player.head.position.y + PLAYER_SIZE / 2,
-		PLAYER_SIZE,
-		PLAYER_SIZE,
-	}
-	origin := rl.Vector2{PLAYER_SIZE / 2, PLAYER_SIZE / 2}
-	rl.DrawTexturePro(player.animation.image^, src_rec, dst_rec, origin, player.rotation, rl.WHITE)
-}
-
+//
+// draw_player_animation :: proc(player: ^Player) {
+// 	src_rec := rl.Rectangle{0, 32, PLAYER_SIZE, PLAYER_SIZE}
+// 	switch player.head.direction {
+// 	case {0, 1}:
+// 		player.rotation = 270
+// 	case {0, -1}:
+// 		player.rotation = 90
+// 	case {1, 0}:
+// 		player.rotation = 180
+// 	case {-1, 0}:
+// 		player.rotation = 0
+//
+// 	}
+//
+// 	dst_rec := rl.Rectangle {
+// 		player.head.position.x + PLAYER_SIZE / 2,
+// 		player.head.position.y + PLAYER_SIZE / 2,
+// 		PLAYER_SIZE,
+// 		PLAYER_SIZE,
+// 	}
+// 	origin := rl.Vector2{PLAYER_SIZE / 2, PLAYER_SIZE / 2}
+// 	rl.DrawTexturePro(player.animation.image^, src_rec, dst_rec, origin, player.rotation, rl.WHITE)
+// }
+//
 
 add_sound :: proc(game: ^Game, sound: ^rl.Sound) {
 	append(&game.audio.fx, sound)
@@ -211,31 +219,12 @@ unload_sounds :: proc() {
 }
 
 load_scene :: proc(game: ^Game, scene: SCENES) {
-	old_ghost_pieces := game.player.ghost_pieces
+	old_ghost_pieces := game.player_body.ghost_pieces
+	game.player_position^ = {{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2}, {0, 0}}
 
-	game.player^ = {
-		head = cell_t{Vector2{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2}, {0, -1}, 0, PLAYER_SIZE},
-		body = [MAX_NUM_BODY]cell_t{},
-		health = 3,
-		next_dir = {0, 0},
-		rotation = 0,
-		next_bullet_size = 0,
-		speed = PLAYER_SPEED,
-		animation = {
-			image = &texture_bank[TEXTURE.TX_PLAYER],
-			w = 16,
-			h = 16,
-			num_frames = 1,
-			kind = .STATIC,
-			angle_type = .DIRECTIONAL,
-		},
-		can_dash = true,
-		time_on_dash = RECOVER_DASH_TIME,
-		state = .NORMAL,
-	}
 
-	game.player.ghost_pieces = old_ghost_pieces
-	game.player.ghost_pieces^ = Ringuffer_t {
+	game.player_body.ghost_pieces = old_ghost_pieces
+	game.player_body.ghost_pieces^ = Ringuffer_t {
 		values = [MAX_NUM_BODY]cell_ghost_t{},
 		head   = 0,
 		tail   = 0,
@@ -248,6 +237,5 @@ load_scene :: proc(game: ^Game, scene: SCENES) {
 	game.enemy_respawn_time = 0
 
 	load_scenario(game, scene)
-
 
 }

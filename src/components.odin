@@ -17,20 +17,23 @@ init_component :: proc(archetype: ^Archetype, component: COMPONENT_ID) {
 		archetype.colliders = make([dynamic]Collider, 0, 64)
 	case .IA:
 		archetype.ias = make([dynamic]IA, 0, 64)
+	case .PLAYER_DATA:
+		archetype.players_data = make([dynamic]PlayerData, 0, 64)
 	case .COUNT:
 	}
 }
 
 
 COMPONENT_ID :: enum u64 {
-	POSITION  = 1,
-	VELOCITY  = 2,
-	SPRITE    = 4,
-	ANIMATION = 8,
-	DATA      = 16,
-	COLLIDER  = 32,
-	IA        = 64,
-	COUNT     = 128,
+	POSITION    = 1,
+	VELOCITY    = 2,
+	SPRITE      = 4,
+	ANIMATION   = 8,
+	DATA        = 16,
+	COLLIDER    = 32,
+	IA          = 64,
+	PLAYER_DATA = 128,
+	COUNT       = 256,
 }
 
 Component :: union #no_nil {
@@ -41,6 +44,7 @@ Component :: union #no_nil {
 	Data,
 	Collider,
 	IA,
+	PlayerData,
 }
 
 Position :: struct {
@@ -105,16 +109,27 @@ IA :: struct {
 	_time_for_change_state: int,
 }
 
+PlayerData :: struct {
+	player_state:     PLAYER_STATE,
+	next_dir:         Vector2,
+	can_dash:         bool,
+	time_on_dash:     i32,
+	health:           i32,
+	next_bullet_size: f32,
+	growing:          bool,
+}
+
 ENEMY_BEHAVIOR :: enum {
 	APPROACH,
 	SHOT,
 	GOAWAY,
 }
 
-
 ENTITY_KIND :: enum {
 	STATIC,
 	PLAYER,
+	BODY,
+	GHOST_PIECE,
 	CANDY,
 	ENEMY,
 	BULLET,

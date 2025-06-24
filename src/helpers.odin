@@ -18,20 +18,18 @@ aligned :: proc(v0: Vector2, v1: Vector2) -> bool {
 	return v0.x == v1.x || v0.y == v1.y
 }
 
-try_set_dir :: proc(player: ^Player) -> bool {
-	prev_dir := player.head.direction
-	next_dir := player.next_dir
-	if !oposite_directions(next_dir, prev_dir) && next_dir != prev_dir {
-		player.head.direction = next_dir
+try_set_dir :: proc(velocity: ^Velocity, next_dir, current_dir: Vector2) -> bool {
+	if !oposite_directions(next_dir, current_dir) && next_dir != current_dir {
+		velocity.direction = next_dir
 		return true
 	}
 	return false
 }
 
 
-add_turn_count :: proc(player: ^Player) {
-	for i in 0 ..< player.num_cells {
-		player.body[i].count_turns_left += 1
+add_turn_count :: proc(body: ^Body) {
+	for i in 0 ..< body.num_cells {
+		body.cells[i].count_turns_left += 1
 	}
 }
 
@@ -59,52 +57,52 @@ get_ghost_piece_index :: proc(turns_left, tail: i8) -> i8 {
 	return index
 }
 
-
-TESTING :: proc(game: ^Game) {
-	for i in 1 ..< game.player.num_cells {
-		prev_cell := game.player.body[i - 1]
-		next_cell := game.player.body[i]
-
-		if !rec_colliding(
-			prev_cell.position,
-			PLAYER_SIZE,
-			PLAYER_SIZE,
-			next_cell.position,
-			PLAYER_SIZE,
-			PLAYER_SIZE,
-		) {
-			fmt.printf(
-				"LENGTH BODY %d, PREV_CELL IDX %d, NEXT_CELL IDX %d",
-				game.player.num_cells,
-				i - 1,
-				i,
-			)
-			fmt.println("PREV_CELL POS AND DIR", prev_cell.position, prev_cell.direction)
-			fmt.println("NEXT_CELL POS AND DIR", next_cell.position, next_cell.direction)
-		}
-
-		index :=
-			(MAX_RINGBUFFER_VALUES + game.player.ghost_pieces.tail - next_cell.count_turns_left) %
-			MAX_RINGBUFFER_VALUES
-
-		following_ghost_piece := ghost_to_cell(game.player.ghost_pieces.values[index])
-		if !aligned(next_cell.position, following_ghost_piece.position) &&
-		   next_cell.count_turns_left != 0 &&
-		   following_ghost_piece.position != {0, 0} {
-
-			fmt.println()
-			fmt.println()
-			fmt.println(
-				"GHOST POS AND DIR",
-				following_ghost_piece.position,
-				following_ghost_piece.direction,
-			)
-			fmt.println("NEXT_CELL POS AND DIR", next_cell.position, next_cell.direction)
-		}
-
-	}
-}
-
+//
+// TESTING :: proc(game: ^Game) {
+// 	for i in 1 ..< game.player.num_cells {
+// 		prev_cell := game.player.body[i - 1]
+// 		next_cell := game.player.body[i]
+//
+// 		if !rec_colliding(
+// 			prev_cell.position,
+// 			PLAYER_SIZE,
+// 			PLAYER_SIZE,
+// 			next_cell.position,
+// 			PLAYER_SIZE,
+// 			PLAYER_SIZE,
+// 		) {
+// 			fmt.printf(
+// 				"LENGTH BODY %d, PREV_CELL IDX %d, NEXT_CELL IDX %d",
+// 				game.player.num_cells,
+// 				i - 1,
+// 				i,
+// 			)
+// 			fmt.println("PREV_CELL POS AND DIR", prev_cell.position, prev_cell.direction)
+// 			fmt.println("NEXT_CELL POS AND DIR", next_cell.position, next_cell.direction)
+// 		}
+//
+// 		index :=
+// 			(MAX_RINGBUFFER_VALUES + game.player.ghost_pieces.tail - next_cell.count_turns_left) %
+// 			MAX_RINGBUFFER_VALUES
+//
+// 		following_ghost_piece := ghost_to_cell(game.player.ghost_pieces.values[index])
+// 		if !aligned(next_cell.position, following_ghost_piece.position) &&
+// 		   next_cell.count_turns_left != 0 &&
+// 		   following_ghost_piece.position != {0, 0} {
+//
+// 			fmt.println()
+// 			fmt.println()
+// 			fmt.println(
+// 				"GHOST POS AND DIR",
+// 				following_ghost_piece.position,
+// 				following_ghost_piece.direction,
+// 			)
+// 			fmt.println("NEXT_CELL POS AND DIR", next_cell.position, next_cell.direction)
+// 		}
+//
+// 	}
+// }
+//
 vec2_add :: proc(v0, v1: Vector2) -> Vector2 {
 	return {v0.x + v1.x, v0.y + v1.y}
 

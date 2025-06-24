@@ -14,12 +14,12 @@ RECOVER_DASH_TIME :: 240
 
 MAX_NUM_BODY :: 20
 MAX_NUM_MOVERS :: 100
-MAX_NUM_CANDIES :: 10
+MAX_NUM_CANDIES :: 1
 CANDY_SIZE :: 16
-CANDY_RESPAWN_TIME :: 20
+CANDY_RESPAWN_TIME :: 2
 
 MAX_NUM_ENEMIES :: 1
-ENEMY_RESPAWN_TIME :: 1
+ENEMY_RESPAWN_TIME :: 10
 ENEMY_SIZE :: 16
 ENEMY_SPEED :: 1
 ENEMY_COLLIDER_THRESHOLD :: 4
@@ -36,6 +36,7 @@ BULLET_SIZE :: 16
 NUM_RECTANGLES_ON_SCENE :: 100
 NUM_ENTITIES :: 1000
 
+player_mask := COMPONENT_ID.POSITION | .VELOCITY | .ANIMATION | .DATA | .COLLIDER | .PLAYER_DATA
 
 main :: proc() {
 	rl.InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "snake_invaders")
@@ -50,9 +51,15 @@ main :: proc() {
 	rl.SetMusicVolume(bg_music, 0.001)
 	rl.PlayMusicStream(bg_music)
 
+	world := new_world()
+
+	add_player(world)
+	player_arquetype := world.archetypes[player_mask]
+
 	game := Game {
-		player = &Player{ghost_pieces = &Ringuffer_t{}, body = [MAX_NUM_BODY]cell_t{}},
-		world = new_world(),
+		player_body = Body{ghost_pieces = &Ringuffer_t{}, cells = [MAX_NUM_BODY]cell_t{}},
+		player_position = &player_arquetype.positions[0],
+		world = world,
 		audio = audio_system_t{fx = make([dynamic]^rl.Sound, 0, 20), bg_music = bg_music},
 	}
 
@@ -65,7 +72,7 @@ main :: proc() {
 		case .PLAY:
 			clear_dead(&game)
 
-			get_input(&game)
+			InputSystem(&game)
 
 			IASystem(&game)
 			CollisionSystem(&game)
@@ -97,4 +104,39 @@ main :: proc() {
 
 		}
 	}
+}
+
+
+add_player :: proc(world: ^World) {
+	add_entity(world, player_mask)
+
+	player_arquetype := world.archetypes[player_mask]
+	append(
+		&player_arquetype.players_data,
+		PlayerData{.NORMAL, Vector2{0, 0}, true, RECOVER_DASH_TIME, 3, 0, false},
+	)
+
+	player_position := Vector2{SCREEN_WIDTH / 2 + 10, SCREEN_HEIGHT / 2 + 10}
+	append(&player_arquetype.positions, Position{player_position, {PLAYER_SIZE, PLAYER_SIZE}})
+	append(&player_arquetype.velocities, Velocity{{0, 0}, PLAYER_SPEED})
+	append(
+		&player_arquetype.animations,
+		Animation {
+			image = &texture_bank[TEXTURE.TX_PLAYER],
+			w = 16,
+			h = 16,
+			num_frames = 1,
+			kind = .STATIC,
+			angle_type = .DIRECTIONAL,
+		},
+	)
+	append(&player_arquetype.data, Data{.PLAYER, .ALIVE, .GOOD, .NORMAL})
+	append(
+		&player_arquetype.colliders,
+		Collider {
+			player_position + EPSILON_COLISION,
+			PLAYER_SIZE - 2 * EPSILON_COLISION,
+			PLAYER_SIZE - 2 * EPSILON_COLISION,
+		},
+	)
 }
