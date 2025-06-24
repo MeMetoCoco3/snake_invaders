@@ -65,7 +65,7 @@ CollisionSystem :: proc(game: ^Game) {
 							colliderB.position + ({f32(colliderB.w), f32(colliderB.h)} / 2)
 
 						if is_player &&
-						   vec2_distance(centerA, center_candy) + EPSILON_COLISION < PLAYER_SIZE &&
+						   vec2_distance(centerA, center_candy) < PLAYER_SIZE &&
 						   dataB.state != .DEAD {
 							fmt.println("WE EAT")
 							dataB.state = .DEAD
@@ -96,7 +96,11 @@ CollisionSystem :: proc(game: ^Game) {
 						distance := vec2_distance(centerA, center_enemy)
 						direction := (centerA - center_enemy) / distance
 
-						sum_radius := (PLAYER_SIZE / 2 + ENEMY_SIZE / 2) - EPSILON_COLISION
+						sum_radius := (PLAYER_SIZE / 2 + ENEMY_SIZE / 2)
+
+						if is_player {
+							fmt.println("distance to enemy: ", distance)
+						}
 
 						if is_player && distance < f32(sum_radius) && dataA.state != .DEAD {
 							switch dataA.player_state {
@@ -218,11 +222,6 @@ VelocitySystem :: proc(game: ^Game) {
 		}
 	}
 
-
-	head_position^ += head_velocity.direction * f32(head_velocity.speed)
-	head_colision.position += head_velocity.direction * f32(head_velocity.speed)
-
-
 	arquetypes, is_empty := query_archetype(
 		game.world,
 		COMPONENT_ID.VELOCITY | COMPONENT_ID.POSITION | COMPONENT_ID.COLLIDER | .DATA,
@@ -234,15 +233,32 @@ VelocitySystem :: proc(game: ^Game) {
 		velocities := arquetype.velocities
 		positions := arquetype.positions
 		colliders := arquetype.colliders
-		data := arquetype.data
-		if data[0].kind == .PLAYER {
-			continue
+		is_player := false
+
+		if arquetype.data[0].kind == .PLAYER {
+			is_player = true
 		}
 
-
 		for i in 0 ..< len(arquetype.entities_id) {
+			if is_player {
+				player_data := &arquetype.players_data[i]
+				if !player_data.can_dash {
+					player_data.time_on_dash += 1
+				}
+
+				if player_data.time_on_dash >= DASH_DURATION {
+					velocities[i].speed = PLAYER_SPEED
+					player_data.player_state = .NORMAL
+					if player_data.time_on_dash >= RECOVER_DASH_TIME {
+						player_data.can_dash = true
+					}
+				}
+			}
+
+
 			positions[i].pos += (velocities[i].direction * velocities[i].speed)
 			colliders[i].position += (velocities[i].direction * velocities[i].speed)
+
 		}
 	}
 
@@ -251,12 +267,13 @@ VelocitySystem :: proc(game: ^Game) {
 		for i in 0 ..< body.num_cells {
 			piece_to_follow: cell_t
 
+			moved := false
 			if (body.cells[i].count_turns_left == 0) {
 				piece_to_follow =
 					(i == 0) ? cell_t{head_position^, head_direction, 0, PLAYER_SIZE} : body.cells[i - 1]
 				body.cells[i].direction = piece_to_follow.direction
 
-				fmt.println("PIECE TO FOLLOW : ", piece_to_follow)
+				// fmt.println("PIECE TO FOLLOW : ", piece_to_follow)
 			} else {
 				index :=
 					(MAX_RINGBUFFER_VALUES +
@@ -265,18 +282,20 @@ VelocitySystem :: proc(game: ^Game) {
 					MAX_RINGBUFFER_VALUES
 
 				following_ghost_piece := ghost_to_cell(body.ghost_pieces.values[index])
-				fmt.println("GHOST PIECEINFORMATION : ", following_ghost_piece)
-				fmt.println("body piece: ", body.cells[i])
+				// fmt.println("GHOST PIECEINFORMATION : ", following_ghost_piece)
+				// fmt.println("body piece: ", body.cells[i])
+
+				distance := vec2_distance(body.cells[i].position, following_ghost_piece.position)
+				if distance < head_velocity.speed {
+					if body.cells[i].position == following_ghost_piece.position {
+						body.cells[i].direction = following_ghost_piece.direction
+						body.cells[i].count_turns_left -= 1
+					} else {
+						body.cells[i].position = following_ghost_piece.position // snap to exact
+						moved = true
+					}
 
 
-				if vec2_distance(body.cells[i].position, following_ghost_piece.position) < 0.5 {
-					body.cells[i].position = following_ghost_piece.position // snap to exact
-					body.cells[i].direction = following_ghost_piece.direction
-					body.cells[i].count_turns_left -= 1
-
-
-					// 	body.cells[i].direction = following_ghost_piece.direction
-					// 	body.cells[i].count_turns_left -= 1
 				} else {
 					direction_to_ghost := get_cardinal_direction(
 						body.cells[i].position,
@@ -289,12 +308,14 @@ VelocitySystem :: proc(game: ^Game) {
 					dealing_ghost_piece(body, i)
 				}
 			}
-			fmt.printfln(
-				"P %v+= D %v * V %v",
-				body.cells[i].position,
-				body.cells[i].direction * f32(head_velocity.speed),
-			)
-			body.cells[i].position += body.cells[i].direction * f32(head_velocity.speed)
+			// fmt.printfln(
+			// 	"P %v+= D %v * V %v",
+			// 	body.cells[i].position,
+			// 	body.cells[i].direction * f32(head_velocity.speed),
+			// )
+			if !moved {
+				body.cells[i].position += body.cells[i].direction * head_velocity.speed
+			}
 		}
 	}
 
@@ -310,18 +331,6 @@ VelocitySystem :: proc(game: ^Game) {
 			distance = vec2_distance(head_position^, body.cells[0].position)
 		}
 		if distance >= PLAYER_SIZE {body.growing = false}
-	}
-
-	if !head_data.can_dash {
-		head_data.time_on_dash += 1
-	}
-
-	if head_data.time_on_dash >= DASH_DURATION {
-		head_velocity.speed = PLAYER_SPEED
-		head_data.player_state = .NORMAL
-		if head_data.time_on_dash >= RECOVER_DASH_TIME {
-			head_data.can_dash = true
-		}
 	}
 
 }

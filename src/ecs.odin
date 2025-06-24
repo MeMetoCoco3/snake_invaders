@@ -1,5 +1,5 @@
-
 package main
+
 import rl "vendor:raylib"
 
 
@@ -13,7 +13,7 @@ Archetype :: struct {
 	data:           [dynamic]Data,
 	colliders:      [dynamic]Collider,
 	ias:            [dynamic]IA,
-	players_data: [dynamic]PlayerData,
+	players_data:   [dynamic]PlayerData,
 }
 
 Entity :: struct {
