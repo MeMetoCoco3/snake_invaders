@@ -8,7 +8,6 @@ import rl "vendor:raylib"
 // INPUT //
 ///////////
 InputSystem :: proc(game: ^Game) {
-
 	player_velocity := &game.world.archetypes[player_mask].velocities[0]
 	player_data := &game.world.archetypes[player_mask].players_data[0]
 	player_position := &game.world.archetypes[player_mask].positions[0]
@@ -104,13 +103,8 @@ get_input_pause :: proc(game: ^Game) {
 // UPDATE //
 ////////////
 update :: proc(game: ^Game) {
-	// update_player(game.player)
-
 	play_sound(game)
-
 	update_scene(game)
-	game.enemy_respawn_time += 1
-	game.candy_respawn_time += 1
 	// TESTING(game)
 }
 
@@ -175,8 +169,11 @@ update_scene :: proc(game: ^Game) {
 			spawn_enemy(game)
 		}
 	}
-}
 
+	game.enemy_respawn_time += 1
+	game.candy_respawn_time += 1
+}
+//
 // update_player :: proc(game: ^Game) {
 // 	player := game.world.archetypes[player_mask]
 // 	body := &game.player_body
@@ -254,7 +251,7 @@ update_scene :: proc(game: ^Game) {
 // 		}
 // 	}
 // }
-//
+
 
 grow_body :: proc(body: ^Body, head_pos, head_dir: Vector2) {
 	if body.num_cells < MAX_NUM_BODY {
@@ -264,10 +261,15 @@ grow_body :: proc(body: ^Body, head_pos, head_dir: Vector2) {
 			shift_array_right(&body.cells, int(body.num_cells))
 		}
 
-		new_cell := cell_t{head_pos, head_dir, 0, PLAYER_SIZE}
+		body.cells[0] = cell_t {
+			position         = head_pos,
+			direction        = head_dir,
+			count_turns_left = 0,
+			size             = PLAYER_SIZE,
+		}
 
-		body.cells[0] = new_cell
 		fmt.println("WE ARE GROWING NUM CELLS: ", body.num_cells)
+		fmt.println(head_pos)
 	} else {
 		fmt.println("WE DO NOT GROW!")
 	}
@@ -417,8 +419,8 @@ spawn_candy :: proc(game: ^Game) {
 		&archetype.animations,
 		Animation {
 			image = &texture_bank[TEXTURE.TX_CANDY],
-			w = 16,
-			h = 16,
+			w = PLAYER_SIZE,
+			h = PLAYER_SIZE,
 			num_frames = 16,
 			frame_delay = 4,
 			kind = .REPEAT,
@@ -445,8 +447,8 @@ spawn_candy :: proc(game: ^Game) {
 draw_game :: proc(game: ^Game) {
 	draw_grid({100, 100, 100, 255})
 	// draw_scene(game)
-	// draw_player(game.player)
-	// draw_ghost_cells(game.player.ghost_pieces)
+	draw_body(&game.player_body)
+	draw_ghost_cells(game.player_body.ghost_pieces)
 	RenderingSystem(game)
 }
 
@@ -522,40 +524,44 @@ draw_game :: proc(game: ^Game) {
 // 	}
 // }
 //
-// draw_player :: proc(player: ^Player) {
-// 	for i in 0 ..< player.num_cells {
-// 		cell := player.body[i]
-//
-// 		x_size := cell.direction.x != 0 ? cell.size : PLAYER_SIZE
-// 		y_size := cell.direction.y != 0 ? cell.size : PLAYER_SIZE
-// 		x_position: f32
-// 		y_position: f32
-// 		switch cell.direction {
-// 		case {0, 1}:
-// 			x_position = cell.position.x
-// 			y_position = cell.position.y + PLAYER_SIZE - cell.size
-// 		case {0, -1}:
-// 			x_position = cell.position.x
-// 			y_position = cell.position.y
-// 		case {1, 0}:
-// 			x_position = cell.position.x + PLAYER_SIZE - cell.size
-// 			y_position = cell.position.y
-// 		case {-1, 0}:
-// 			x_position = cell.position.x
-// 			y_position = cell.position.y
-// 		}
-//
-// 		rl.DrawRectangle(
-// 			i32(math.round(x_position)),
-// 			i32(math.round(y_position)),
-// 			i32(math.round(x_size)),
-// 			i32(math.round(y_size)),
-// 			rl.ORANGE,
-// 		)
-// 	}
-//
-// 	draw(player)
-// }
+draw_body :: proc(body: ^Body) {
+	for i in 0 ..< body.num_cells {
+		cell := body.cells[i]
+
+		x_size := cell.direction.x != 0 ? cell.size : PLAYER_SIZE
+		y_size := cell.direction.y != 0 ? cell.size : PLAYER_SIZE
+		x_position: f32
+		y_position: f32
+		switch cell.direction {
+		case {0, 1}:
+			x_position = cell.position.x
+			y_position = cell.position.y + PLAYER_SIZE - cell.size
+		case {0, -1}:
+			x_position = cell.position.x
+			y_position = cell.position.y
+		case {1, 0}:
+			x_position = cell.position.x + PLAYER_SIZE - cell.size
+			y_position = cell.position.y
+		case {-1, 0}:
+			x_position = cell.position.x
+			y_position = cell.position.y
+		}
+		rl.DrawRectangle(
+			i32(cell.position.x),
+			i32(cell.position.y),
+			i32(math.round(x_size)),
+			i32(math.round(y_size)),
+			rl.ORANGE,
+		)
+		rl.DrawRectangle(
+			i32(math.round(x_position)),
+			i32(math.round(y_position)),
+			i32(math.round(x_size)),
+			i32(math.round(y_size)),
+			rl.RED,
+		)
+	}
+}
 
 draw_ghost_cells :: proc(rb: ^Ringuffer_t) {
 	for i in 0 ..< rb.count {
@@ -704,7 +710,7 @@ draw_ghost_cells :: proc(rb: ^Ringuffer_t) {
 // }
 
 aligned_to_grid :: proc(p: Vector2) -> bool {
-	return i32(p.x) % PLAYER_SIZE == 10 && i32(p.y) % PLAYER_SIZE == 10
+	return i32(p.x) % PLAYER_SIZE == 0 && i32(p.y) % PLAYER_SIZE == 0
 }
 
 circle_colliding :: proc(v0, v1: Vector2, d0, d1: f32) -> bool {

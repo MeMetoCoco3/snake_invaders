@@ -8,17 +8,17 @@ import rl "vendor:raylib"
 SCREEN_WIDTH :: 800
 SCREEN_HEIGHT :: 800
 PLAYER_SIZE :: 16
-PLAYER_SPEED :: 2
+PLAYER_SPEED :: 1
 DASH_DURATION :: 30
 RECOVER_DASH_TIME :: 240
 
 MAX_NUM_BODY :: 20
 MAX_NUM_MOVERS :: 100
-MAX_NUM_CANDIES :: 1
+MAX_NUM_CANDIES :: 20
 CANDY_SIZE :: 16
 CANDY_RESPAWN_TIME :: 2
 
-MAX_NUM_ENEMIES :: 1
+MAX_NUM_ENEMIES :: 0
 ENEMY_RESPAWN_TIME :: 10
 ENEMY_SIZE :: 16
 ENEMY_SPEED :: 1
@@ -59,9 +59,11 @@ main :: proc() {
 	game := Game {
 		player_body = Body{ghost_pieces = &Ringuffer_t{}, cells = [MAX_NUM_BODY]cell_t{}},
 		player_position = &player_arquetype.positions[0],
+		player_velocity = &player_arquetype.velocities[0],
 		world = world,
 		audio = audio_system_t{fx = make([dynamic]^rl.Sound, 0, 20), bg_music = bg_music},
 	}
+
 
 	load_scene(&game, .ONE)
 
@@ -77,14 +79,13 @@ main :: proc() {
 			IASystem(&game)
 			CollisionSystem(&game)
 			VelocitySystem(&game)
-
 			update(&game)
-
 			rl.BeginDrawing()
 			draw_game(&game)
 			rl.ClearBackground(rl.BLACK)
 			rl.EndDrawing()
 
+			fmt.println("")
 		case .PAUSE:
 			get_input_pause(&game)
 			rl.BeginDrawing()
@@ -116,8 +117,14 @@ add_player :: proc(world: ^World) {
 		PlayerData{.NORMAL, Vector2{0, 0}, true, RECOVER_DASH_TIME, 3, 0, false},
 	)
 
-	player_position := Vector2{SCREEN_WIDTH / 2 + 10, SCREEN_HEIGHT / 2 + 10}
-	append(&player_arquetype.positions, Position{player_position, {PLAYER_SIZE, PLAYER_SIZE}})
+
+	// ANY UPDATETO INITIAL POSITION MUST BE DONE ON LOAD SCENE
+	player_position := Position {
+		Vector2{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2},
+		{PLAYER_SIZE, PLAYER_SIZE},
+	}
+
+	append(&player_arquetype.positions, player_position)
 	append(&player_arquetype.velocities, Velocity{{0, 0}, PLAYER_SPEED})
 	append(
 		&player_arquetype.animations,
@@ -127,14 +134,15 @@ add_player :: proc(world: ^World) {
 			h = 16,
 			num_frames = 1,
 			kind = .STATIC,
-			angle_type = .DIRECTIONAL,
+			angle_type = .IGNORE,
 		},
 	)
+
 	append(&player_arquetype.data, Data{.PLAYER, .ALIVE, .GOOD, .NORMAL})
 	append(
 		&player_arquetype.colliders,
 		Collider {
-			player_position + EPSILON_COLISION,
+			player_position.pos + EPSILON_COLISION,
 			PLAYER_SIZE - 2 * EPSILON_COLISION,
 			PLAYER_SIZE - 2 * EPSILON_COLISION,
 		},

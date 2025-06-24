@@ -8,6 +8,7 @@ Vector2 :: [2]f32
 Game :: struct {
 	state:              GAME_STATE,
 	player_position:    ^Position,
+	player_velocity:    ^Velocity,
 	player_body:        Body,
 	spawn_areas:        []rl.Rectangle,
 	count_spawn_areas:  int,
@@ -102,8 +103,7 @@ texture_bank: [TEXTURE.TX_COUNT]rl.Texture2D
 sound_bank: [FX.FX_COUNT]rl.Sound
 bg_music: rl.Music
 
-draw :: proc {// draw_entity_animation,
-	// draw_player_animation,
+draw :: proc {
 	draw_sprite,
 	draw_animated_sprite,
 }
@@ -125,10 +125,12 @@ draw_animated_sprite :: proc(position: Position, animation: ^Animation, velocity
 		angle = math.atan2(velocity.direction.y, velocity.direction.x) * 180 / math.PI
 	case .IGNORE:
 	}
+	// fmt.println(position)
+	// fmt.println("PITION:", position.size)
+	// fmt.println("ANIM, POSITION", animation.w, animation.h)
+	dst_rec := rl.Rectangle{position.pos.x, position.pos.y, position.size.x, position.size.y}
 
-	dst_rec := rl.Rectangle{position.pos.x, position.pos.y, animation.w, animation.h}
-
-	origin := Vector2{animation.w / 2, animation.h / 2}
+	origin := Vector2{0, 0}
 	rl.DrawTexturePro(animation.image^, src_rec, dst_rec, origin, f32(angle), rl.WHITE)
 
 	if animation._time_on_frame >= animation.frame_delay && animation.kind != .STATIC {
@@ -220,7 +222,7 @@ unload_sounds :: proc() {
 
 load_scene :: proc(game: ^Game, scene: SCENES) {
 	old_ghost_pieces := game.player_body.ghost_pieces
-	game.player_position^ = {{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2}, {0, 0}}
+	game.player_position^ = {{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2}, {PLAYER_SIZE, PLAYER_SIZE}}
 
 
 	game.player_body.ghost_pieces = old_ghost_pieces
