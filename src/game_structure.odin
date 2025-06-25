@@ -36,24 +36,6 @@ GAME_STATE :: enum {
 	QUIT,
 }
 
-
-// Player :: struct {
-// 	using head:       cell_t,
-// 	next_dir:         Vector2,
-// 	speed:            i8,
-// 	can_dash:         bool,
-// 	time_on_dash:     i16,
-// 	health:           i8,
-// 	num_cells:        i8,
-// 	num_ghost_pieces: i8,
-// 	ghost_pieces:     ^Ringuffer_t,
-// 	rotation:         f32,
-// 	next_bullet_size: f32,
-// 	growing:          bool,
-// 	animation:        Animation,
-// 	state:            PLAYER_STATE,
-// }
-
 PLAYER_STATE :: enum {
 	NORMAL,
 	DASH,
@@ -90,16 +72,30 @@ vec2_normalize :: proc(v: ^Vector2) {
 	v.y = y
 }
 
-TEXTURE :: enum {
-	TX_PLAYER = 0,
-	TX_ENEMY,
-	TX_BULLET,
-	TX_BIG_EXPLOSION,
-	TX_CANDY,
-	TX_COUNT,
+ANIMATION :: enum {
+	PLAYER = 0,
+	BULLET_G,
+	ENEMY_SHOT,
+	ENEMY_RUN,
+	BIG_EXPLOSION,
+	BULLET_B,
+	CANDY,
+	ANIM_COUNT,
 }
 
-texture_bank: [TEXTURE.TX_COUNT]rl.Texture2D
+SPRITE :: enum {
+	PLAYER_IDLE = 0,
+	PLAYER_EAT,
+	BODY_STRAIGHT,
+	BODY_TURN,
+	TAIL,
+	BORDER,
+	CORNER,
+	SPRITE_COUNT,
+}
+
+animation_bank: [ANIMATION.ANIM_COUNT]Animation
+sprite_bank: [SPRITE.SPRITE_COUNT]Sprite
 sound_bank: [FX.FX_COUNT]rl.Sound
 bg_music: rl.Music
 
@@ -143,43 +139,16 @@ draw_animated_sprite :: proc(position: Position, animation: ^Animation, velocity
 
 draw_sprite :: proc(position: Position, sprite: Sprite) {
 	src_rec := rl.Rectangle {
-		sprite.source_position.x,
-		sprite.source_position.y,
+		sprite.source_origin.x,
+		sprite.source_origin.y,
 		sprite.size.x,
 		sprite.size.y,
 	}
 	// ORIGIN: Marks the point of rotation, relative to the rectangle, i will live it at 0,0
 	dst_rec := rl.Rectangle{position.pos.x, position.pos.y, position.size.x, position.size.y}
 
-	rl.DrawTexturePro(sprite.texture_id^, src_rec, dst_rec, {0, 0}, 0, rl.WHITE)
+	rl.DrawTexturePro(sprite.image^, src_rec, dst_rec, {0, 0}, 0, rl.WHITE)
 }
-
-//
-// draw_player_animation :: proc(player: ^Player) {
-// 	src_rec := rl.Rectangle{0, 32, PLAYER_SIZE, PLAYER_SIZE}
-// 	switch player.head.direction {
-// 	case {0, 1}:
-// 		player.rotation = 270
-// 	case {0, -1}:
-// 		player.rotation = 90
-// 	case {1, 0}:
-// 		player.rotation = 180
-// 	case {-1, 0}:
-// 		player.rotation = 0
-//
-// 	}
-//
-// 	dst_rec := rl.Rectangle {
-// 		player.head.position.x + PLAYER_SIZE / 2,
-// 		player.head.position.y + PLAYER_SIZE / 2,
-// 		PLAYER_SIZE,
-// 		PLAYER_SIZE,
-// 	}
-// 	origin := rl.Vector2{PLAYER_SIZE / 2, PLAYER_SIZE / 2}
-// 	rl.DrawTexturePro(player.animation.image^, src_rec, dst_rec, origin, player.rotation, rl.WHITE)
-// }
-//
-
 add_sound :: proc(game: ^Game, sound: ^rl.Sound) {
 	append(&game.audio.fx, sound)
 }
@@ -199,18 +168,158 @@ load_sounds :: proc() {
 	sound_bank[FX.FX_SHOOT] = rl.LoadSound("assets/pow.mp3")
 }
 
-load_textures :: proc() {
-	texture_bank[TEXTURE.TX_PLAYER] = rl.LoadTexture("assets/tileset.png")
-	texture_bank[TEXTURE.TX_ENEMY] = rl.LoadTexture("assets/ghost.png")
-	texture_bank[TEXTURE.TX_BULLET] = rl.LoadTexture("assets/player-shoot.png")
-	texture_bank[TEXTURE.TX_CANDY] = rl.LoadTexture("assets/coin.png")
-	texture_bank[TEXTURE.TX_BIG_EXPLOSION] = rl.LoadTexture("assets/big-explosion.png")
+load_animations :: proc() {
+	animation_bank[ANIMATION.PLAYER] = Animation {
+		image          = &atlas,
+		w              = 32,
+		h              = 32,
+		source_origin  = Vector2{0, 0},
+		_current_frame = 0,
+		num_frames     = 0,
+		frame_delay    = 0,
+		_time_on_frame = 0,
+		padding        = {0, 0},
+		offset         = {0, 0},
+		kind           = .STATIC,
+		angle_type     = .IGNORE,
+	}
+
+	animation_bank[ANIMATION.BULLET_G] = Animation {
+		image          = &atlas,
+		w              = 32,
+		h              = 32,
+		source_origin  = Vector2{0, 64},
+		_current_frame = 0,
+		num_frames     = 2,
+		frame_delay    = 8,
+		_time_on_frame = 0,
+		padding        = {0, 0},
+		offset         = {0, 0},
+		kind           = .REPEAT,
+		angle_type     = .DIRECTIONAL,
+	}
+
+	animation_bank[ANIMATION.BULLET_B] = Animation {
+		image          = &atlas,
+		w              = 32,
+		h              = 32,
+		source_origin  = Vector2{64, 64},
+		_current_frame = 0,
+		num_frames     = 2,
+		frame_delay    = 8,
+		_time_on_frame = 0,
+		padding        = {0, 0},
+		offset         = {0, 0},
+		kind           = .REPEAT,
+		angle_type     = .DIRECTIONAL,
+	}
+
+	animation_bank[ANIMATION.ENEMY_SHOT] = Animation {
+		image          = &atlas,
+		w              = 32,
+		h              = 32,
+		source_origin  = Vector2{0, 128},
+		_current_frame = 0,
+		num_frames     = 1,
+		frame_delay    = 8,
+		_time_on_frame = 0,
+		padding        = {0, 0},
+		offset         = {0, 0},
+		kind           = .STATIC,
+		angle_type     = .LR,
+	}
+
+	animation_bank[ANIMATION.ENEMY_RUN] = Animation {
+		image          = &atlas,
+		w              = 32,
+		h              = 32,
+		source_origin  = Vector2{32, 128},
+		_current_frame = 0,
+		num_frames     = 4,
+		frame_delay    = 8,
+		_time_on_frame = 0,
+		padding        = {0, 0},
+		offset         = {0, 0},
+		kind           = .REPEAT,
+		angle_type     = .LR,
+	}
+
+
+	animation_bank[ANIMATION.BIG_EXPLOSION] = Animation {
+		image          = &atlas,
+		w              = 32,
+		h              = 32,
+		source_origin  = Vector2{0, 64},
+		_current_frame = 0,
+		num_frames     = 2,
+		frame_delay    = 8,
+		_time_on_frame = 0,
+		padding        = {0, 0},
+		offset         = {0, 0},
+		kind           = .REPEAT,
+		angle_type     = .DIRECTIONAL,
+	}
+
+	animation_bank[ANIMATION.CANDY] = Animation {
+		image       = &tx_candy,
+		w           = PLAYER_SIZE,
+		h           = PLAYER_SIZE,
+		num_frames  = 16,
+		frame_delay = 4,
+		kind        = .REPEAT,
+		angle_type  = .IGNORE,
+	}
+
 }
 
-unload_textures :: proc() {
-	for i in 0 ..< int(TEXTURE.TX_COUNT) {
-		rl.UnloadTexture(texture_bank[i])
+load_sprites :: proc() {
+	sprite_bank[SPRITE.PLAYER_IDLE] = Sprite {
+		image         = &atlas,
+		source_origin = {0, 0},
+		size          = {32, 32},
 	}
+
+	sprite_bank[SPRITE.PLAYER_EAT] = Sprite {
+		image         = &atlas,
+		source_origin = {32, 0},
+		size          = {32, 32},
+	}
+
+	sprite_bank[SPRITE.BODY_STRAIGHT] = Sprite {
+		image         = &atlas,
+		source_origin = {0, 32},
+		size          = {32, 32},
+	}
+
+	sprite_bank[SPRITE.BODY_TURN] = Sprite {
+		image         = &atlas,
+		source_origin = {32, 32},
+		size          = {32, 32},
+	}
+
+	sprite_bank[SPRITE.TAIL] = Sprite {
+		image         = &atlas,
+		source_origin = {32, 64},
+		size          = {32, 32},
+	}
+
+	sprite_bank[SPRITE.BORDER] = Sprite {
+		image         = &atlas,
+		source_origin = {0, 96},
+		size          = {32, 32},
+	}
+
+	sprite_bank[SPRITE.CORNER] = Sprite {
+		image         = &atlas,
+		source_origin = {32, 96},
+		size          = {32, 32},
+	}
+
+
+}
+
+unload_atlas :: proc() {
+	rl.UnloadTexture(atlas)
 }
 
 

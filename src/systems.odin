@@ -15,6 +15,26 @@ FX :: enum {
 }
 
 
+DrawCollidersSystem :: proc(game: ^Game) {
+	arquetypes, is_empty := query_archetype(game.world, COMPONENT_ID.COLLIDER)
+	if is_empty {
+		return
+	}
+
+	for arquetype in arquetypes {
+		colliders := arquetype.colliders
+		for i in 0 ..< len(arquetype.entities_id) {
+			rect := rl.Rectangle {
+				x      = colliders[i].position.x,
+				y      = colliders[i].position.y,
+				width  = f32(colliders[i].w),
+				height = f32(colliders[i].h),
+			}
+			rl.DrawRectangleRec(rect, rl.WHITE)
+		}
+	}
+}
+
 CollisionSystem :: proc(game: ^Game) {
 	arquetypesA, is_empty := query_archetype(
 		game.world,
@@ -39,11 +59,6 @@ CollisionSystem :: proc(game: ^Game) {
 				is_player = true
 			}
 
-			centerA := Vector2 {
-				colliderA.position.x - f32(colliderA.w),
-				colliderA.position.y - f32(colliderA.h),
-			}
-
 			future_pos := Vector2 {
 				colliderA.position.x + velocityA.direction.x,
 				colliderA.position.y + velocityA.direction.y,
@@ -61,12 +76,9 @@ CollisionSystem :: proc(game: ^Game) {
 
 					#partial switch dataB.kind {
 					case .CANDY:
-						center_candy :=
-							colliderB.position + ({f32(colliderB.w), f32(colliderB.h)} / 2)
-
 						if is_player &&
-						   vec2_distance(centerA, center_candy) < PLAYER_SIZE &&
-						   dataB.state != .DEAD {
+						   dataB.state != .DEAD &&
+						   collide_no_edges(colliderB^, colliderA^) {
 							fmt.println("WE EAT")
 							dataB.state = .DEAD
 							add_sound(game, &sound_bank[FX.FX_EAT])
@@ -79,30 +91,14 @@ CollisionSystem :: proc(game: ^Game) {
 						}
 
 					case .STATIC:
-						if rec_colliding_no_edges(
-							colliderB.position,
-							f32(colliderB.w),
-							f32(colliderB.h),
-							future_pos,
-							f32(colliderA.w),
-							f32(colliderA.h),
-						) {
+						if collide_no_edges(colliderB^, colliderA^) {
 							velocityA.direction = Vector2{0, 0}
 						}
 
 					case .ENEMY:
-						center_enemy :=
-							colliderB.position + ({f32(colliderB.w), f32(colliderB.h)} / 2)
-						distance := vec2_distance(centerA, center_enemy)
-						direction := (centerA - center_enemy) / distance
-
-						sum_radius := (PLAYER_SIZE / 2 + ENEMY_SIZE / 2)
-
-						if is_player {
-							fmt.println("distance to enemy: ", distance)
-						}
-
-						if is_player && distance < f32(sum_radius) && dataA.state != .DEAD {
+						if is_player &&
+						   dataB.state != .DEAD &&
+						   collide_no_edges(colliderB^, colliderA^) {
 							switch dataA.player_state {
 							case .NORMAL:
 								game.state = .DEAD
@@ -116,22 +112,20 @@ CollisionSystem :: proc(game: ^Game) {
 						}
 
 					case .BULLET:
-						center_bullet :=
-							colliderB.position + ({f32(colliderB.w), f32(colliderB.h)} / 2)
-						sum_radius_player := (BULLET_SIZE / 2 + PLAYER_SIZE / 2) - EPSILON_COLISION
-						are_colliding :=
-							vec2_distance(center_bullet, centerA) <= f32(sum_radius_player)
+						if dataA.team == dataB.team {
+							continue
+						}
 
-						if dataB.team == .BAD && is_player {
-							if are_colliding {
+						are_colliding := collide_no_edges(colliderB^, colliderA^)
+						if are_colliding {
+							if dataB.team == .BAD && is_player {
 								game.state = .DEAD
-							}
-						} else if dataB.team == .GOOD && !is_player {
-							if are_colliding {
+							} else if dataB.team == .GOOD && !is_player {
 								dataB.state = .DEAD
 								dataA.state = .DEAD
 							}
 						}
+
 					case .PLAYER:
 						continue
 					}
@@ -140,6 +134,133 @@ CollisionSystem :: proc(game: ^Game) {
 		}
 	}
 }
+
+
+// CollisionSystem :: proc(game: ^Game) {
+// 	arquetypesA, is_empty := query_archetype(
+// 		game.world,
+// 		COMPONENT_ID.COLLIDER | .DATA | .VELOCITY | .POSITION,
+// 	)
+// 	if is_empty {
+// 		return
+// 	}
+//
+// 	// No need to check 2 colliders if either have velocity
+// 	arquetypesB, _ := query_archetype(game.world, COMPONENT_ID.COLLIDER | .DATA | .POSITION)
+// 	for archetypeA in arquetypesA {
+// 		for i in 0 ..< len(archetypeA.entities_id) {
+// 			colliderA := &archetypeA.colliders[i]
+// 			dataA := &archetypeA.data[i]
+// 			velocityA := &archetypeA.velocities[i]
+// 			positionA := &archetypeA.positions[i]
+//
+// 			is_player := false
+//
+// 			if dataA.kind == .PLAYER {
+// 				is_player = true
+// 			}
+//
+// 			centerA := Vector2 {
+// 				colliderA.position.x + f32(colliderA.w) / 2,
+// 				colliderA.position.y + f32(colliderA.h) / 2,
+// 			}
+//
+// 			future_pos := Vector2 {
+// 				colliderA.position.x + velocityA.direction.x,
+// 				colliderA.position.y + velocityA.direction.y,
+// 			}
+//
+// 			for archetypeB in arquetypesB {
+// 				for j in 0 ..< len(archetypeB.entities_id) {
+// 					dataB := &archetypeB.data[j]
+// 					if dataB.state == .DEAD || dataB == dataA || dataB.kind == .PLAYER {
+// 						continue
+// 					}
+//
+// 					colliderB := &archetypeB.colliders[j]
+// 					positionB := &archetypeB.positions[j]
+//
+// 					#partial switch dataB.kind {
+// 					case .CANDY:
+// 						center_candy :=
+// 							colliderB.position + ({f32(colliderB.w), f32(colliderB.h)} / 2)
+//
+// 						if is_player &&
+// 						   vec2_distance(centerA, center_candy) < PLAYER_SIZE &&
+// 						   dataB.state != .DEAD {
+// 							fmt.println("WE EAT")
+// 							dataB.state = .DEAD
+// 							add_sound(game, &sound_bank[FX.FX_EAT])
+// 							grow_body(
+// 								&game.player_body,
+// 								game.player_position.pos,
+// 								game.player_velocity.direction,
+// 							)
+//
+// 						}
+//
+// 					case .STATIC:
+// 						if rec_colliding_no_edges(
+// 							colliderB.position,
+// 							f32(colliderB.w),
+// 							f32(colliderB.h),
+// 							future_pos,
+// 							f32(colliderA.w),
+// 							f32(colliderA.h),
+// 						) {
+// 							velocityA.direction = Vector2{0, 0}
+// 						}
+//
+// 					case .ENEMY:
+// 						center_enemy :=
+// 							colliderB.position + ({f32(colliderB.w), f32(colliderB.h)} / 2)
+// 						distance := vec2_distance(centerA, center_enemy)
+// 						direction := (centerA - center_enemy) / distance
+//
+// 						sum_radius := (PLAYER_SIZE / 2 + ENEMY_SIZE / 2)
+//
+// 						if is_player {
+// 							fmt.println("distance to enemy: ", distance)
+// 						}
+//
+// 						if is_player && distance < f32(sum_radius) && dataA.state != .DEAD {
+// 							switch dataA.player_state {
+// 							case .NORMAL:
+// 								game.state = .DEAD
+// 								break
+// 							case .DASH:
+// 								dataA.state = .DEAD
+// 								add_sound(game, &sound_bank[FX.FX_EAT])
+// 								// grow_body(game.player)
+// 								continue
+// 							}
+// 						}
+//
+// 					case .BULLET:
+// 						center_bullet :=
+// 							colliderB.position + ({f32(colliderB.w), f32(colliderB.h)} / 2)
+// 						sum_radius_player := (BULLET_SIZE / 2 + PLAYER_SIZE / 2)
+// 						are_colliding :=
+// 							vec2_distance(center_bullet, centerA) < f32(sum_radius_player)
+//
+// 						if dataB.team == .BAD && is_player {
+// 							if are_colliding {
+// 								game.state = .DEAD
+// 							}
+// 						} else if dataB.team == .GOOD && !is_player {
+// 							if are_colliding {
+// 								dataB.state = .DEAD
+// 								dataA.state = .DEAD
+// 							}
+// 						}
+// 					case .PLAYER:
+// 						continue
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
+// }
 
 
 IASystem :: proc(game: ^Game) {

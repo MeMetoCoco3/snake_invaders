@@ -20,11 +20,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 	append(&arquetype.colliders, Collider{{0, 0}, SCREEN_WIDTH, PLAYER_SIZE})
 	append(
 		&arquetype.sprites,
-		Sprite {
-			&texture_bank[TEXTURE.TX_ENEMY],
-			{SCREEN_WIDTH, PLAYER_SIZE},
-			{SCREEN_WIDTH, PLAYER_SIZE},
-		},
+		Sprite{&atlas, {SCREEN_WIDTH, PLAYER_SIZE}, {SCREEN_WIDTH, PLAYER_SIZE}},
 	)
 	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL})
 
@@ -39,11 +35,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 	)
 	append(
 		&arquetype.sprites,
-		Sprite {
-			&texture_bank[TEXTURE.TX_ENEMY],
-			{SCREEN_WIDTH, PLAYER_SIZE},
-			{SCREEN_WIDTH, PLAYER_SIZE},
-		},
+		Sprite{&atlas, {SCREEN_WIDTH, PLAYER_SIZE}, {SCREEN_WIDTH, PLAYER_SIZE}},
 	)
 	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL})
 
@@ -52,11 +44,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 	append(&arquetype.colliders, Collider{{0, 0}, PLAYER_SIZE, SCREEN_HEIGHT})
 	append(
 		&arquetype.sprites,
-		Sprite {
-			&texture_bank[TEXTURE.TX_ENEMY],
-			{PLAYER_SIZE, SCREEN_HEIGHT},
-			{PLAYER_SIZE, SCREEN_HEIGHT},
-		},
+		Sprite{&atlas, {PLAYER_SIZE, SCREEN_HEIGHT}, {PLAYER_SIZE, SCREEN_HEIGHT}},
 	)
 	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL})
 
@@ -71,11 +59,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 	)
 	append(
 		&arquetype.sprites,
-		Sprite {
-			&texture_bank[TEXTURE.TX_ENEMY],
-			{PLAYER_SIZE, SCREEN_HEIGHT},
-			{PLAYER_SIZE, SCREEN_HEIGHT},
-		},
+		Sprite{&atlas, {PLAYER_SIZE, SCREEN_HEIGHT}, {PLAYER_SIZE, SCREEN_HEIGHT}},
 	)
 	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL})
 
@@ -111,7 +95,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 clean_up :: proc(game: ^Game) {
 	free(game)
 	unload_sounds()
-	unload_textures()
+	// unload_textures()
 
 	rl.UnloadMusicStream(game.audio.bg_music)
 

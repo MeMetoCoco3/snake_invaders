@@ -3,7 +3,9 @@ package main
 import "core:fmt"
 import "core:math"
 import "core:math/rand"
+
 import rl "vendor:raylib"
+DEBUG_COLISION :: #config(DEBUG_COLISION, false)
 
 SCREEN_WIDTH :: 800
 SCREEN_HEIGHT :: 800
@@ -20,7 +22,7 @@ CANDY_RESPAWN_TIME :: 2
 
 MAX_NUM_ENEMIES :: 1
 ENEMY_RESPAWN_TIME :: 10
-ENEMY_SIZE :: 16
+ENEMY_SIZE :: 32
 ENEMY_SPEED :: 1
 ENEMY_COLLIDER_THRESHOLD :: 4
 ENEMY_TIME_RELOAD :: 60
@@ -38,14 +40,25 @@ NUM_ENTITIES :: 1000
 
 player_mask := COMPONENT_ID.POSITION | .VELOCITY | .ANIMATION | .DATA | .COLLIDER | .PLAYER_DATA
 
+atlas: rl.Texture2D
+tx_candy: rl.Texture2D
+
 main :: proc() {
+	fmt.println("JJJ")
+
 	rl.InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "snake_invaders")
 	rl.InitAudioDevice()
 
 	rl.SetTargetFPS(60)
 
+	atlas = rl.LoadTexture("assets/atlas.png")
+	tx_candy = rl.LoadTexture("assets/coin.png")
+
+	load_animations()
+	load_sprites()
+
+
 	load_sounds()
-	load_textures()
 
 	bg_music := bg_music
 	rl.SetMusicVolume(bg_music, 0.001)
@@ -82,10 +95,13 @@ main :: proc() {
 			update(&game)
 			rl.BeginDrawing()
 			draw_game(&game)
+			when DEBUG_COLISION {
+				DrawCollidersSystem(&game)
+			}
+
 			rl.ClearBackground(rl.BLACK)
 			rl.EndDrawing()
 
-			fmt.println("")
 		case .PAUSE:
 			get_input_pause(&game)
 			rl.BeginDrawing()
@@ -126,17 +142,7 @@ add_player :: proc(world: ^World) {
 
 	append(&player_arquetype.positions, player_position)
 	append(&player_arquetype.velocities, Velocity{{0, 0}, PLAYER_SPEED})
-	append(
-		&player_arquetype.animations,
-		Animation {
-			image = &texture_bank[TEXTURE.TX_PLAYER],
-			w = 16,
-			h = 16,
-			num_frames = 1,
-			kind = .STATIC,
-			angle_type = .IGNORE,
-		},
-	)
+	append(&player_arquetype.animations, animation_bank[ANIMATION.PLAYER])
 
 	append(&player_arquetype.data, Data{.PLAYER, .ALIVE, .GOOD, .NORMAL})
 	append(
