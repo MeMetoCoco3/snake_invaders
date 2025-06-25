@@ -137,18 +137,24 @@ draw_animated_sprite :: proc(position: Position, animation: ^Animation, velocity
 	animation._time_on_frame += 1
 }
 
-draw_sprite :: proc(position: Position, sprite: Sprite) {
+draw_sprite :: proc(sprite: Sprite) {
 	src_rec := rl.Rectangle {
-		sprite.source_origin.x,
-		sprite.source_origin.y,
-		sprite.size.x,
-		sprite.size.y,
+		sprite.src_rect.position.x,
+		sprite.src_rect.position.y,
+		sprite.src_rect.size.x,
+		sprite.src_rect.size.y,
 	}
-	// ORIGIN: Marks the point of rotation, relative to the rectangle, i will live it at 0,0
-	dst_rec := rl.Rectangle{position.pos.x, position.pos.y, position.size.x, position.size.y}
+	dst_rec := rl.Rectangle {
+		sprite.dst_rect.position.x,
+		sprite.dst_rect.position.y,
+		sprite.dst_rect.size.x,
+		sprite.dst_rect.size.y,
+	}
 
-	rl.DrawTexturePro(sprite.image^, src_rec, dst_rec, {0, 0}, 0, rl.WHITE)
+	origin := Vector2{sprite.dst_rect.size.x / 2, sprite.dst_rect.size.y / 2}
+	rl.DrawTexturePro(sprite.image^, src_rec, dst_rec, origin, sprite.rotation, rl.WHITE)
 }
+
 add_sound :: proc(game: ^Game, sound: ^rl.Sound) {
 	append(&game.audio.fx, sound)
 }
@@ -271,52 +277,52 @@ load_animations :: proc() {
 	}
 
 }
-
-load_sprites :: proc() {
-	sprite_bank[SPRITE.PLAYER_IDLE] = Sprite {
-		image         = &atlas,
-		source_origin = {0, 0},
-		size          = {32, 32},
-	}
-
-	sprite_bank[SPRITE.PLAYER_EAT] = Sprite {
-		image         = &atlas,
-		source_origin = {32, 0},
-		size          = {32, 32},
-	}
-
-	sprite_bank[SPRITE.BODY_STRAIGHT] = Sprite {
-		image         = &atlas,
-		source_origin = {0, 32},
-		size          = {32, 32},
-	}
-
-	sprite_bank[SPRITE.BODY_TURN] = Sprite {
-		image         = &atlas,
-		source_origin = {32, 32},
-		size          = {32, 32},
-	}
-
-	sprite_bank[SPRITE.TAIL] = Sprite {
-		image         = &atlas,
-		source_origin = {32, 64},
-		size          = {32, 32},
-	}
-
-	sprite_bank[SPRITE.BORDER] = Sprite {
-		image         = &atlas,
-		source_origin = {0, 96},
-		size          = {32, 32},
-	}
-
-	sprite_bank[SPRITE.CORNER] = Sprite {
-		image         = &atlas,
-		source_origin = {32, 96},
-		size          = {32, 32},
-	}
-
-
-}
+//
+// load_sprites :: proc() {
+// 	sprite_bank[SPRITE.PLAYER_IDLE] = Sprite {
+// 		image         = &atlas,
+// 		source_origin = {0, 0},
+// 		size          = {32, 32},
+// 	}
+//
+// 	sprite_bank[SPRITE.PLAYER_EAT] = Sprite {
+// 		image         = &atlas,
+// 		source_origin = {32, 0},
+// 		size          = {32, 32},
+// 	}
+//
+// 	sprite_bank[SPRITE.BODY_STRAIGHT] = Sprite {
+// 		image         = &atlas,
+// 		source_origin = {0, 32},
+// 		size          = {32, 32},
+// 	}
+//
+// 	sprite_bank[SPRITE.BODY_TURN] = Sprite {
+// 		image         = &atlas,
+// 		source_origin = {32, 32},
+// 		size          = {32, 32},
+// 	}
+//
+// 	sprite_bank[SPRITE.TAIL] = Sprite {
+// 		image         = &atlas,
+// 		source_origin = {32, 64},
+// 		size          = {32, 32},
+// 	}
+//
+// 	sprite_bank[SPRITE.BORDER] = Sprite {
+// 		image         = &atlas,
+// 		source_origin = {0, 96},
+// 		size          = {32, 32},
+// 	}
+//
+// 	sprite_bank[SPRITE.CORNER] = Sprite {
+// 		image         = &atlas,
+// 		source_origin = {32, 96},
+// 		size          = {32, 32},
+// 	}
+//
+//
+// }
 
 unload_atlas :: proc() {
 	rl.UnloadTexture(atlas)
@@ -331,7 +337,7 @@ unload_sounds :: proc() {
 
 load_scene :: proc(game: ^Game, scene: SCENES) {
 	old_ghost_pieces := game.player_body.ghost_pieces
-	game.player_position^ = {{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2}, {PLAYER_SIZE, PLAYER_SIZE}}
+	game.player_position^ = {{320, 320}, {PLAYER_SIZE, PLAYER_SIZE}}
 
 
 	game.player_body.ghost_pieces = old_ghost_pieces

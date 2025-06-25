@@ -58,10 +58,17 @@ Velocity :: struct {
 }
 
 Sprite :: struct {
-	image:         ^rl.Texture2D,
-	source_origin: Vector2,
-	size:          Vector2,
+	image:    ^rl.Texture2D,
+	src_rect: Rect,
+	dst_rect: Rect,
+	rotation: f32,
 }
+
+Rect :: struct {
+	position: Vector2,
+	size:     Vector2,
+}
+
 
 Animation :: struct {
 	image:          ^rl.Texture2D,

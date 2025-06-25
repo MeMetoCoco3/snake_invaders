@@ -30,7 +30,7 @@ DrawCollidersSystem :: proc(game: ^Game) {
 				width  = f32(colliders[i].w),
 				height = f32(colliders[i].h),
 			}
-			rl.DrawRectangleRec(rect, rl.WHITE)
+			rl.DrawRectangleRec(rect, rl.BLUE)
 		}
 	}
 }
@@ -91,7 +91,14 @@ CollisionSystem :: proc(game: ^Game) {
 						}
 
 					case .STATIC:
-						if collide_no_edges(colliderB^, colliderA^) {
+						colliderA_future_pos := Collider {
+							colliderA.position + velocityA.direction * velocityA.speed,
+							colliderA.h,
+							colliderA.w,
+						}
+						if collide_no_edges(colliderB^, colliderA_future_pos) {
+							fmt.println("COLLIDING")
+
 							velocityA.direction = Vector2{0, 0}
 						}
 
@@ -106,6 +113,7 @@ CollisionSystem :: proc(game: ^Game) {
 							case .DASH:
 								dataA.state = .DEAD
 								add_sound(game, &sound_bank[FX.FX_EAT])
+								// TODO: 
 								// grow_body(game.player)
 								continue
 							}
@@ -325,7 +333,6 @@ VelocitySystem :: proc(game: ^Game) {
 	head_data := player.players_data[0]
 	head_colision := &player.colliders[0]
 
-
 	if aligned_to_grid(head_position^) {
 		if try_set_dir(head_velocity, head_data.next_dir, head_direction) &&
 		   body.num_cells > 0 &&
@@ -466,7 +473,7 @@ RenderingSystem :: proc(game: ^Game) {
 		positions := arquetype.positions
 		sprites := arquetype.sprites
 		for i in 0 ..< len(arquetype.entities_id) {
-			draw(positions[i], sprites[i])
+			draw(sprites[i])
 		}
 	}
 

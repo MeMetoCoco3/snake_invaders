@@ -9,18 +9,18 @@ DEBUG_COLISION :: #config(DEBUG_COLISION, false)
 
 SCREEN_WIDTH :: 800
 SCREEN_HEIGHT :: 800
-PLAYER_SIZE :: 16
-PLAYER_SPEED :: 2
+PLAYER_SIZE :: 32
+PLAYER_SPEED :: 4
 DASH_DURATION :: 30
 RECOVER_DASH_TIME :: 240
 
 MAX_NUM_BODY :: 20
 MAX_NUM_MOVERS :: 100
-MAX_NUM_CANDIES :: 20
+MAX_NUM_CANDIES :: 0
 CANDY_SIZE :: 16
 CANDY_RESPAWN_TIME :: 2
 
-MAX_NUM_ENEMIES :: 1
+MAX_NUM_ENEMIES :: 0
 ENEMY_RESPAWN_TIME :: 10
 ENEMY_SIZE :: 32
 ENEMY_SPEED :: 1
@@ -55,7 +55,7 @@ main :: proc() {
 	tx_candy = rl.LoadTexture("assets/coin.png")
 
 	load_animations()
-	load_sprites()
+	// load_sprites()
 
 
 	load_sounds()
@@ -94,6 +94,7 @@ main :: proc() {
 			VelocitySystem(&game)
 			update(&game)
 			rl.BeginDrawing()
+
 			draw_game(&game)
 			when DEBUG_COLISION {
 				DrawCollidersSystem(&game)
@@ -133,12 +134,8 @@ add_player :: proc(world: ^World) {
 		PlayerData{.NORMAL, Vector2{0, 0}, true, RECOVER_DASH_TIME, 3, 0, false},
 	)
 
-
 	// ANY UPDATETO INITIAL POSITION MUST BE DONE ON LOAD SCENE
-	player_position := Position {
-		Vector2{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2},
-		{PLAYER_SIZE, PLAYER_SIZE},
-	}
+	player_position := Position{Vector2{320, 320}, {PLAYER_SIZE, PLAYER_SIZE}}
 
 	append(&player_arquetype.positions, player_position)
 	append(&player_arquetype.velocities, Velocity{{0, 0}, PLAYER_SPEED})
