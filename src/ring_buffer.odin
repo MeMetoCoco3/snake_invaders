@@ -35,7 +35,7 @@ pop_cell :: proc(rb: ^Ringuffer_t) -> (cell_ghost_t, bool) {
 	return popped_cell, true
 }
 
-peek_cell :: proc(rb: ^Ringuffer_t) -> (cell_ghost_t, bool) {
+peek_head :: proc(rb: ^Ringuffer_t) -> (cell_ghost_t, bool) {
 	if rb.count == 0 {
 		return cell_ghost_t{}, false
 	}

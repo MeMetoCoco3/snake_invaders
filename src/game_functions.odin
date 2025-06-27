@@ -12,22 +12,19 @@ InputSystem :: proc(game: ^Game) {
 	player_data := &game.world.archetypes[player_mask].players_data[0]
 	player_position := &game.world.archetypes[player_mask].positions[0]
 
-	if (rl.IsKeyPressed(.H) || rl.IsKeyPressed(.LEFT)) {
+	if (rl.IsKeyDown(.H) || rl.IsKeyDown(.LEFT)) {
 		player_data.next_dir = {-1, 0}
 		// player_velocity.direction = {-1, 0}
-	}
-	if (rl.IsKeyPressed(.L) || rl.IsKeyPressed(.RIGHT)) {
+	} else if (rl.IsKeyDown(.L) || rl.IsKeyDown(.RIGHT)) {
 		player_data.next_dir = {1, 0}
 		// player_velocity.direction = {1, 0}
-	}
-	if (rl.IsKeyPressed(.J) || rl.IsKeyPressed(.DOWN)) {
+	} else if (rl.IsKeyDown(.J) || rl.IsKeyDown(.DOWN)) {
 		player_data.next_dir = {0, 1}
 		// player_velocity.direction = {0, 1}
-	}
-	if (rl.IsKeyPressed(.K) || rl.IsKeyPressed(.UP)) {
+	} else if (rl.IsKeyDown(.K) || rl.IsKeyDown(.UP)) {
 		player_data.next_dir = {0, -1}
 		// player_velocity.direction = {0, -1}
-	}
+	} else {player_data.next_dir = {0, 0}}
 
 
 	if rl.IsKeyPressed(.P) {
@@ -49,7 +46,7 @@ InputSystem :: proc(game: ^Game) {
 		last_cell.size = math.lerp(last_cell.size, f32(0.0), f32(SMOOTHING / 2))
 
 		if last_cell.size < f32(EPSILON) {
-			last_ghost, ok := peek_cell(body.ghost_pieces)
+			last_ghost, ok := peek_head(body.ghost_pieces)
 
 			if ok &&
 			   last_cell.count_turns_left <= 1 &&
@@ -173,7 +170,7 @@ update_scene :: proc(game: ^Game) {
 	game.enemy_respawn_time += 1
 	game.candy_respawn_time += 1
 }
-//
+
 // update_player :: proc(game: ^Game) {
 // 	player := game.world.archetypes[player_mask]
 // 	body := &game.player_body
@@ -277,7 +274,7 @@ grow_body :: proc(body: ^Body, head_pos, head_dir: Vector2) {
 
 
 dealing_ghost_piece :: proc(body: ^Body, last_piece: i8) {
-	ghost_piece, ok := peek_cell(body.ghost_pieces)
+	ghost_piece, ok := peek_head(body.ghost_pieces)
 	if !ok {
 		return
 	}
@@ -501,38 +498,36 @@ draw_body :: proc(body: ^Body) {
 	for i in 0 ..< body.num_cells {
 		cell := body.cells[i]
 
-		x_size := cell.direction.x != 0 ? cell.size : PLAYER_SIZE
-		y_size := cell.direction.y != 0 ? cell.size : PLAYER_SIZE
-		x_position: f32
-		y_position: f32
-		switch cell.direction {
-		case {0, 1}:
-			x_position = cell.position.x
-			y_position = cell.position.y + PLAYER_SIZE - cell.size
-		case {0, -1}:
-			x_position = cell.position.x
-			y_position = cell.position.y
-		case {1, 0}:
-			x_position = cell.position.x + PLAYER_SIZE - cell.size
-			y_position = cell.position.y
-		case {-1, 0}:
-			x_position = cell.position.x
-			y_position = cell.position.y
-		}
+		// x_position: f32
+		// y_position: f32
+		//
+		// switch cell.direction {
+		// case {0, 1}:
+		// 	x_position = cell.position.x
+		// 	y_position = cell.position.y + PLAYER_SIZE - cell.size
+		// case {0, -1}:
+		// 	x_position = cell.position.x
+		// 	y_position = cell.position.y
+		// case {1, 0}:
+		// 	x_position = cell.position.x + PLAYER_SIZE - cell.size
+		// 	y_position = cell.position.y
+		// case {-1, 0}:
+		// 	x_position = cell.position.x
+		// 	y_position = cell.position.y
+		// }
 		rl.DrawRectangle(
 			i32(cell.position.x),
 			i32(cell.position.y),
-			i32(math.round(x_size)),
-			i32(math.round(y_size)),
+			i32(math.round(cell.size)),
+			i32(math.round(cell.size)),
 			rl.ORANGE,
 		)
-		rl.DrawRectangle(
-			i32(math.round(x_position)),
-			i32(math.round(y_position)),
-			i32(math.round(x_size)),
-			i32(math.round(y_size)),
-			rl.RED,
-		)
+		// rl.DrawRectangle(
+		// 	i32(math.round(x_position)),
+		// 	i32(math.round(y_position)),
+		// 	i32(math.round(x_size)),
+		// 	i32(math.round(y_size)),
+		// 	rl.RED,)
 	}
 }
 

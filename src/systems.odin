@@ -55,13 +55,17 @@ CollisionSystem :: proc(game: ^Game) {
 
 			is_player := false
 
-			if dataA.kind == .PLAYER {
-				is_player = true
+			colliderA_future_pos := Collider {
+				colliderA.position + velocityA.direction * velocityA.speed,
+				colliderA.h,
+				colliderA.w,
 			}
 
-			future_pos := Vector2 {
-				colliderA.position.x + velocityA.direction.x,
-				colliderA.position.y + velocityA.direction.y,
+
+			if dataA.kind == .PLAYER {
+				is_player = true
+				colliderA_future_pos.position =
+					colliderA.position + velocityA.speed * archetypeA.players_data[i].next_dir
 			}
 
 			for archetypeB in arquetypesB {
@@ -84,22 +88,20 @@ CollisionSystem :: proc(game: ^Game) {
 							add_sound(game, &sound_bank[FX.FX_EAT])
 							grow_body(
 								&game.player_body,
-								game.player_position.pos,
+								positionA.pos +
+								archetypeA.players_data[i].next_dir * velocityA.speed,
 								game.player_velocity.direction,
 							)
 
 						}
 
 					case .STATIC:
-						colliderA_future_pos := Collider {
-							colliderA.position + velocityA.direction * velocityA.speed,
-							colliderA.h,
-							colliderA.w,
-						}
 						if collide_no_edges(colliderB^, colliderA_future_pos) {
-							fmt.println("COLLIDING")
-
-							velocityA.direction = Vector2{0, 0}
+							if is_player {
+								archetypeA.players_data[i].next_dir = Vector2{0, 0}
+								continue
+							}
+							velocityA.direction = {0, 0}
 						}
 
 					case .ENEMY:
@@ -142,133 +144,6 @@ CollisionSystem :: proc(game: ^Game) {
 		}
 	}
 }
-
-
-// CollisionSystem :: proc(game: ^Game) {
-// 	arquetypesA, is_empty := query_archetype(
-// 		game.world,
-// 		COMPONENT_ID.COLLIDER | .DATA | .VELOCITY | .POSITION,
-// 	)
-// 	if is_empty {
-// 		return
-// 	}
-//
-// 	// No need to check 2 colliders if either have velocity
-// 	arquetypesB, _ := query_archetype(game.world, COMPONENT_ID.COLLIDER | .DATA | .POSITION)
-// 	for archetypeA in arquetypesA {
-// 		for i in 0 ..< len(archetypeA.entities_id) {
-// 			colliderA := &archetypeA.colliders[i]
-// 			dataA := &archetypeA.data[i]
-// 			velocityA := &archetypeA.velocities[i]
-// 			positionA := &archetypeA.positions[i]
-//
-// 			is_player := false
-//
-// 			if dataA.kind == .PLAYER {
-// 				is_player = true
-// 			}
-//
-// 			centerA := Vector2 {
-// 				colliderA.position.x + f32(colliderA.w) / 2,
-// 				colliderA.position.y + f32(colliderA.h) / 2,
-// 			}
-//
-// 			future_pos := Vector2 {
-// 				colliderA.position.x + velocityA.direction.x,
-// 				colliderA.position.y + velocityA.direction.y,
-// 			}
-//
-// 			for archetypeB in arquetypesB {
-// 				for j in 0 ..< len(archetypeB.entities_id) {
-// 					dataB := &archetypeB.data[j]
-// 					if dataB.state == .DEAD || dataB == dataA || dataB.kind == .PLAYER {
-// 						continue
-// 					}
-//
-// 					colliderB := &archetypeB.colliders[j]
-// 					positionB := &archetypeB.positions[j]
-//
-// 					#partial switch dataB.kind {
-// 					case .CANDY:
-// 						center_candy :=
-// 							colliderB.position + ({f32(colliderB.w), f32(colliderB.h)} / 2)
-//
-// 						if is_player &&
-// 						   vec2_distance(centerA, center_candy) < PLAYER_SIZE &&
-// 						   dataB.state != .DEAD {
-// 							fmt.println("WE EAT")
-// 							dataB.state = .DEAD
-// 							add_sound(game, &sound_bank[FX.FX_EAT])
-// 							grow_body(
-// 								&game.player_body,
-// 								game.player_position.pos,
-// 								game.player_velocity.direction,
-// 							)
-//
-// 						}
-//
-// 					case .STATIC:
-// 						if rec_colliding_no_edges(
-// 							colliderB.position,
-// 							f32(colliderB.w),
-// 							f32(colliderB.h),
-// 							future_pos,
-// 							f32(colliderA.w),
-// 							f32(colliderA.h),
-// 						) {
-// 							velocityA.direction = Vector2{0, 0}
-// 						}
-//
-// 					case .ENEMY:
-// 						center_enemy :=
-// 							colliderB.position + ({f32(colliderB.w), f32(colliderB.h)} / 2)
-// 						distance := vec2_distance(centerA, center_enemy)
-// 						direction := (centerA - center_enemy) / distance
-//
-// 						sum_radius := (PLAYER_SIZE / 2 + ENEMY_SIZE / 2)
-//
-// 						if is_player {
-// 							fmt.println("distance to enemy: ", distance)
-// 						}
-//
-// 						if is_player && distance < f32(sum_radius) && dataA.state != .DEAD {
-// 							switch dataA.player_state {
-// 							case .NORMAL:
-// 								game.state = .DEAD
-// 								break
-// 							case .DASH:
-// 								dataA.state = .DEAD
-// 								add_sound(game, &sound_bank[FX.FX_EAT])
-// 								// grow_body(game.player)
-// 								continue
-// 							}
-// 						}
-//
-// 					case .BULLET:
-// 						center_bullet :=
-// 							colliderB.position + ({f32(colliderB.w), f32(colliderB.h)} / 2)
-// 						sum_radius_player := (BULLET_SIZE / 2 + PLAYER_SIZE / 2)
-// 						are_colliding :=
-// 							vec2_distance(center_bullet, centerA) < f32(sum_radius_player)
-//
-// 						if dataB.team == .BAD && is_player {
-// 							if are_colliding {
-// 								game.state = .DEAD
-// 							}
-// 						} else if dataB.team == .GOOD && !is_player {
-// 							if are_colliding {
-// 								dataB.state = .DEAD
-// 								dataA.state = .DEAD
-// 							}
-// 						}
-// 					case .PLAYER:
-// 						continue
-// 					}
-// 				}
-// 			}
-// 		}
-// 	}
-// }
 
 
 IASystem :: proc(game: ^Game) {
@@ -333,22 +208,86 @@ VelocitySystem :: proc(game: ^Game) {
 	head_data := player.players_data[0]
 	head_colision := &player.colliders[0]
 
-	if aligned_to_grid(head_position^) {
-		if try_set_dir(head_velocity, head_data.next_dir, head_direction) &&
-		   body.num_cells > 0 &&
-		   head_direction != {0, 0} {
-			fmt.println(
-				"SUCCESS CHANGIN NEW PLAYER DIRECTION TO : ",
-				game.player_velocity.direction,
-			)
+	if try_set_dir(head_velocity, head_data.next_dir, head_direction) {
+
+		player.players_data[0].previous_dir = head_direction
+		if body.num_cells > 0 &&
+		   head_data.next_dir != {0, 0} &&
+		   head_data.next_dir != head_direction {
+
 			put_cell(
 				body.ghost_pieces,
 				cell_ghost_t{head_position^, player.velocities[0].direction},
 			)
-			fmt.println("ADD GHOST CELL: ", cell_ghost_t{head_position^, head_direction})
 			add_turn_count(body)
+
 		}
 	}
+	if body.growing {
+		distance: f32 = 0.0
+		ghosts := body.ghost_pieces
+		cap := MAX_RINGBUFFER_VALUES
+		head_pos := head_position^
+		tail_pos := body.cells[0].position
+		turns_left := body.cells[0].count_turns_left
+
+		if turns_left > 0 {
+			ghost_head := int(ghosts.head) % cap
+			first_ghost := ghosts.values[ghost_head]
+			distance += vec2_distance(head_pos, first_ghost.position)
+
+			for i := 1; i < int(turns_left); i += 1 {
+				from := ghosts.values[(ghost_head + i - 1) % cap]
+				to := ghosts.values[(ghost_head + i) % cap]
+				distance += vec2_distance(from.position, to.position)
+			}
+
+			last_ghost := ghosts.values[(i8(ghost_head) + turns_left - 1) % i8(cap)]
+			distance += vec2_distance(last_ghost.position, tail_pos)
+		} else {
+			distance = vec2_distance(head_pos, tail_pos)
+		}
+
+		fmt.println("Total body separation distance:", distance)
+		if distance >= PLAYER_SIZE {
+			body.growing = false
+		}
+	}
+
+	// if body.growing {
+	// 	fmt.println("GONNA STOP GROWING")
+	// 	distance: f32 = 0
+	// 	position_to_follow := head_position
+	// 	fmt.println(body.cells[0])
+	//
+	// 	turns_left := body.cells[0].count_turns_left
+	// 	fmt.println("TURNS_LEFT: ", turns_left)
+	// 	if turns_left > 0 {
+	// 		ghost_cell, _ := peek_head(body.ghost_pieces)
+	// 		next_ghost := ghost_cell
+	// 		distance += vec2_distance(ghost_cell.position, head_position^)
+	//
+	// 		fmt.println("DISTANCE", distance)
+	// 		for i := 0; i < int(turns_left - 1); i += 1 {
+	//
+	// 			next_ghost =
+	// 				game.player_body.ghost_pieces.values[(game.player_body.ghost_pieces.head + 1) % MAX_RINGBUFFER_VALUES]
+	// 			distance += vec2_distance(next_ghost.position, ghost_cell.position)
+	// 		}
+	// 		distance += vec2_distance(next_ghost.position, head_position^)
+	// 	} else {
+	//
+	// 		distance = vec2_distance(head_position^, body.cells[0].position)
+	// 	}
+	//
+	// 	fmt.println(distance)
+	// 	if distance >= PLAYER_SIZE {
+	// 		body.growing = false
+	// 		// if body.cells[0].count_turns_left >0{
+	// 		// }
+	// 	}
+	// }
+
 
 	arquetypes, is_empty := query_archetype(
 		game.world,
@@ -419,7 +358,7 @@ VelocitySystem :: proc(game: ^Game) {
 						body.cells[i].direction = following_ghost_piece.direction
 						body.cells[i].count_turns_left -= 1
 					} else {
-						body.cells[i].position = following_ghost_piece.position // snap to exact
+						body.cells[i].position = following_ghost_piece.position
 						moved = true
 					}
 
@@ -436,31 +375,13 @@ VelocitySystem :: proc(game: ^Game) {
 					dealing_ghost_piece(body, i)
 				}
 			}
-			// fmt.printfln(
-			// 	"P %v+= D %v * V %v",
-			// 	body.cells[i].position,
-			// 	body.cells[i].direction * f32(head_velocity.speed),
-			// )
+
 			if !moved {
 				body.cells[i].position += body.cells[i].direction * head_velocity.speed
+				// fmt.printfln("POSITION %v: %v", i, body.cells[i].position)
 			}
 		}
 	}
-
-	// fmt.println(body.num_cells, body.growing)
-	if body.num_cells > 0 && body.growing {
-		fmt.println("GONNA STOP GROWING")
-		distance: f32
-		if body.cells[0].count_turns_left > 0 {
-			ghost_cell, _ := peek_tail(body.ghost_pieces)
-			distance += vec2_distance(body.cells[0].position, ghost_cell.position)
-			distance += vec2_distance(head_position^, ghost_cell.position)
-		} else {
-			distance = vec2_distance(head_position^, body.cells[0].position)
-		}
-		if distance >= PLAYER_SIZE {body.growing = false}
-	}
-
 }
 
 RenderingSystem :: proc(game: ^Game) {

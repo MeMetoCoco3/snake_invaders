@@ -120,6 +120,7 @@ IA :: struct {
 PlayerData :: struct {
 	player_state:     PLAYER_STATE,
 	next_dir:         Vector2,
+	previous_dir:     Vector2,
 	can_dash:         bool,
 	time_on_dash:     i32,
 	health:           i32,

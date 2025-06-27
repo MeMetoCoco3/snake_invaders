@@ -16,8 +16,8 @@ RECOVER_DASH_TIME :: 240
 
 MAX_NUM_BODY :: 20
 MAX_NUM_MOVERS :: 100
-MAX_NUM_CANDIES :: 0
-CANDY_SIZE :: 16
+MAX_NUM_CANDIES :: 3
+CANDY_SIZE :: 32
 CANDY_RESPAWN_TIME :: 2
 
 MAX_NUM_ENEMIES :: 0
@@ -44,7 +44,6 @@ atlas: rl.Texture2D
 tx_candy: rl.Texture2D
 
 main :: proc() {
-	fmt.println("JJJ")
 
 	rl.InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "snake_invaders")
 	rl.InitAudioDevice()
@@ -131,7 +130,7 @@ add_player :: proc(world: ^World) {
 	player_arquetype := world.archetypes[player_mask]
 	append(
 		&player_arquetype.players_data,
-		PlayerData{.NORMAL, Vector2{0, 0}, true, RECOVER_DASH_TIME, 3, 0, false},
+		PlayerData{.NORMAL, Vector2{0, 0}, Vector2{0, 0}, true, RECOVER_DASH_TIME, 3, 0, false},
 	)
 
 	// ANY UPDATETO INITIAL POSITION MUST BE DONE ON LOAD SCENE

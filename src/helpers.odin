@@ -19,7 +19,6 @@ aligned :: proc(v0: Vector2, v1: Vector2) -> bool {
 }
 
 try_set_dir :: proc(velocity: ^Velocity, next_dir, current_dir: Vector2) -> bool {
-	fmt.println(next_dir, current_dir)
 	if !oposite_directions(next_dir, current_dir) && next_dir != current_dir {
 		velocity.direction = next_dir
 		fmt.println("NEW PLAYER DIRECTION", next_dir)
