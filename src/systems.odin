@@ -66,6 +66,17 @@ CollisionSystem :: proc(game: ^Game) {
 				is_player = true
 				colliderA_future_pos.position =
 					colliderA.position + velocityA.speed * archetypeA.players_data[i].next_dir
+
+
+				// for i in 0 ..< game.player_body.num_cells {
+				// 	collider_body := game.player_body.cells[i].collider
+				// 	are_colliding := collide_no_edges(collider_body, colliderA_future_pos)
+				//
+				// 	velocityA.direction = {0, 0}
+				// 	break
+				// }
+				//
+
 			}
 
 			for archetypeB in arquetypesB {
@@ -88,11 +99,10 @@ CollisionSystem :: proc(game: ^Game) {
 							add_sound(game, &sound_bank[FX.FX_EAT])
 							grow_body(
 								&game.player_body,
-								positionA.pos +
-								archetypeA.players_data[i].next_dir * velocityA.speed,
+								positionA.pos,
+								// archetypeA.players_data[i].next_dir * velocityA.speed,
 								game.player_velocity.direction,
 							)
-
 						}
 
 					case .STATIC:
@@ -141,8 +151,13 @@ CollisionSystem :: proc(game: ^Game) {
 					}
 				}
 			}
+
+
 		}
+
 	}
+
+
 }
 
 
@@ -202,18 +217,19 @@ IASystem :: proc(game: ^Game) {
 VelocitySystem :: proc(game: ^Game) {
 	player := game.world.archetypes[player_mask]
 	body := &game.player_body
+
 	head_position := &player.positions[0].pos
 	head_direction := player.velocities[0].direction
 	head_velocity := &player.velocities[0]
-	head_data := player.players_data[0]
+	head_data := &player.players_data[0]
 	head_colision := &player.colliders[0]
+	fmt.println("distance", head_data.distance)
 
 	if try_set_dir(head_velocity, head_data.next_dir, head_direction) {
+		head_data.distance = 0
+		if head_data.next_dir != {0, 0} && body.num_cells > 0 {
+			player.players_data[0].previous_dir = head_direction
 
-		player.players_data[0].previous_dir = head_direction
-		if body.num_cells > 0 &&
-		   head_data.next_dir != {0, 0} &&
-		   head_data.next_dir != head_direction {
 
 			put_cell(
 				body.ghost_pieces,
@@ -223,70 +239,6 @@ VelocitySystem :: proc(game: ^Game) {
 
 		}
 	}
-	if body.growing {
-		distance: f32 = 0.0
-		ghosts := body.ghost_pieces
-		cap := MAX_RINGBUFFER_VALUES
-		head_pos := head_position^
-		tail_pos := body.cells[0].position
-		turns_left := body.cells[0].count_turns_left
-
-		if turns_left > 0 {
-			ghost_head := int(ghosts.head) % cap
-			first_ghost := ghosts.values[ghost_head]
-			distance += vec2_distance(head_pos, first_ghost.position)
-
-			for i := 1; i < int(turns_left); i += 1 {
-				from := ghosts.values[(ghost_head + i - 1) % cap]
-				to := ghosts.values[(ghost_head + i) % cap]
-				distance += vec2_distance(from.position, to.position)
-			}
-
-			last_ghost := ghosts.values[(i8(ghost_head) + turns_left - 1) % i8(cap)]
-			distance += vec2_distance(last_ghost.position, tail_pos)
-		} else {
-			distance = vec2_distance(head_pos, tail_pos)
-		}
-
-		fmt.println("Total body separation distance:", distance)
-		if distance >= PLAYER_SIZE {
-			body.growing = false
-		}
-	}
-
-	// if body.growing {
-	// 	fmt.println("GONNA STOP GROWING")
-	// 	distance: f32 = 0
-	// 	position_to_follow := head_position
-	// 	fmt.println(body.cells[0])
-	//
-	// 	turns_left := body.cells[0].count_turns_left
-	// 	fmt.println("TURNS_LEFT: ", turns_left)
-	// 	if turns_left > 0 {
-	// 		ghost_cell, _ := peek_head(body.ghost_pieces)
-	// 		next_ghost := ghost_cell
-	// 		distance += vec2_distance(ghost_cell.position, head_position^)
-	//
-	// 		fmt.println("DISTANCE", distance)
-	// 		for i := 0; i < int(turns_left - 1); i += 1 {
-	//
-	// 			next_ghost =
-	// 				game.player_body.ghost_pieces.values[(game.player_body.ghost_pieces.head + 1) % MAX_RINGBUFFER_VALUES]
-	// 			distance += vec2_distance(next_ghost.position, ghost_cell.position)
-	// 		}
-	// 		distance += vec2_distance(next_ghost.position, head_position^)
-	// 	} else {
-	//
-	// 		distance = vec2_distance(head_position^, body.cells[0].position)
-	// 	}
-	//
-	// 	fmt.println(distance)
-	// 	if distance >= PLAYER_SIZE {
-	// 		body.growing = false
-	// 		// if body.cells[0].count_turns_left >0{
-	// 		// }
-	// 	}
-	// }
 
 
 	arquetypes, is_empty := query_archetype(
@@ -322,10 +274,44 @@ VelocitySystem :: proc(game: ^Game) {
 				}
 			}
 
+			vector_move := (velocities[i].direction * velocities[i].speed)
 
-			positions[i].pos += (velocities[i].direction * velocities[i].speed)
-			colliders[i].position += (velocities[i].direction * velocities[i].speed)
+			positions[i].pos += vector_move
+			colliders[i].position += vector_move
+			fmt.println("VECTOR MOVE!: ", vector_move)
+			head_data.distance += velocities[i].speed * (vector_move.x + vector_move.y)
+		}
+	}
 
+	head_direction = player.velocities[0].direction
+	if body.growing && head_direction != {0, 0} {
+		distance: f32 = 0.0
+		ghosts := body.ghost_pieces
+		cap := MAX_RINGBUFFER_VALUES
+		head_pos := head_position^
+		tail_pos := &body.cells[0].position
+		turns_left := body.cells[0].count_turns_left
+
+		if turns_left > 0 {
+			ghost_head := int(ghosts.head) % cap
+			first_ghost := ghosts.values[ghost_head]
+			distance += vec2_distance(head_pos, first_ghost.position)
+
+			for i := 1; i < int(turns_left); i += 1 {
+				from := ghosts.values[(ghost_head + i - 1) % cap]
+				to := ghosts.values[(ghost_head + i) % cap]
+				distance += vec2_distance(from.position, to.position)
+
+			}
+
+			last_ghost := ghosts.values[(i8(ghost_head) + turns_left - 1) % i8(cap)]
+			distance += vec2_distance(last_ghost.position, tail_pos^)
+		} else {
+			distance = vec2_distance(head_pos, tail_pos^)
+		}
+
+		if distance > PLAYER_SIZE {
+			body.growing = false
 		}
 	}
 
@@ -336,11 +322,21 @@ VelocitySystem :: proc(game: ^Game) {
 
 			moved := false
 			if (body.cells[i].count_turns_left == 0) {
+
+				absolute_direction := Vector2{abs(head_direction.x), abs(head_direction.y)}
+
+				new_collider_size := absolute_direction * {12, 12}
+				new_collider_position := new_collider_size + head_position^
+
+				if new_collider_size.x == 32 {new_collider_size.x = 0}
+
+				if new_collider_size.y == 32 {new_collider_size.y = 0}
+
+
 				piece_to_follow =
-					(i == 0) ? cell_t{head_position^, head_direction, 0, PLAYER_SIZE} : body.cells[i - 1]
+					(i == 0) ? cell_t{head_position^, head_direction, 0, PLAYER_SIZE, Collider{new_collider_position, int(new_collider_size.x), int(new_collider_size.y)}} : body.cells[i - 1]
 				body.cells[i].direction = piece_to_follow.direction
 
-				// fmt.println("PIECE TO FOLLOW : ", piece_to_follow)
 			} else {
 				index :=
 					(MAX_RINGBUFFER_VALUES +
@@ -349,8 +345,6 @@ VelocitySystem :: proc(game: ^Game) {
 					MAX_RINGBUFFER_VALUES
 
 				following_ghost_piece := ghost_to_cell(body.ghost_pieces.values[index])
-				// fmt.println("GHOST PIECEINFORMATION : ", following_ghost_piece)
-				// fmt.println("body piece: ", body.cells[i])
 
 				distance := vec2_distance(body.cells[i].position, following_ghost_piece.position)
 				if distance < head_velocity.speed {

@@ -38,6 +38,7 @@ BULLET_SIZE :: 16
 NUM_RECTANGLES_ON_SCENE :: 100
 NUM_ENTITIES :: 1000
 
+
 player_mask := COMPONENT_ID.POSITION | .VELOCITY | .ANIMATION | .DATA | .COLLIDER | .PLAYER_DATA
 
 atlas: rl.Texture2D
@@ -92,6 +93,22 @@ main :: proc() {
 			CollisionSystem(&game)
 			VelocitySystem(&game)
 			update(&game)
+			//
+			// if game.player_body.num_cells > 1 {
+			// 	fmt.println(
+			// 		" DISTANCE BETWEN  0 AND HEAD: ",
+			// 		vec2_distance(game.player_position.pos, game.player_body.cells[0].position),
+			// 	)
+			//
+			// 	fmt.println(
+			// 		" DISTANCE BETWEN  0 AND 1: ",
+			// 		vec2_distance(
+			// 			game.player_body.cells[1].position,
+			// 			game.player_body.cells[0].position,
+			// 		),
+			// 	)
+			// }
+			//
 			rl.BeginDrawing()
 
 			draw_game(&game)
@@ -130,7 +147,17 @@ add_player :: proc(world: ^World) {
 	player_arquetype := world.archetypes[player_mask]
 	append(
 		&player_arquetype.players_data,
-		PlayerData{.NORMAL, Vector2{0, 0}, Vector2{0, 0}, true, RECOVER_DASH_TIME, 3, 0, false},
+		PlayerData {
+			.NORMAL,
+			20,
+			Vector2{0, 0},
+			Vector2{0, 0},
+			true,
+			RECOVER_DASH_TIME,
+			3,
+			0,
+			false,
+		},
 	)
 
 	// ANY UPDATETO INITIAL POSITION MUST BE DONE ON LOAD SCENE

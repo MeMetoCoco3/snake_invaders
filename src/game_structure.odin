@@ -22,11 +22,10 @@ Game :: struct {
 }
 
 Body :: struct {
-	cells:            [MAX_NUM_BODY]cell_t,
-	num_cells:        i8,
-	ghost_pieces:     ^Ringuffer_t,
-	num_ghost_pieces: i8,
-	growing:          bool,
+	cells:        [MAX_NUM_BODY]cell_t,
+	num_cells:    i8,
+	ghost_pieces: ^Ringuffer_t,
+	growing:      bool,
 }
 
 GAME_STATE :: enum {
@@ -45,6 +44,7 @@ cell_t :: struct {
 	position, direction: Vector2,
 	count_turns_left:    i8,
 	size:                f32,
+	collider:            Collider,
 }
 
 cell_ghost_t :: struct {

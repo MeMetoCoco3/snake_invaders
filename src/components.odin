@@ -119,6 +119,7 @@ IA :: struct {
 
 PlayerData :: struct {
 	player_state:     PLAYER_STATE,
+	distance:         f32,
 	next_dir:         Vector2,
 	previous_dir:     Vector2,
 	can_dash:         bool,
