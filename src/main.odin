@@ -10,7 +10,7 @@ DEBUG_COLISION :: #config(DEBUG_COLISION, false)
 SCREEN_WIDTH :: 800
 SCREEN_HEIGHT :: 800
 PLAYER_SIZE :: 32
-GRID_SIZE :: 4
+GRID_SIZE :: 8
 PLAYER_SPEED :: 4
 DASH_DURATION :: 120
 RECOVER_DASH_TIME :: 240
@@ -56,7 +56,7 @@ main :: proc() {
 	tx_candy = rl.LoadTexture("assets/coin.png")
 
 	load_animations()
-	// load_sprites()
+	load_sprites()
 
 
 	load_sounds()
@@ -94,7 +94,7 @@ main :: proc() {
 			CollisionSystem(&game)
 			VelocitySystem(&game)
 			update(&game)
-			//
+
 			// if game.player_body.num_cells > 1 {
 			// 	fmt.println(
 			// 		" DISTANCE BETWEN  0 AND HEAD: ",

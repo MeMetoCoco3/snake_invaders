@@ -335,7 +335,7 @@ draw_game :: proc(game: ^Game) {
 	draw_grid({100, 100, 100, 255})
 	// draw_scene(game)
 	draw_body(&game.player_body)
-	draw_ghost_cells(game.player_body.ghost_pieces)
+	// draw_ghost_cells(game.player_body.ghost_pieces)
 	RenderingSystem(game)
 }
 
@@ -415,23 +415,7 @@ draw_body :: proc(body: ^Body) {
 	for i in 0 ..< body.num_cells {
 		cell := body.cells[i]
 
-		// x_position: f32
-		// y_position: f32
-		//
-		// switch cell.direction {
-		// case {0, 1}:
-		// 	x_position = cell.position.x
-		// 	y_position = cell.position.y + PLAYER_SIZE - cell.size
-		// case {0, -1}:
-		// 	x_position = cell.position.x
-		// 	y_position = cell.position.y
-		// case {1, 0}:
-		// 	x_position = cell.position.x + PLAYER_SIZE - cell.size
-		// 	y_position = cell.position.y
-		// case {-1, 0}:
-		// 	x_position = cell.position.x
-		// 	y_position = cell.position.y
-		// }
+
 		rl.DrawRectangle(
 			i32(cell.position.x),
 			i32(cell.position.y),
@@ -439,13 +423,10 @@ draw_body :: proc(body: ^Body) {
 			i32(math.round(cell.size)),
 			rl.ORANGE,
 		)
-		// rl.DrawRectangle(
-		// 	i32(math.round(x_position)),
-		// 	i32(math.round(y_position)),
-		// 	i32(math.round(x_size)),
-		// 	i32(math.round(y_size)),
-		// 	rl.RED,)
+
 	}
+
+	draw_body_sprite(body)
 }
 
 draw_ghost_cells :: proc(rb: ^Ringuffer_t) {

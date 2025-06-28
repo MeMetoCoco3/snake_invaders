@@ -49,6 +49,7 @@ cell_t :: struct {
 
 cell_ghost_t :: struct {
 	position, direction: Vector2,
+	rotation:            f32,
 }
 
 radians_from_vector :: proc(v: Vector2) -> f32 {
@@ -123,7 +124,6 @@ draw_animated_sprite :: proc(position: Position, animation: ^Animation, directio
 		}
 	case .DIRECTIONAL:
 		angle = angle_from_vector(direction) + animation.angle
-		fmt.println(angle)
 	case .IGNORE:
 	}
 	// fmt.println(position)
@@ -296,52 +296,82 @@ load_animations :: proc() {
 	}
 
 }
-//
-// load_sprites :: proc() {
-// 	sprite_bank[SPRITE.PLAYER_IDLE] = Sprite {
-// 		image         = &atlas,
-// 		source_origin = {0, 0},
-// 		size          = {32, 32},
-// 	}
-//
-// 	sprite_bank[SPRITE.PLAYER_EAT] = Sprite {
-// 		image         = &atlas,
-// 		source_origin = {32, 0},
-// 		size          = {32, 32},
-// 	}
-//
-// 	sprite_bank[SPRITE.BODY_STRAIGHT] = Sprite {
-// 		image         = &atlas,
-// 		source_origin = {0, 32},
-// 		size          = {32, 32},
-// 	}
-//
-// 	sprite_bank[SPRITE.BODY_TURN] = Sprite {
-// 		image         = &atlas,
-// 		source_origin = {32, 32},
-// 		size          = {32, 32},
-// 	}
-//
-// 	sprite_bank[SPRITE.TAIL] = Sprite {
-// 		image         = &atlas,
-// 		source_origin = {32, 64},
-// 		size          = {32, 32},
-// 	}
-//
-// 	sprite_bank[SPRITE.BORDER] = Sprite {
-// 		image         = &atlas,
-// 		source_origin = {0, 96},
-// 		size          = {32, 32},
-// 	}
-//
-// 	sprite_bank[SPRITE.CORNER] = Sprite {
-// 		image         = &atlas,
-// 		source_origin = {32, 96},
-// 		size          = {32, 32},
-// 	}
-//
-//
-// }
+
+
+load_sprites :: proc() {
+	sprite_bank[SPRITE.PLAYER_IDLE] = Sprite {
+		image    = &atlas,
+		src_rect = Rect{{0, 0}, {32, 32}},
+	}
+
+	sprite_bank[SPRITE.PLAYER_EAT] = Sprite {
+		image    = &atlas,
+		src_rect = Rect{{32, 0}, {32, 32}},
+	}
+
+	sprite_bank[SPRITE.BODY_STRAIGHT] = Sprite {
+		image    = &atlas,
+		src_rect = Rect{{0, 32}, {32, 32}},
+		rotation = 90,
+	}
+
+	sprite_bank[SPRITE.BODY_TURN] = Sprite {
+		image    = &atlas,
+		src_rect = Rect{{32, 32}, {32, 32}},
+	}
+
+	sprite_bank[SPRITE.TAIL] = Sprite {
+		image    = &atlas,
+		src_rect = Rect{{32, 64}, {32, 32}},
+	}
+
+	sprite_bank[SPRITE.BORDER] = Sprite {
+		image    = &atlas,
+		src_rect = Rect{{0, 96}, {32, 32}},
+	}
+
+	sprite_bank[SPRITE.CORNER] = Sprite {
+		image    = &atlas,
+		src_rect = Rect{{32, 96}, {32, 32}},
+	}
+}
+
+
+draw_body_sprite :: proc(body: ^Body) {
+	for i in 0 ..< body.num_cells {
+		cell := body.cells[i]
+
+		sprite := sprite_bank[SPRITE.BODY_STRAIGHT]
+		sprite.rotation += angle_from_vector(cell.direction)
+		sprite.dst_rect = Rect {
+			position = cell.position + PLAYER_SIZE / 2,
+			size     = cell.size,
+		}
+		draw(sprite)
+	}
+
+
+	rb := body.ghost_pieces
+	loop_index := rb.head
+	for i in 0 ..< rb.count {
+		cell := rb.values[loop_index]
+		sprite := sprite_bank[SPRITE.BODY_TURN]
+		angle := angle_from_vector(cell.direction)
+
+		sprite.rotation = cell.rotation
+
+		sprite.dst_rect = Rect {
+			position = cell.position + PLAYER_SIZE / 2,
+			size     = PLAYER_SIZE,
+		}
+
+		draw(sprite)
+
+
+		loop_index = (loop_index + 1) % MAX_RINGBUFFER_VALUES
+	}
+}
+
 
 unload_atlas :: proc() {
 	rl.UnloadTexture(atlas)

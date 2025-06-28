@@ -56,6 +56,7 @@ CollisionSystem :: proc(game: ^Game) {
 
 			is_player := false
 			is_turning := false
+			dir_is_zero := false
 			colliderA_future_pos := Collider {
 				colliderA.position + velocityA.direction * velocityA.speed,
 				colliderA.h,
@@ -93,6 +94,11 @@ CollisionSystem :: proc(game: ^Game) {
 
 				if can_turn &&
 				   try_set_dir(head_velocity, head_data.next_dir, head_direction, head_data) {
+					fmt.println("IS TURNING")
+					fmt.println(head_direction)
+					// if head_direction == {0, 0} {
+					// 	dir_is_zero = true
+					// }
 					// player.animations[i].
 					// if head_data.next_dir != (Vector2{0, 0}) {
 					is_turning = true
@@ -101,10 +107,6 @@ CollisionSystem :: proc(game: ^Game) {
 				// fmt.println(velocityA.speed)
 				colliderA_future_pos.position =
 					colliderA.position + velocityA.speed * player.velocities[0].direction
-
-				if is_player {
-					fmt.println("PREV DIRECTION", player.players_data[i].previous_dir)
-				}
 			}
 
 
@@ -143,9 +145,9 @@ CollisionSystem :: proc(game: ^Game) {
 					case .STATIC:
 						if collide(colliderB^, colliderA_future_pos) {
 							if is_player {
-								fmt.println(" PLAYER IS COLLIDING")
+								// fmt.println(" PLAYER IS COLLIDING")
 								archetypeA.velocities[i].direction = Vector2{0, 0}
-								fmt.println("Player position", positionA)
+								// fmt.println("Player position", positionA)
 								continue
 							}
 							velocityA.direction = {0, 0}
@@ -196,13 +198,31 @@ CollisionSystem :: proc(game: ^Game) {
 			player := game.world.archetypes[player_mask]
 			future_head_pos := head_position + head_velocity.direction * head_velocity.speed
 			if is_turning &&
+			   !dir_is_zero &&
 			   !aligned_vectors(head_position, future_head_pos, body.cells[0].position) &&
 			   body.num_cells > 0 {
-				// fmt.println("NOT ALIGNED")
-				put_cell(
-					body.ghost_pieces,
-					cell_ghost_t{head_position, player.velocities[0].direction},
-				)
+
+				rotation: f32 = 90
+				from_dir := player.velocities[0].direction
+				to_dir := get_cardinal_direction(head_position, body.cells[0].position)
+				fmt.println("TO DIR", to_dir)
+
+				if (from_dir == {0, -1} && to_dir == {1, 0}) ||
+				   (from_dir == {1, 0} && to_dir == {0, -1}) {
+					rotation += 270
+				} else if (from_dir == {0, -1} && to_dir == {-1, 0}) ||
+				   (from_dir == {-1, 0} && to_dir == {0, -1}) {
+					rotation += 180
+				} else if (from_dir == {0, 1} && to_dir == {-1, 0}) ||
+				   (from_dir == {-1, 0} && to_dir == {0, 1}) {
+					rotation += 90
+				} else if (from_dir == {0, 1} && to_dir == {1, 0}) ||
+				   (from_dir == {1, 0} && to_dir == {0, 1}) {
+					rotation += 0
+				}
+
+
+				put_cell(body.ghost_pieces, cell_ghost_t{head_position, from_dir, rotation})
 				add_turn_count(body)
 			}
 		}
@@ -317,9 +337,9 @@ VelocitySystem :: proc(game: ^Game) {
 				head_data.distance += abs(vector_move.x + vector_move.y)
 				// fmt.println(head_data.distance)
 			}
-			if is_player {
-				fmt.println("PLAYER SPEED: ", velocities[i].speed)
-			}
+			// if is_player {
+			// 	fmt.println("PLAYER SPEED: ", velocities[i].speed)
+			// }
 			positions[i].pos += vector_move
 			colliders[i].position += vector_move
 		}
@@ -363,23 +383,23 @@ VelocitySystem :: proc(game: ^Game) {
 					MAX_RINGBUFFER_VALUES
 
 				following_ghost_piece := ghost_to_cell(body.ghost_pieces.values[index])
-				fmt.println(
-					"Ghost Index: ",
-					index,
-					" Tail: ",
-					body.ghost_pieces.tail,
-					" Turns left: ",
-					body.cells[i].count_turns_left,
-				)
-				fmt.println(
-					"Following ghost pos: ",
-					following_ghost_piece.position,
-					" Cell pos: ",
-					body.cells[i].position,
-				)
+				// fmt.println(
+				// 	"Ghost Index: ",
+				// 	index,
+				// 	" Tail: ",
+				// 	body.ghost_pieces.tail,
+				// 	" Turns left: ",
+				// 	body.cells[i].count_turns_left,
+				// )
+				// fmt.println(
+				// 	"Following ghost pos: ",
+				// 	following_ghost_piece.position,
+				// 	" Cell pos: ",
+				// 	body.cells[i].position,
+				// )
 
 				distance := vec2_distance(body.cells[i].position, following_ghost_piece.position)
-				fmt.println("CHEKEANDO LA HEAD_VELOCITY.SPEED", head_velocity.speed)
+				// fmt.println("CHEKEANDO LA HEAD_VELOCITY.SPEED", head_velocity.speed)
 
 				body_cell_speed := head_velocity.speed
 				if distance < body_cell_speed {
