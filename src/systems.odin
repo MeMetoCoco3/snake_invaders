@@ -54,7 +54,7 @@ CollisionSystem :: proc(game: ^Game) {
 			positionA := &archetypeA.positions[i]
 
 			is_player := false
-
+			is_turning := false
 			colliderA_future_pos := Collider {
 				colliderA.position + velocityA.direction * velocityA.speed,
 				colliderA.h,
@@ -63,20 +63,42 @@ CollisionSystem :: proc(game: ^Game) {
 
 
 			if dataA.kind == .PLAYER {
+
+				player := game.world.archetypes[player_mask]
+				body := &game.player_body
+				head_position := &player.positions[0].pos
+				head_direction := player.velocities[0].direction
+				head_velocity := &player.velocities[0]
+				head_data := &player.players_data[0]
+				head_colision := &player.colliders[0]
+				has_body := game.player_body.num_cells > 0 ? true : false
+
 				is_player = true
+				can_turn := true
+				if !aligned_to_grid(head_position^) {
+					can_turn = false
+					head_data.next_dir = {0, 0}
+				}
+
+				if has_body {
+					dir := get_cardinal_direction(
+						head_position^,
+						game.player_body.cells[0].position,
+					)
+					if dir == head_data.next_dir {
+						head_data.next_dir = {0, 0}
+					}
+				}
+
+				if can_turn && try_set_dir(head_velocity, head_data.next_dir, head_direction) {
+					if head_data.next_dir != (Vector2{0, 0}) && body.num_cells > 0 {
+						player.players_data[0].previous_dir = head_direction
+						is_turning = true
+					}
+				}
+
 				colliderA_future_pos.position =
-					colliderA.position + velocityA.speed * archetypeA.players_data[i].next_dir
-
-
-				// for i in 0 ..< game.player_body.num_cells {
-				// 	collider_body := game.player_body.cells[i].collider
-				// 	are_colliding := collide_no_edges(collider_body, colliderA_future_pos)
-				//
-				// 	velocityA.direction = {0, 0}
-				// 	break
-				// }
-				//
-
+					colliderA.position + velocityA.speed * player.velocities[0].direction
 			}
 
 			for archetypeB in arquetypesB {
@@ -97,18 +119,27 @@ CollisionSystem :: proc(game: ^Game) {
 							fmt.println("WE EAT")
 							dataB.state = .DEAD
 							add_sound(game, &sound_bank[FX.FX_EAT])
+
 							grow_body(
 								&game.player_body,
 								positionA.pos,
 								// archetypeA.players_data[i].next_dir * velocityA.speed,
 								game.player_velocity.direction,
 							)
+
+							// Calcula distancia recorrida desdenext_dir que crecemos
+							archetypeA.players_data[0].distance = 0
+
+
 						}
 
 					case .STATIC:
-						if collide_no_edges(colliderB^, colliderA_future_pos) {
+						// if collide(colliderB^,) {
+
+						if collide(colliderB^, colliderA_future_pos) {
 							if is_player {
-								archetypeA.players_data[i].next_dir = Vector2{0, 0}
+								fmt.println(" PLAYER IS COLLIDING")
+								archetypeA.velocities[i].direction = Vector2{0, 0}
 								continue
 							}
 							velocityA.direction = {0, 0}
@@ -152,11 +183,24 @@ CollisionSystem :: proc(game: ^Game) {
 				}
 			}
 
-
+			// We check if a turn is made after the collision is checked, if it is, we spawn a ghost.
+			head_position := game.player_position.pos
+			head_velocity := game.player_velocity
+			body := &game.player_body
+			player := game.world.archetypes[player_mask]
+			future_head_pos := head_position + head_velocity.direction * head_velocity.speed
+			if is_turning &&
+			   !aligned_vectors(head_position, future_head_pos, body.cells[0].position) {
+				fmt.println("NOT ALIGNED")
+				put_cell(
+					body.ghost_pieces,
+					cell_ghost_t{head_position, player.velocities[0].direction},
+				)
+				add_turn_count(body)
+			}
 		}
 
 	}
-
 
 }
 
@@ -223,28 +267,13 @@ VelocitySystem :: proc(game: ^Game) {
 	head_velocity := &player.velocities[0]
 	head_data := &player.players_data[0]
 	head_colision := &player.colliders[0]
-	fmt.println("distance", head_data.distance)
-
-	if try_set_dir(head_velocity, head_data.next_dir, head_direction) {
-		head_data.distance = 0
-		if head_data.next_dir != {0, 0} && body.num_cells > 0 {
-			player.players_data[0].previous_dir = head_direction
-
-
-			put_cell(
-				body.ghost_pieces,
-				cell_ghost_t{head_position^, player.velocities[0].direction},
-			)
-			add_turn_count(body)
-
-		}
-	}
-
+	has_body := game.player_body.num_cells > 0 ? true : false
 
 	arquetypes, is_empty := query_archetype(
 		game.world,
 		COMPONENT_ID.VELOCITY | COMPONENT_ID.POSITION | COMPONENT_ID.COLLIDER | .DATA,
 	)
+
 	if is_empty {
 		return
 	}
@@ -259,6 +288,9 @@ VelocitySystem :: proc(game: ^Game) {
 		}
 
 		for i in 0 ..< len(arquetype.entities_id) {
+
+			vector_move := (velocities[i].direction * velocities[i].speed)
+			fmt.println(vector_move)
 			if is_player {
 				player_data := &arquetype.players_data[i]
 				if !player_data.can_dash {
@@ -267,49 +299,28 @@ VelocitySystem :: proc(game: ^Game) {
 
 				if player_data.time_on_dash >= DASH_DURATION {
 					velocities[i].speed = PLAYER_SPEED
+					vector_move = (velocities[i].direction * velocities[i].speed)
 					player_data.player_state = .NORMAL
 					if player_data.time_on_dash >= RECOVER_DASH_TIME {
 						player_data.can_dash = true
 					}
 				}
-			}
 
-			vector_move := (velocities[i].direction * velocities[i].speed)
+
+				head_data.distance += abs(vector_move.x + vector_move.y)
+				fmt.println(head_data.distance)
+			}
 
 			positions[i].pos += vector_move
 			colliders[i].position += vector_move
-			fmt.println("VECTOR MOVE!: ", vector_move)
-			head_data.distance += velocities[i].speed * (vector_move.x + vector_move.y)
 		}
 	}
 
 	head_direction = player.velocities[0].direction
 	if body.growing && head_direction != {0, 0} {
-		distance: f32 = 0.0
-		ghosts := body.ghost_pieces
-		cap := MAX_RINGBUFFER_VALUES
-		head_pos := head_position^
-		tail_pos := &body.cells[0].position
-		turns_left := body.cells[0].count_turns_left
+		distance := head_data.distance
 
-		if turns_left > 0 {
-			ghost_head := int(ghosts.head) % cap
-			first_ghost := ghosts.values[ghost_head]
-			distance += vec2_distance(head_pos, first_ghost.position)
-
-			for i := 1; i < int(turns_left); i += 1 {
-				from := ghosts.values[(ghost_head + i - 1) % cap]
-				to := ghosts.values[(ghost_head + i) % cap]
-				distance += vec2_distance(from.position, to.position)
-
-			}
-
-			last_ghost := ghosts.values[(i8(ghost_head) + turns_left - 1) % i8(cap)]
-			distance += vec2_distance(last_ghost.position, tail_pos^)
-		} else {
-			distance = vec2_distance(head_pos, tail_pos^)
-		}
-
+		fmt.println(distance)
 		if distance > PLAYER_SIZE {
 			body.growing = false
 		}
@@ -325,13 +336,11 @@ VelocitySystem :: proc(game: ^Game) {
 
 				absolute_direction := Vector2{abs(head_direction.x), abs(head_direction.y)}
 
-				new_collider_size := absolute_direction * {12, 12}
+				new_collider_size := absolute_direction * {GRID_SIZE, GRID_SIZE}
 				new_collider_position := new_collider_size + head_position^
 
-				if new_collider_size.x == 32 {new_collider_size.x = 0}
-
-				if new_collider_size.y == 32 {new_collider_size.y = 0}
-
+				if new_collider_size.x == PLAYER_SIZE {new_collider_size.x = 0}
+				if new_collider_size.y == PLAYER_SIZE {new_collider_size.y = 0}
 
 				piece_to_follow =
 					(i == 0) ? cell_t{head_position^, head_direction, 0, PLAYER_SIZE, Collider{new_collider_position, int(new_collider_size.x), int(new_collider_size.y)}} : body.cells[i - 1]
@@ -372,7 +381,6 @@ VelocitySystem :: proc(game: ^Game) {
 
 			if !moved {
 				body.cells[i].position += body.cells[i].direction * head_velocity.speed
-				// fmt.printfln("POSITION %v: %v", i, body.cells[i].position)
 			}
 		}
 	}

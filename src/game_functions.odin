@@ -14,16 +14,12 @@ InputSystem :: proc(game: ^Game) {
 
 	if (rl.IsKeyDown(.H) || rl.IsKeyDown(.LEFT)) {
 		player_data.next_dir = {-1, 0}
-		// player_velocity.direction = {-1, 0}
 	} else if (rl.IsKeyDown(.L) || rl.IsKeyDown(.RIGHT)) {
 		player_data.next_dir = {1, 0}
-		// player_velocity.direction = {1, 0}
 	} else if (rl.IsKeyDown(.J) || rl.IsKeyDown(.DOWN)) {
 		player_data.next_dir = {0, 1}
-		// player_velocity.direction = {0, 1}
 	} else if (rl.IsKeyDown(.K) || rl.IsKeyDown(.UP)) {
 		player_data.next_dir = {0, -1}
-		// player_velocity.direction = {0, -1}
 	} else {player_data.next_dir = {0, 0}}
 
 
@@ -678,7 +674,7 @@ draw_ghost_cells :: proc(rb: ^Ringuffer_t) {
 // }
 
 aligned_to_grid :: proc(p: Vector2) -> bool {
-	return i32(p.x) % PLAYER_SIZE == 0 && i32(p.y) % PLAYER_SIZE == 0
+	return i32(p.x) % GRID_SIZE == 0 && i32(p.y) % GRID_SIZE == 0
 }
 
 circle_colliding :: proc(v0, v1: Vector2, d0, d1: f32) -> bool {
@@ -720,4 +716,20 @@ collide_no_edges :: proc(c0, c1: Collider) -> bool {
 	b := (v0.x + w0 == v1.x || v0.x == v1.x + w1 || v0.y + h0 == v1.y || v0.y == v1.y + h1)
 
 	return a && !b
+}
+
+collide :: proc(c0, c1: Collider) -> bool {
+	v0 := c0.position
+	w0 := f32(c0.w)
+	h0 := f32(c0.h)
+
+	v1 := c1.position
+	w1 := f32(c1.w)
+	h1 := f32(c1.h)
+
+	horizontal_in :=
+		(v0.x <= v1.x && v0.x + w0 >= v1.x) || (v0.x <= v1.x + w1 && v0.x + w0 >= v1.x + w1)
+	vertical_in :=
+		(v0.y <= v1.y && v0.y + h0 >= v1.y) || (v0.y <= v1.y + h1 && v0.y + h0 >= v1.y + h1)
+	return horizontal_in && vertical_in
 }

@@ -7,7 +7,7 @@ import rl "vendor:raylib"
 // OTHERS //
 ////////////
 draw_grid :: proc(col: rl.Color) {
-	for i: i32 = 0; i < SCREEN_WIDTH; i += PLAYER_SIZE {
+	for i: i32 = 0; i < SCREEN_WIDTH; i += GRID_SIZE {
 		rl.DrawLine(i, 0, i, SCREEN_HEIGHT, col)
 		rl.DrawLine(0, i, SCREEN_WIDTH, i, col)
 	}
@@ -42,6 +42,23 @@ vec2_distance :: proc(a, b: Vector2) -> f32 {
 	return math.sqrt(math.pow(b.x - a.x, 2.0) + math.pow(b.y - a.y, 2.0))
 }
 
+aligned_vectors :: proc(vectors: ..Vector2) -> bool {
+	aligned_x := true
+	aligned_y := true
+
+	for i in 1 ..< len(vectors) {
+		prev := vectors[i - 1]
+		curr := vectors[i]
+
+		if prev.x != curr.x {
+			aligned_x = false
+		}
+		if prev.y != curr.y {
+			aligned_y = false
+		}
+	}
+	return aligned_x || aligned_y
+}
 
 get_cardinal_direction :: proc(from, to: Vector2) -> Vector2 {
 	dx := to.x - from.x

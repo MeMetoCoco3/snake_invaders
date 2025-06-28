@@ -10,6 +10,7 @@ DEBUG_COLISION :: #config(DEBUG_COLISION, false)
 SCREEN_WIDTH :: 800
 SCREEN_HEIGHT :: 800
 PLAYER_SIZE :: 32
+GRID_SIZE :: 8
 PLAYER_SPEED :: 4
 DASH_DURATION :: 30
 RECOVER_DASH_TIME :: 240
@@ -109,6 +110,7 @@ main :: proc() {
 			// 	)
 			// }
 			//
+			fmt.println()
 			rl.BeginDrawing()
 
 			draw_game(&game)
@@ -161,7 +163,7 @@ add_player :: proc(world: ^World) {
 	)
 
 	// ANY UPDATETO INITIAL POSITION MUST BE DONE ON LOAD SCENE
-	player_position := Position{Vector2{320, 320}, {PLAYER_SIZE, PLAYER_SIZE}}
+	player_position := Position{Vector2{360, 360}, {PLAYER_SIZE, PLAYER_SIZE}}
 
 	append(&player_arquetype.positions, player_position)
 	append(&player_arquetype.velocities, Velocity{{0, 0}, PLAYER_SPEED})

@@ -337,7 +337,7 @@ unload_sounds :: proc() {
 
 load_scene :: proc(game: ^Game, scene: SCENES) {
 	old_ghost_pieces := game.player_body.ghost_pieces
-	game.player_position^ = {{320, 320}, {PLAYER_SIZE, PLAYER_SIZE}}
+	game.player_position^ = {{360, 360}, {PLAYER_SIZE, PLAYER_SIZE}}
 
 
 	game.player_body.ghost_pieces = old_ghost_pieces
