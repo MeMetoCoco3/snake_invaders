@@ -167,85 +167,6 @@ update_scene :: proc(game: ^Game) {
 	game.candy_respawn_time += 1
 }
 
-// update_player :: proc(game: ^Game) {
-// 	player := game.world.archetypes[player_mask]
-// 	body := &game.player_body
-// 	head_position := player.positions[0].pos
-// 	head_direction := player.velocities[0].direction
-// 	if aligned_to_grid(head_position) {
-//
-// 		if try_set_dir(player) && body.num_cells > 0 && head_direction != {0, 0} {
-// 			put_cell(body.ghost_pieces, cell_ghost_t{head_position, head_direction})
-// 			add_turn_count(player)
-// 		}
-// 	}
-//
-// 	player.head.position += player.head.direction * f32(player.speed)
-//
-// 	if player.head.direction != {0, 0} && !player.growing {
-// 		for i in 0 ..< player.num_cells {
-// 			piece_to_follow: cell_t
-// 			if (player.body[i].count_turns_left == 0) {
-// 				piece_to_follow = (i == 0) ? player.head : player.body[i - 1]
-// 				player.body[i].direction = piece_to_follow.direction
-// 			} else {
-// 				index :=
-// 					(MAX_RINGBUFFER_VALUES +
-// 						player.ghost_pieces.tail -
-// 						player.body[i].count_turns_left) %
-// 					MAX_RINGBUFFER_VALUES
-//
-// 				following_ghost_piece := ghost_to_cell(player.ghost_pieces.values[index])
-//
-// 				if (player.body[i].position == following_ghost_piece.position) {
-// 					player.body[i].direction = following_ghost_piece.direction
-// 					player.body[i].count_turns_left -= 1
-// 				} else {
-// 					direction_to_ghost := get_cardinal_direction(
-// 						player.body[i].position,
-// 						following_ghost_piece.position,
-// 					)
-// 					player.body[i].direction = direction_to_ghost
-// 				}
-//
-//
-// 				if (i == player.num_cells - 1) {
-// 					dealing_ghost_piece(player, i)
-// 				}
-//
-// 			}
-// 			player.body[i].position += player.body[i].direction * f32(player.speed)
-// 		}
-// 	}
-//
-// 	if player.num_cells > 0 && player.growing {
-// 		distance: f32
-// 		if player.body[0].count_turns_left > 0 {
-// 			ghost_cell, _ := peek_tail(player.ghost_pieces)
-// 			distance += vec2_distance(player.body[0].position, ghost_cell.position)
-// 			distance += vec2_distance(player.head.position, ghost_cell.position)
-// 		} else {
-// 			distance = vec2_distance(player.head.position, player.body[0].position)
-// 		}
-//
-// 		if distance >= PLAYER_SIZE {player.growing = false}
-// 	}
-//
-//
-// 	if !player.can_dash {
-// 		player.time_on_dash += 1
-// 	}
-//
-// 	if player.time_on_dash >= DASH_DURATION {
-// 		player.speed = PLAYER_SPEED
-// 		player.state = .NORMAL
-// 		if player.time_on_dash >= RECOVER_DASH_TIME {
-// 			player.can_dash = true
-// 		}
-// 	}
-// }
-
-
 grow_body :: proc(body: ^Body, head_pos, head_dir: Vector2) {
 	if body.num_cells < MAX_NUM_BODY {
 		body.growing = true
@@ -261,8 +182,8 @@ grow_body :: proc(body: ^Body, head_pos, head_dir: Vector2) {
 			size             = PLAYER_SIZE,
 		}
 
-		fmt.println("WE ARE GROWING NUM CELLS: ", body.num_cells)
-		fmt.println(head_pos)
+		// fmt.println("WE ARE GROWING NUM CELLS: ", body.num_cells)
+		// fmt.println(head_pos)
 	} else {
 		fmt.println("WE DO NOT GROW!")
 	}

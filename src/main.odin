@@ -10,9 +10,9 @@ DEBUG_COLISION :: #config(DEBUG_COLISION, false)
 SCREEN_WIDTH :: 800
 SCREEN_HEIGHT :: 800
 PLAYER_SIZE :: 32
-GRID_SIZE :: 8
+GRID_SIZE :: 4
 PLAYER_SPEED :: 4
-DASH_DURATION :: 30
+DASH_DURATION :: 120
 RECOVER_DASH_TIME :: 240
 
 MAX_NUM_BODY :: 20
@@ -110,7 +110,7 @@ main :: proc() {
 			// 	)
 			// }
 			//
-			fmt.println()
+			// fmt.println()
 			rl.BeginDrawing()
 
 			draw_game(&game)

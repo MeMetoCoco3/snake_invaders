@@ -71,18 +71,20 @@ Rect :: struct {
 
 
 Animation :: struct {
-	image:          ^rl.Texture2D,
-	w:              f32,
-	h:              f32,
-	source_origin:  Vector2,
-	_current_frame: int,
-	num_frames:     int,
-	frame_delay:    int,
-	_time_on_frame: int,
-	padding:        Vector2,
-	offset:         Vector2,
-	kind:           ANIMATION_KIND,
-	angle_type:     ANIM_DIRECTION,
+	image:              ^rl.Texture2D,
+	source_x, source_y: f32,
+	w:                  f32,
+	h:                  f32,
+	source_origin:      Vector2,
+	_current_frame:     int,
+	num_frames:         int,
+	frame_delay:        int,
+	_time_on_frame:     int,
+	padding:            Vector2,
+	offset:             Vector2,
+	kind:               ANIMATION_KIND,
+	angle_type:         ANIM_DIRECTION,
+	angle:              f32,
 }
 
 ANIMATION_KIND :: enum {

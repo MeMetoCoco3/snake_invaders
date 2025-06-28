@@ -18,10 +18,16 @@ aligned :: proc(v0: Vector2, v1: Vector2) -> bool {
 	return v0.x == v1.x || v0.y == v1.y
 }
 
-try_set_dir :: proc(velocity: ^Velocity, next_dir, current_dir: Vector2) -> bool {
+try_set_dir :: proc(
+	velocity: ^Velocity,
+	next_dir, current_dir: Vector2,
+	data: ^PlayerData,
+) -> bool {
+	fmt.printfln("NEXT DIR %v, CURRENT DIR %v", next_dir, current_dir)
 	if !oposite_directions(next_dir, current_dir) && next_dir != current_dir {
 		velocity.direction = next_dir
-		fmt.println("NEW PLAYER DIRECTION", next_dir)
+		data.previous_dir = current_dir
+		// fmt.println("NEW PLAYER DIRECTION", next_dir)
 		return true
 	}
 	return false

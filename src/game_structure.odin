@@ -105,30 +105,43 @@ draw :: proc {
 }
 
 
-draw_animated_sprite :: proc(position: Position, animation: ^Animation, velocity: Velocity) {
+draw_animated_sprite :: proc(position: Position, animation: ^Animation, direction: Vector2) {
 	if animation._current_frame >= animation.num_frames {
 		animation._current_frame = 0
 	}
-	src_rec := rl.Rectangle{f32(32 * animation._current_frame), 0, animation.w, animation.h}
-
-	angle: f32
+	src_rec := rl.Rectangle {
+		f32(animation.source_x + animation.w * f32(animation._current_frame)),
+		f32(animation.source_y),
+		animation.w,
+		animation.h,
+	}
+	angle: f32 = 0.0
 	switch animation.angle_type {
 	case .LR:
-		if velocity.direction.x >= 0 {
+		if direction.x >= 0 {
 			src_rec.width *= -1
 		}
 	case .DIRECTIONAL:
-		angle = math.atan2(velocity.direction.y, velocity.direction.x) * 180 / math.PI
+		angle = angle_from_vector(direction) + animation.angle
+		fmt.println(angle)
 	case .IGNORE:
 	}
 	// fmt.println(position)
 	// fmt.println("PITION:", position.size)
 	// fmt.println("ANIM, POSITION", animation.w, animation.h)
-	dst_rec := rl.Rectangle{position.pos.x, position.pos.y, position.size.x, position.size.y}
+	dst_rec := rl.Rectangle {
+		position.pos.x + position.size.x / 2,
+		position.pos.y + position.size.y / 2,
+		position.size.x,
+		position.size.y,
+	}
 
-	origin := Vector2{0, 0}
-	rl.DrawTexturePro(animation.image^, src_rec, dst_rec, origin, f32(angle), rl.WHITE)
-
+	rl.DrawTexturePro(animation.image^, src_rec, dst_rec, animation.source_origin, angle, rl.WHITE)
+	when DEBUG_COLISION {
+		dst_rec.x -= position.size.x / 2
+		dst_rec.y -= position.size.y / 2
+		rl.DrawRectangleLinesEx(dst_rec, 1, rl.RED)
+	}
 	if animation._time_on_frame >= animation.frame_delay && animation.kind != .STATIC {
 		animation._current_frame += 1
 		animation._time_on_frame = 0
@@ -177,9 +190,12 @@ load_sounds :: proc() {
 load_animations :: proc() {
 	animation_bank[ANIMATION.PLAYER] = Animation {
 		image          = &atlas,
-		w              = 32,
-		h              = 32,
-		source_origin  = Vector2{0, 0},
+		w              = PLAYER_SIZE,
+		h              = PLAYER_SIZE,
+		source_x       = 0,
+		source_y       = 0,
+		angle          = 90,
+		source_origin  = Vector2{PLAYER_SIZE / 2, PLAYER_SIZE / 2},
 		_current_frame = 0,
 		num_frames     = 0,
 		frame_delay    = 0,
@@ -187,7 +203,7 @@ load_animations :: proc() {
 		padding        = {0, 0},
 		offset         = {0, 0},
 		kind           = .STATIC,
-		angle_type     = .IGNORE,
+		angle_type     = .DIRECTIONAL,
 	}
 
 	animation_bank[ANIMATION.BULLET_G] = Animation {
@@ -267,13 +283,16 @@ load_animations :: proc() {
 	}
 
 	animation_bank[ANIMATION.CANDY] = Animation {
-		image       = &tx_candy,
-		w           = PLAYER_SIZE,
-		h           = PLAYER_SIZE,
-		num_frames  = 16,
-		frame_delay = 4,
-		kind        = .REPEAT,
-		angle_type  = .IGNORE,
+		image         = &tx_candy,
+		w             = 16,
+		h             = 16,
+		source_x      = 0,
+		source_y      = 0,
+		source_origin = Vector2{CANDY_SIZE / 2, CANDY_SIZE / 2},
+		num_frames    = 16,
+		frame_delay   = 4,
+		kind          = .REPEAT,
+		angle_type    = .IGNORE,
 	}
 
 }

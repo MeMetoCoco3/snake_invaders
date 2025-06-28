@@ -1,5 +1,6 @@
 package main
 import "core:fmt"
+import "core:math"
 import rl "vendor:raylib"
 
 
@@ -90,16 +91,22 @@ CollisionSystem :: proc(game: ^Game) {
 					}
 				}
 
-				if can_turn && try_set_dir(head_velocity, head_data.next_dir, head_direction) {
-					if head_data.next_dir != (Vector2{0, 0}) && body.num_cells > 0 {
-						player.players_data[0].previous_dir = head_direction
-						is_turning = true
-					}
+				if can_turn &&
+				   try_set_dir(head_velocity, head_data.next_dir, head_direction, head_data) {
+					// player.animations[i].
+					// if head_data.next_dir != (Vector2{0, 0}) {
+					is_turning = true
+					// }
 				}
-
+				// fmt.println(velocityA.speed)
 				colliderA_future_pos.position =
 					colliderA.position + velocityA.speed * player.velocities[0].direction
+
+				if is_player {
+					fmt.println("PREV DIRECTION", player.players_data[i].previous_dir)
+				}
 			}
+
 
 			for archetypeB in arquetypesB {
 				for j in 0 ..< len(archetypeB.entities_id) {
@@ -127,19 +134,18 @@ CollisionSystem :: proc(game: ^Game) {
 								game.player_velocity.direction,
 							)
 
-							// Calcula distancia recorrida desdenext_dir que crecemos
+							// Calcula distancia recorrida desde que crecemos
 							archetypeA.players_data[0].distance = 0
 
 
 						}
 
 					case .STATIC:
-						// if collide(colliderB^,) {
-
 						if collide(colliderB^, colliderA_future_pos) {
 							if is_player {
 								fmt.println(" PLAYER IS COLLIDING")
 								archetypeA.velocities[i].direction = Vector2{0, 0}
+								fmt.println("Player position", positionA)
 								continue
 							}
 							velocityA.direction = {0, 0}
@@ -190,8 +196,9 @@ CollisionSystem :: proc(game: ^Game) {
 			player := game.world.archetypes[player_mask]
 			future_head_pos := head_position + head_velocity.direction * head_velocity.speed
 			if is_turning &&
-			   !aligned_vectors(head_position, future_head_pos, body.cells[0].position) {
-				fmt.println("NOT ALIGNED")
+			   !aligned_vectors(head_position, future_head_pos, body.cells[0].position) &&
+			   body.num_cells > 0 {
+				// fmt.println("NOT ALIGNED")
 				put_cell(
 					body.ghost_pieces,
 					cell_ghost_t{head_position, player.velocities[0].direction},
@@ -290,27 +297,29 @@ VelocitySystem :: proc(game: ^Game) {
 		for i in 0 ..< len(arquetype.entities_id) {
 
 			vector_move := (velocities[i].direction * velocities[i].speed)
-			fmt.println(vector_move)
 			if is_player {
 				player_data := &arquetype.players_data[i]
 				if !player_data.can_dash {
 					player_data.time_on_dash += 1
+
+					if player_data.time_on_dash >= RECOVER_DASH_TIME {
+						player_data.can_dash = true
+					}
 				}
 
 				if player_data.time_on_dash >= DASH_DURATION {
 					velocities[i].speed = PLAYER_SPEED
 					vector_move = (velocities[i].direction * velocities[i].speed)
 					player_data.player_state = .NORMAL
-					if player_data.time_on_dash >= RECOVER_DASH_TIME {
-						player_data.can_dash = true
-					}
 				}
 
 
 				head_data.distance += abs(vector_move.x + vector_move.y)
-				fmt.println(head_data.distance)
+				// fmt.println(head_data.distance)
 			}
-
+			if is_player {
+				fmt.println("PLAYER SPEED: ", velocities[i].speed)
+			}
 			positions[i].pos += vector_move
 			colliders[i].position += vector_move
 		}
@@ -320,7 +329,6 @@ VelocitySystem :: proc(game: ^Game) {
 	if body.growing && head_direction != {0, 0} {
 		distance := head_data.distance
 
-		fmt.println(distance)
 		if distance > PLAYER_SIZE {
 			body.growing = false
 		}
@@ -328,6 +336,7 @@ VelocitySystem :: proc(game: ^Game) {
 
 
 	if head_direction != {0, 0} && !body.growing {
+		fmt.println("CHEKEANDO SI ENTRAMOS EN AQUI")
 		for i in 0 ..< body.num_cells {
 			piece_to_follow: cell_t
 
@@ -354,15 +363,36 @@ VelocitySystem :: proc(game: ^Game) {
 					MAX_RINGBUFFER_VALUES
 
 				following_ghost_piece := ghost_to_cell(body.ghost_pieces.values[index])
+				fmt.println(
+					"Ghost Index: ",
+					index,
+					" Tail: ",
+					body.ghost_pieces.tail,
+					" Turns left: ",
+					body.cells[i].count_turns_left,
+				)
+				fmt.println(
+					"Following ghost pos: ",
+					following_ghost_piece.position,
+					" Cell pos: ",
+					body.cells[i].position,
+				)
 
 				distance := vec2_distance(body.cells[i].position, following_ghost_piece.position)
-				if distance < head_velocity.speed {
+				fmt.println("CHEKEANDO LA HEAD_VELOCITY.SPEED", head_velocity.speed)
+
+				body_cell_speed := head_velocity.speed
+				if distance < body_cell_speed {
 					if body.cells[i].position == following_ghost_piece.position {
 						body.cells[i].direction = following_ghost_piece.direction
 						body.cells[i].count_turns_left -= 1
+
 					} else {
 						body.cells[i].position = following_ghost_piece.position
-						moved = true
+						fmt.println("WE MOVE IT BY CHANGING POSITION")
+						body_cell_speed -= distance
+						// moved = true
+
 					}
 
 
@@ -380,6 +410,8 @@ VelocitySystem :: proc(game: ^Game) {
 			}
 
 			if !moved {
+				fmt.println("Body speed: ", head_velocity.speed, i)
+				fmt.println()
 				body.cells[i].position += body.cells[i].direction * head_velocity.speed
 			}
 		}
@@ -409,17 +441,37 @@ RenderingSystem :: proc(game: ^Game) {
 	for arquetype in arquetypes {
 		positions := arquetype.positions
 		animations := arquetype.animations
-		velocity := Velocity{{0, 0}, 0}
-		update_velocity := false
+		direction := Vector2{0, 0}
+		has_velocity := false
+		is_player := false
+
+		if (arquetype.component_mask & COMPONENT_ID.PLAYER_DATA) == .PLAYER_DATA {
+			is_player = true
+		}
+
+
 		if (arquetype.component_mask & COMPONENT_ID.VELOCITY) == .VELOCITY {
-			update_velocity = true
+			has_velocity = true
 		}
 
 		for i in 0 ..< len(arquetype.entities_id) {
-			if update_velocity {
-				velocity = arquetype.velocities[i]
+			if has_velocity {
+
+				if is_player && arquetype.velocities[i].direction == {0, 0} {
+					direction = arquetype.players_data[i].previous_dir
+				} else {
+					direction = arquetype.velocities[i].direction
+				}
 			}
-			draw(positions[i], &animations[i], velocity)
+
+
+			draw(positions[i], &animations[i], direction)
 		}
 	}
+}
+
+
+angle_from_vector :: proc(v0: Vector2) -> f32 {
+	return math.atan2(v0.y, v0.x) * (180.0 / math.PI)
+
 }
