@@ -129,6 +129,7 @@ PlayerData :: struct {
 	health:           i32,
 	next_bullet_size: f32,
 	growing:          bool,
+	gona_dash:        bool,
 }
 
 ENEMY_BEHAVIOR :: enum {

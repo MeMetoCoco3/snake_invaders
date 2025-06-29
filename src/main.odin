@@ -159,6 +159,7 @@ add_player :: proc(world: ^World) {
 			3,
 			0,
 			false,
+			false,
 		},
 	)
 

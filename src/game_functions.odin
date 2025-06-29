@@ -20,7 +20,7 @@ InputSystem :: proc(game: ^Game) {
 		player_data.next_dir = {0, 1}
 	} else if (rl.IsKeyDown(.K) || rl.IsKeyDown(.UP)) {
 		player_data.next_dir = {0, -1}
-	} else {player_data.next_dir = {0, 0}}
+	}
 
 
 	if rl.IsKeyPressed(.P) {
@@ -28,11 +28,17 @@ InputSystem :: proc(game: ^Game) {
 		game.state = .PAUSE
 	}
 
-	if player_data.can_dash && rl.IsKeyPressed(.X) {
-		player_velocity.speed = PLAYER_SPEED * 2
-		player_data.can_dash = false
-		player_data.time_on_dash = 0
-		player_data.player_state = .DASH
+	if player_data.can_dash && rl.IsKeyPressed(.X) || player_data.gona_dash {
+		player_data.gona_dash = true
+
+
+		if aligned_to_grid(player_position.pos) {
+			player_velocity.speed = PLAYER_SPEED * 2
+			player_data.can_dash = false
+			player_data.time_on_dash = 0
+			player_data.player_state = .DASH
+			player_data.gona_dash = false
+		}
 	}
 
 	body := &game.player_body
@@ -171,6 +177,7 @@ grow_body :: proc(body: ^Body, head_pos, head_dir: Vector2) {
 	if body.num_cells < MAX_NUM_BODY {
 		body.growing = true
 		body.num_cells += 1
+
 		if body.num_cells > 0 {
 			shift_array_right(&body.cells, int(body.num_cells))
 		}
@@ -191,11 +198,13 @@ grow_body :: proc(body: ^Body, head_pos, head_dir: Vector2) {
 
 
 dealing_ghost_piece :: proc(body: ^Body, last_piece: i8) {
+	fmt.println("$$$$$$$$$$$$$$$$$$$$$")
 	ghost_piece, ok := peek_head(body.ghost_pieces)
 	if !ok {
 		return
 	}
 
+	fmt.println("$$$$$$$$$$$$$$$$$$$$$")
 	is_colliding := rec_colliding(
 		body.cells[last_piece].position,
 		PLAYER_SIZE,
@@ -206,6 +215,8 @@ dealing_ghost_piece :: proc(body: ^Body, last_piece: i8) {
 	)
 
 	if (is_colliding && body.cells[last_piece].direction == ghost_piece.direction) {
+
+		fmt.println("$$$$$$$$$$$$$$$$$$$$$")
 		pop_cell(body.ghost_pieces)
 	}
 }

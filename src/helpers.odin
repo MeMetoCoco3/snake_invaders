@@ -45,6 +45,9 @@ ghost_to_cell :: proc(cell: cell_ghost_t) -> cell_t {
 }
 
 vec2_distance :: proc(a, b: Vector2) -> f32 {
+	if a.x == b.x && a.y == b.y {
+		return 0
+	}
 	return math.sqrt(math.pow(b.x - a.x, 2.0) + math.pow(b.y - a.y, 2.0))
 }
 

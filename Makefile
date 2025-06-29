@@ -10,4 +10,4 @@ run_c:
 	odin run ./src/ -define:DEBUG_COLISION=true
 debug: 
 	odin build ./src/ -out:debug_invaders -o:none -debug
-	gdb -tui debug_invaders
+	gdb  debug_invaders

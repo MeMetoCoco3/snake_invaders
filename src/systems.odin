@@ -95,11 +95,10 @@ CollisionSystem :: proc(game: ^Game) {
 				if can_turn &&
 				   try_set_dir(head_velocity, head_data.next_dir, head_direction, head_data) {
 					fmt.println("IS TURNING")
-					fmt.println(head_direction)
 					// if head_direction == {0, 0} {
 					// 	dir_is_zero = true
 					// }
-					// player.animations[i].
+					// // player.animations[i].
 					// if head_data.next_dir != (Vector2{0, 0}) {
 					is_turning = true
 					// }
@@ -197,6 +196,7 @@ CollisionSystem :: proc(game: ^Game) {
 			body := &game.player_body
 			player := game.world.archetypes[player_mask]
 			future_head_pos := head_position + head_velocity.direction * head_velocity.speed
+
 			if is_turning &&
 			   !dir_is_zero &&
 			   !aligned_vectors(head_position, future_head_pos, body.cells[0].position) &&
@@ -219,8 +219,17 @@ CollisionSystem :: proc(game: ^Game) {
 				} else if (from_dir == {0, 1} && to_dir == {1, 0}) ||
 				   (from_dir == {1, 0} && to_dir == {0, 1}) {
 					rotation += 0
+				} else {
+					return
 				}
 
+				// Checks if the previous ghost is aligned with the head_position and the future_head_pos
+				if body.cells[0].count_turns_left > 0 {
+					ghost, ok := peek_head(body.ghost_pieces)
+					if aligned_vectors(ghost.position, head_position, future_head_pos) {
+						return
+					}
+				}
 
 				put_cell(body.ghost_pieces, cell_ghost_t{head_position, from_dir, rotation})
 				add_turn_count(body)
@@ -289,6 +298,8 @@ VelocitySystem :: proc(game: ^Game) {
 	player := game.world.archetypes[player_mask]
 	body := &game.player_body
 
+	// fmt.println(body.ghost_pieces.count)
+
 	head_position := &player.positions[0].pos
 	head_direction := player.velocities[0].direction
 	head_velocity := &player.velocities[0]
@@ -333,7 +344,6 @@ VelocitySystem :: proc(game: ^Game) {
 					player_data.player_state = .NORMAL
 				}
 
-
 				head_data.distance += abs(vector_move.x + vector_move.y)
 				// fmt.println(head_data.distance)
 			}
@@ -356,86 +366,146 @@ VelocitySystem :: proc(game: ^Game) {
 
 
 	if head_direction != {0, 0} && !body.growing {
-		fmt.println("CHEKEANDO SI ENTRAMOS EN AQUI")
 		for i in 0 ..< body.num_cells {
+			curr_cell := &body.cells[i]
+
 			piece_to_follow: cell_t
+			ghost_index_being_followed: i8 = -1
 
-			moved := false
-			if (body.cells[i].count_turns_left == 0) {
-
-				absolute_direction := Vector2{abs(head_direction.x), abs(head_direction.y)}
-
-				new_collider_size := absolute_direction * {GRID_SIZE, GRID_SIZE}
-				new_collider_position := new_collider_size + head_position^
-
-				if new_collider_size.x == PLAYER_SIZE {new_collider_size.x = 0}
-				if new_collider_size.y == PLAYER_SIZE {new_collider_size.y = 0}
-
-				piece_to_follow =
-					(i == 0) ? cell_t{head_position^, head_direction, 0, PLAYER_SIZE, Collider{new_collider_position, int(new_collider_size.x), int(new_collider_size.y)}} : body.cells[i - 1]
-				body.cells[i].direction = piece_to_follow.direction
-
+			if curr_cell.count_turns_left == 0 {
+				piece_to_follow = cell_t {
+					head_position^,
+					head_direction,
+					0,
+					PLAYER_SIZE,
+					Collider{},
+				}
 			} else {
-				index :=
-					(MAX_RINGBUFFER_VALUES +
-						body.ghost_pieces.tail -
-						body.cells[i].count_turns_left) %
+				ghost_index_being_followed =
+					(MAX_RINGBUFFER_VALUES + body.ghost_pieces.tail - curr_cell.count_turns_left) %
 					MAX_RINGBUFFER_VALUES
-
-				following_ghost_piece := ghost_to_cell(body.ghost_pieces.values[index])
-				// fmt.println(
-				// 	"Ghost Index: ",
-				// 	index,
-				// 	" Tail: ",
-				// 	body.ghost_pieces.tail,
-				// 	" Turns left: ",
-				// 	body.cells[i].count_turns_left,
-				// )
-				// fmt.println(
-				// 	"Following ghost pos: ",
-				// 	following_ghost_piece.position,
-				// 	" Cell pos: ",
-				// 	body.cells[i].position,
-				// )
-
-				distance := vec2_distance(body.cells[i].position, following_ghost_piece.position)
-				// fmt.println("CHEKEANDO LA HEAD_VELOCITY.SPEED", head_velocity.speed)
-
-				body_cell_speed := head_velocity.speed
-				if distance < body_cell_speed {
-					if body.cells[i].position == following_ghost_piece.position {
-						body.cells[i].direction = following_ghost_piece.direction
-						body.cells[i].count_turns_left -= 1
-
-					} else {
-						body.cells[i].position = following_ghost_piece.position
-						fmt.println("WE MOVE IT BY CHANGING POSITION")
-						body_cell_speed -= distance
-						// moved = true
-
-					}
-
-
-				} else {
-					direction_to_ghost := get_cardinal_direction(
-						body.cells[i].position,
-						following_ghost_piece.position,
-					)
-					body.cells[i].direction = direction_to_ghost
-				}
-
-				if (i == body.num_cells - 1) {
-					dealing_ghost_piece(body, i)
-				}
+				piece_to_follow = ghost_to_cell(
+					body.ghost_pieces.values[ghost_index_being_followed],
+				)
 			}
 
-			if !moved {
-				fmt.println("Body speed: ", head_velocity.speed, i)
-				fmt.println()
-				body.cells[i].position += body.cells[i].direction * head_velocity.speed
+			// BEGIN MOVEMENT
+			remaining_movement := head_velocity.speed
+			for {
+				direction := get_cardinal_direction(curr_cell.position, piece_to_follow.position)
+				distance_to_follow := vec2_distance(curr_cell.position, piece_to_follow.position)
+
+				if distance_to_follow <= remaining_movement {
+					curr_cell.position = piece_to_follow.position
+					curr_cell.direction = piece_to_follow.direction
+					remaining_movement -= distance_to_follow
+
+					if curr_cell.count_turns_left > 0 {
+						curr_cell.count_turns_left -= 1
+					}
+
+					if i == body.num_cells - 1 && ghost_index_being_followed >= 0 {
+						dealing_ghost_piece(body, i)
+					}
+
+					if curr_cell.count_turns_left == 0 {
+						piece_to_follow = cell_t {
+							head_position^,
+							head_direction,
+							0,
+							PLAYER_SIZE,
+							Collider{},
+						}
+						ghost_index_being_followed = -1
+					} else {
+						ghost_index_being_followed =
+							(MAX_RINGBUFFER_VALUES +
+								body.ghost_pieces.tail -
+								curr_cell.count_turns_left) %
+							MAX_RINGBUFFER_VALUES
+						piece_to_follow = ghost_to_cell(
+							body.ghost_pieces.values[ghost_index_being_followed],
+						)
+					}
+				} else {
+					curr_cell.direction = direction
+					curr_cell.position += direction * remaining_movement
+
+					if i == body.num_cells - 1 && ghost_index_being_followed >= 0 {
+						dealing_ghost_piece(body, i)
+					}
+					break
+				}
 			}
 		}
 	}
+
+	// if head_direction != {0, 0} && !body.growing {
+	// for i in 0 ..< body.num_cells {
+	// 	piece_to_follow: cell_t
+	//
+	// 	moved := false
+	// 	if (body.cells[i].count_turns_left == 0) {
+	//
+	// 		// absolute_direction := Vector2{abs(head_direction.x), abs(head_direction.y)}
+	// 		//
+	// 		// new_collider_size := absolute_direction * {GRID_SIZE, GRID_SIZE}
+	// 		// new_collider_position := new_collider_size + head_position^
+	// 		//
+	// 		// if new_collider_size.x == PLAYER_SIZE {new_collider_size.x = 0}
+	// 		// if new_collider_size.y == PLAYER_SIZE {new_collider_size.y = 0}
+	// 		//
+	// 		// piece_to_follow =
+	// 		// 	(i == 0) ? cell_t{head_position^, head_direction, 0, PLAYER_SIZE, Collider{new_collider_position, int(new_collider_size.x), int(new_collider_size.y)}} : body.cells[i - 1]
+	// 		body.cells[i].direction = piece_to_follow.direction
+	//
+	// 	} else {
+	// 		index :=
+	// 			(MAX_RINGBUFFER_VALUES +
+	// 				body.ghost_pieces.tail -
+	// 				body.cells[i].count_turns_left) %
+	// 			MAX_RINGBUFFER_VALUES
+	//
+	// 		following_ghost_piece := ghost_to_cell(body.ghost_pieces.values[index])
+	//
+	// 		distance := vec2_distance(body.cells[i].position, following_ghost_piece.position)
+	// 		// fmt.println("CHEKEANDO LA HEAD_VELOCITY.SPEED", head_velocity.speed)
+	//
+	// 		body_cell_speed := head_velocity.speed
+	// 		if distance < body_cell_speed {
+	// 			if body.cells[i].position == following_ghost_piece.position {
+	// 				body.cells[i].direction = following_ghost_piece.direction
+	// 				body.cells[i].count_turns_left -= 1
+	//
+	// 			} else {
+	// 				body.cells[i].position = following_ghost_piece.position
+	// 				fmt.println("WE MOVE IT BY CHANGING POSITION")
+	// 				body_cell_speed -= distance
+	// 				// moved = true
+	//
+	// 			}
+	//
+	//
+	// 		} else {
+	// 			direction_to_ghost := get_cardinal_direction(
+	// 				body.cells[i].position,
+	// 				following_ghost_piece.position,
+	// 			)
+	// 			body.cells[i].direction = direction_to_ghost
+	// 		}
+	//
+	// 		if (i == body.num_cells - 1) {
+	// 			dealing_ghost_piece(body, i)
+	// 		}
+	// }
+	//
+	// if !moved {
+	// 	fmt.println("Body speed: ", head_velocity.speed, i)
+	// 	fmt.println()
+	// 	body.cells[i].position += body.cells[i].direction * head_velocity.speed
+	// }
+	// }
+	// }
 }
 
 RenderingSystem :: proc(game: ^Game) {
