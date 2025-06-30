@@ -280,9 +280,7 @@ spawn_bullet :: proc(
 ) {
 	mask := (COMPONENT_ID.POSITION | .VELOCITY | .ANIMATION | .COLLIDER | .DATA)
 	add_entity(game.world, mask)
-	if team == .GOOD {
-		fmt.println("DIRECTION INSIDE", direction)
-	}
+
 	archetype := game.world.archetypes[mask]
 
 	append(&archetype.positions, Position{origin, {bullet_size, bullet_size}})
@@ -290,7 +288,7 @@ spawn_bullet :: proc(
 
 	anim :=
 		(team == .GOOD) ? animation_bank[ANIMATION.BULLET_G] : animation_bank[ANIMATION.BULLET_B]
-
+	// anim.angle = angle_from_vector(direction)
 	append(&archetype.animations, anim)
 	append(
 		&archetype.colliders,
