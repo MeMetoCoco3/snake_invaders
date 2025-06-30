@@ -465,57 +465,53 @@ VelocitySystem :: proc(game: ^Game) {
 
 RenderingSystem :: proc(game: ^Game) {
 	arquetypes, is_empty := query_archetype(game.world, COMPONENT_ID.POSITION | .SPRITE)
-	if is_empty {
-		return
-	}
-
-	for arquetype in arquetypes {
-		positions := arquetype.positions
-		sprites := arquetype.sprites
-		for i in 0 ..< len(arquetype.entities_id) {
-			draw(sprites[i])
+	if !is_empty {
+		for arquetype in arquetypes {
+			positions := arquetype.positions
+			sprites := arquetype.sprites
+			for i in 0 ..< len(arquetype.entities_id) {
+				draw(sprites[i])
+			}
 		}
+
+
 	}
 
 	arquetypes, is_empty = query_archetype(game.world, COMPONENT_ID.POSITION | .ANIMATION)
-	if is_empty {
-		return
-	}
+	if !is_empty {
+		for arquetype in arquetypes {
+			positions := arquetype.positions
+			animations := arquetype.animations
+			direction := Vector2{0, 0}
+			team := arquetype.data
+			has_velocity := false
+			is_player := false
 
-
-	for arquetype in arquetypes {
-		positions := arquetype.positions
-		animations := arquetype.animations
-		direction := Vector2{0, 0}
-		team := arquetype.data
-		has_velocity := false
-		is_player := false
-
-		if (arquetype.component_mask & COMPONENT_ID.PLAYER_DATA) == .PLAYER_DATA {
-			is_player = true
-		}
-
-
-		if (arquetype.component_mask & COMPONENT_ID.VELOCITY) == .VELOCITY {
-			has_velocity = true
-		}
-
-		for i in 0 ..< len(arquetype.entities_id) {
-			if has_velocity {
-
-				if is_player && arquetype.velocities[i].direction == {0, 0} {
-					direction = arquetype.players_data[i].previous_dir
-				} else {
-					direction = arquetype.velocities[i].direction
-				}
+			if (arquetype.component_mask & COMPONENT_ID.PLAYER_DATA) == .PLAYER_DATA {
+				is_player = true
 			}
 
 
-			draw(positions[i], &animations[i], direction, team[i].team)
+			if (arquetype.component_mask & COMPONENT_ID.VELOCITY) == .VELOCITY {
+				has_velocity = true
+			}
+
+			for i in 0 ..< len(arquetype.entities_id) {
+				if has_velocity {
+
+					if is_player && arquetype.velocities[i].direction == {0, 0} {
+						direction = arquetype.players_data[i].previous_dir
+					} else {
+						direction = arquetype.velocities[i].direction
+					}
+				}
+
+
+				draw(positions[i], &animations[i], direction, team[i].team)
+			}
 		}
 	}
 }
-
 
 angle_from_vector :: proc(v0: Vector2) -> f32 {
 	return math.atan2(v0.y, v0.x) * (180.0 / math.PI)
