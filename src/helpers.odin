@@ -26,7 +26,10 @@ try_set_dir :: proc(
 	// fmt.printfln("NEXT DIR %v, CURRENT DIR %v", next_dir, current_dir)
 	if !oposite_directions(next_dir, current_dir) && next_dir != current_dir {
 		velocity.direction = next_dir
-		data.previous_dir = current_dir
+		if current_dir != {0, 0} {
+			fmt.println(current_dir)
+			data.previous_dir = current_dir
+		}
 		// fmt.println("NEW PLAYER DIRECTION", next_dir)
 		return true
 	}

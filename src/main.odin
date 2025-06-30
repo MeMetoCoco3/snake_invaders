@@ -10,7 +10,7 @@ DEBUG_COLISION :: #config(DEBUG_COLISION, false)
 SCREEN_WIDTH :: 800
 SCREEN_HEIGHT :: 800
 PLAYER_SIZE :: 32
-GRID_SIZE :: 8
+GRID_SIZE :: PLAYER_SIZE / 2
 PLAYER_SPEED :: 4
 DASH_DURATION :: 120
 RECOVER_DASH_TIME :: 240
@@ -21,7 +21,7 @@ MAX_NUM_CANDIES :: 3
 CANDY_SIZE :: 32
 CANDY_RESPAWN_TIME :: 2
 
-MAX_NUM_ENEMIES :: 0
+MAX_NUM_ENEMIES :: 1
 ENEMY_RESPAWN_TIME :: 10
 ENEMY_SIZE :: 32
 ENEMY_SPEED :: 1
@@ -33,7 +33,7 @@ TIME_TO_CHANGE_STATE :: 200
 EPSILON :: 0.5
 EPSILON_COLISION :: 4
 SMOOTHING :: 0.1
-BULLET_SPEED :: 2
+BULLET_SPEED :: PLAYER_SPEED * 1.5
 BULLET_SIZE :: 16
 
 NUM_RECTANGLES_ON_SCENE :: 100
@@ -95,22 +95,6 @@ main :: proc() {
 			VelocitySystem(&game)
 			update(&game)
 
-			// if game.player_body.num_cells > 1 {
-			// 	fmt.println(
-			// 		" DISTANCE BETWEN  0 AND HEAD: ",
-			// 		vec2_distance(game.player_position.pos, game.player_body.cells[0].position),
-			// 	)
-			//
-			// 	fmt.println(
-			// 		" DISTANCE BETWEN  0 AND 1: ",
-			// 		vec2_distance(
-			// 			game.player_body.cells[1].position,
-			// 			game.player_body.cells[0].position,
-			// 		),
-			// 	)
-			// }
-			//
-			// fmt.println()
 			rl.BeginDrawing()
 
 			draw_game(&game)
@@ -164,13 +148,13 @@ add_player :: proc(world: ^World) {
 	)
 
 	// ANY UPDATETO INITIAL POSITION MUST BE DONE ON LOAD SCENE
-	player_position := Position{Vector2{360, 360}, {PLAYER_SIZE, PLAYER_SIZE}}
+	player_position := Position{Vector2{320, 320}, {PLAYER_SIZE, PLAYER_SIZE}}
 
 	append(&player_arquetype.positions, player_position)
 	append(&player_arquetype.velocities, Velocity{{0, 0}, PLAYER_SPEED})
 	append(&player_arquetype.animations, animation_bank[ANIMATION.PLAYER])
 
-	append(&player_arquetype.data, Data{.PLAYER, .ALIVE, .GOOD, .NORMAL})
+	append(&player_arquetype.data, Data{.PLAYER, .ALIVE, .GOOD})
 	append(
 		&player_arquetype.colliders,
 		Collider {

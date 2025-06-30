@@ -69,13 +69,25 @@ InputSystem :: proc(game: ^Game) {
 	}
 	if (rl.IsKeyReleased(.Z)) && player_data.next_bullet_size > 0 {
 		add_sound(game, &sound_bank[FX.FX_SHOOT])
-		origin := player_position.pos + PLAYER_SIZE / 2
+		// THIS ORIGIN MARKS THE VERTEZ SO I SHOULD TAKEON ACCOUT ALSO THE SIZE OF THE BULLET
+		origin := player_position.pos + player_position.size / 2
 
+
+		speed := max(player_velocity.speed * 1.5, BULLET_SPEED)
+
+		direction := player_velocity.direction
+		if direction == {0, 0} {
+			direction = player_data.previous_dir
+		}
+
+		fmt.println("SPEED HERE: ", speed)
+		fmt.println("DIR HERE", direction)
 		spawn_bullet(
 			game,
 			origin,
 			PLAYER_SIZE * player_data.next_bullet_size,
-			player_velocity.direction,
+			speed,
+			direction,
 			.GOOD,
 		)
 
@@ -189,8 +201,6 @@ grow_body :: proc(body: ^Body, head_pos, head_dir: Vector2) {
 			size             = PLAYER_SIZE,
 		}
 
-		// fmt.println("WE ARE GROWING NUM CELLS: ", body.num_cells)
-		// fmt.println(head_pos)
 	} else {
 		fmt.println("WE DO NOT GROW!")
 	}
@@ -198,13 +208,11 @@ grow_body :: proc(body: ^Body, head_pos, head_dir: Vector2) {
 
 
 dealing_ghost_piece :: proc(body: ^Body, last_piece: i8) {
-	fmt.println("$$$$$$$$$$$$$$$$$$$$$")
 	ghost_piece, ok := peek_head(body.ghost_pieces)
 	if !ok {
 		return
 	}
 
-	fmt.println("$$$$$$$$$$$$$$$$$$$$$")
 	is_colliding := rec_colliding(
 		body.cells[last_piece].position,
 		PLAYER_SIZE,
@@ -215,8 +223,6 @@ dealing_ghost_piece :: proc(body: ^Body, last_piece: i8) {
 	)
 
 	if (is_colliding && body.cells[last_piece].direction == ghost_piece.direction) {
-
-		fmt.println("$$$$$$$$$$$$$$$$$$$$$")
 		pop_cell(body.ghost_pieces)
 	}
 }
@@ -239,29 +245,28 @@ spawn_enemy :: proc(game: ^Game) {
 	add_entity(game.world, mask)
 
 	archetype := game.world.archetypes[mask]
-
-	append(&archetype.positions, Position{{x, y}, {ENEMY_SIZE, ENEMY_SIZE}})
+	enemy_position := Position{{x, y}, {ENEMY_SIZE, ENEMY_SIZE}}
+	append(&archetype.positions, enemy_position)
 	append(&archetype.velocities, Velocity{{0, 0}, ENEMY_SPEED})
 	append(&archetype.animations, animation_bank[ANIMATION.ENEMY_RUN])
 
 
 	colision_origin := Vector2{x, y} + EPSILON_COLISION * 2
-	append(
-		&archetype.colliders,
-		Collider {
-			colision_origin,
-			ENEMY_SIZE - EPSILON_COLISION * 4,
-			ENEMY_SIZE - EPSILON_COLISION * 4,
-		},
-	)
+	enemy_collider := Collider {
+		colision_origin,
+		ENEMY_SIZE - EPSILON_COLISION * 4,
+		ENEMY_SIZE - EPSILON_COLISION * 4,
+	}
+	append(&archetype.colliders, enemy_collider)
 
-	append(&archetype.data, Data{.ENEMY, .ALIVE, .BAD, .NORMAL})
+	append(&archetype.data, Data{.ENEMY, .ALIVE, .BAD})
 	append(&archetype.ias, IA{.APPROACH, 60, 100, 500, 0})
 
 	game.count_enemies += 1
 
 	fmt.println("APPENDED NEW ENEMY")
-
+	fmt.println("POSITION:  ", enemy_position)
+	fmt.println("COLLIDER: ", enemy_collider)
 
 }
 
@@ -269,16 +274,19 @@ spawn_bullet :: proc(
 	game: ^Game,
 	origin: Vector2,
 	bullet_size: f32,
+	speed: f32,
 	direction: Vector2,
 	team: ENTITY_TEAM,
 ) {
 	mask := (COMPONENT_ID.POSITION | .VELOCITY | .ANIMATION | .COLLIDER | .DATA)
 	add_entity(game.world, mask)
-
+	if team == .GOOD {
+		fmt.println("DIRECTION INSIDE", direction)
+	}
 	archetype := game.world.archetypes[mask]
 
-	append(&archetype.positions, Position{origin, {BULLET_SIZE, BULLET_SIZE}})
-	append(&archetype.velocities, Velocity{direction, BULLET_SPEED})
+	append(&archetype.positions, Position{origin, {bullet_size, bullet_size}})
+	append(&archetype.velocities, Velocity{direction, speed})
 
 	anim :=
 		(team == .GOOD) ? animation_bank[ANIMATION.BULLET_G] : animation_bank[ANIMATION.BULLET_B]
@@ -288,11 +296,11 @@ spawn_bullet :: proc(
 		&archetype.colliders,
 		Collider {
 			origin + EPSILON_COLISION,
-			BULLET_SIZE - EPSILON_COLISION * 2,
-			BULLET_SIZE - EPSILON_COLISION * 2,
+			int(bullet_size) - EPSILON_COLISION * 2,
+			int(bullet_size) - EPSILON_COLISION * 2,
 		},
 	)
-	append(&archetype.data, Data{.BULLET, .ALIVE, team, .NORMAL})
+	append(&archetype.data, Data{.BULLET, .ALIVE, team})
 }
 
 spawn_candy :: proc(game: ^Game) {
@@ -323,7 +331,7 @@ spawn_candy :: proc(game: ^Game) {
 		&archetype.positions,
 		Position{{f32(pos_x + 10), f32(pos_y + 10)}, {CANDY_SIZE, CANDY_SIZE}},
 	)
-	append(&archetype.data, Data{.CANDY, .ALIVE, .GOOD, .NORMAL})
+	append(&archetype.data, Data{.CANDY, .ALIVE, .NEUTRAL})
 	append(&archetype.animations, animation_bank[ANIMATION.CANDY])
 
 	collider_position := Vector2{f32(pos_x + 10), f32(pos_y + 10)} + EPSILON_COLISION
@@ -456,136 +464,6 @@ draw_ghost_cells :: proc(rb: ^Ringuffer_t) {
 		)
 	}
 }
-
-/////////////
-// COLLIDE //
-/////////////
-// check_collision :: proc(game: ^Game) {
-// 	player := game.player
-//
-// 	future_pos := player.head.position + player.next_dir * f32(player.speed)
-//
-// 	center_player := player.head.position
-// 	center_player += PLAYER_SIZE / 2
-//
-// 	for i in 0 ..< game.scene.count_entities {
-// 		entity := &game.scene.entities[i]
-// 		switch entity.kind {
-// 		case .CANDY:
-// 			if vec2_distance(center_player, entity.position) + EPSILON_COLISION < PLAYER_SIZE &&
-// 			   entity.state != .DEAD {
-// 				game.scene.entities[i].state = .DEAD
-// 				game.scene.count_candies -= 1
-//
-// 				add_sound(game, &sound_bank[FX.FX_EAT])
-// 				grow_body(game.player)
-// 			}
-// 		case .STATIC:
-// 		}
-//
-// 	}
-//
-//
-// 	for i in 0 ..< game.scene.count_enemies {
-// 		enemy := &game.scene.enemies[i]
-// 		distance_to_player := vec2_distance(center_player, enemy.position)
-// 		direction := (game.player.position - enemy.position) / distance_to_player
-// 		sum_radius := (PLAYER_SIZE / 2 + enemy.shape.(Circle).r / 2) - EPSILON_COLISION
-// 		if distance_to_player < sum_radius && enemy.state != .DEAD {
-// 			switch player.state {
-// 			case .NORMAL:
-// 				game.state = .DEAD
-// 				break
-// 			case .DASH:
-// 				game.scene.entities[i].state = .DEAD
-//
-// 				add_sound(game, &sound_bank[FX.FX_EAT])
-// 				grow_body(game.player)
-// 				game.scene.count_enemies -= 1
-// 				continue
-// 			}
-// 		}
-//
-// 		switch enemy.behavior {
-// 		case .APROACH:
-// 			direction = direction
-// 		case .GOAWAY:
-// 			direction = -direction
-// 		case .SHOT:
-// 			direction = Vector2{0, 0}
-// 		}
-//
-// 		for j in 0 ..< game.scene.count_scenario {
-// 			rectangle := game.scene.scenario[j]
-// 			future_pos_enemy := enemy.position + (enemy.direction * enemy.speed)
-// 			if rec_colliding_no_edges(
-// 				rectangle.position,
-// 				rectangle.shape.(Rect).w,
-// 				rectangle.shape.(Rect).h,
-// 				future_pos_enemy,
-// 				enemy.shape.(Circle).r,
-// 				enemy.shape.(Circle).r,
-// 			) {
-// 				direction = Vector2{0, 0}
-// 				break
-// 			}
-// 		}
-// 		enemy.direction = direction
-//
-// 		for j in 0 ..< game.scene.count_bullets {
-// 			bullet := &game.scene.bullets[j]
-// 			if bullet.team == .BAD {
-// 				sum_radius_player :=
-// 					(bullet.shape.(Circle).r / 2 + PLAYER_SIZE / 2) - EPSILON_COLISION
-// 				if vec2_distance(bullet.position, center_player) <= sum_radius_player {
-// 					game.state = .DEAD
-// 				}
-// 				continue
-// 			}
-//
-// 			sum_radius :=
-// 				(bullet.shape.(Circle).r / 2 + enemy.shape.(Circle).r / 2) - EPSILON_COLISION
-// 			if vec2_distance(bullet.position, enemy.position) <= sum_radius {
-// 				bullet.state = .DEAD
-// 				enemy.state = .DEAD
-//
-// 				game.scene.count_enemies -= 1
-// 				game.scene.count_bullets -= 1
-// 				continue
-// 			}
-//
-// 			for k in 0 ..< game.scene.count_scenario {
-// 				rectangle := game.scene.scenario[k]
-// 				future_pos_bullet := bullet.position + (bullet.direction * bullet.speed)
-// 				if rec_colliding_no_edges(
-// 					rectangle.position,
-// 					rectangle.shape.(Rect).w,
-// 					rectangle.shape.(Rect).h,
-// 					future_pos_bullet,
-// 					bullet.shape.(Circle).r,
-// 					bullet.shape.(Circle).r,
-// 				) {
-// 					fmt.println("BOOM ROASTED")
-// 					bullet.state = .DEAD
-// 				}
-// 			}
-// 		}
-// 	}
-// 	for i in 0 ..< game.scene.count_scenario {
-// 		rectangle := game.scene.scenario[i]
-// 		if rec_colliding_no_edges(
-// 			rectangle.position,
-// 			rectangle.shape.(Rect).w,
-// 			rectangle.shape.(Rect).h,
-// 			future_pos,
-// 			PLAYER_SIZE,
-// 			PLAYER_SIZE,
-// 		) {
-// 			player.next_dir = {0, 0}
-// 		}
-// 	}
-// }
-
 aligned_to_grid :: proc(p: Vector2) -> bool {
 	return i32(p.x) % GRID_SIZE == 0 && i32(p.y) % GRID_SIZE == 0
 }

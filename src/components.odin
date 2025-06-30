@@ -75,7 +75,6 @@ Animation :: struct {
 	source_x, source_y: f32,
 	w:                  f32,
 	h:                  f32,
-	source_origin:      Vector2,
 	_current_frame:     int,
 	num_frames:         int,
 	frame_delay:        int,
@@ -105,10 +104,9 @@ Collider :: struct {
 }
 
 Data :: struct {
-	kind:         ENTITY_KIND,
-	state:        ENTITY_STATE,
-	team:         ENTITY_TEAM,
-	player_state: PLAYER_STATE,
+	kind:  ENTITY_KIND,
+	state: ENTITY_STATE,
+	team:  ENTITY_TEAM,
 }
 
 IA :: struct {

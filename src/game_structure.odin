@@ -106,7 +106,12 @@ draw :: proc {
 }
 
 
-draw_animated_sprite :: proc(position: Position, animation: ^Animation, direction: Vector2) {
+draw_animated_sprite :: proc(
+	position: Position,
+	animation: ^Animation,
+	direction: Vector2,
+	team: ENTITY_TEAM,
+) {
 	if animation._current_frame >= animation.num_frames {
 		animation._current_frame = 0
 	}
@@ -119,16 +124,14 @@ draw_animated_sprite :: proc(position: Position, animation: ^Animation, directio
 	angle: f32 = 0.0
 	switch animation.angle_type {
 	case .LR:
-		if direction.x >= 0 {
+		if direction.x <= 0 {
 			src_rec.width *= -1
 		}
 	case .DIRECTIONAL:
 		angle = angle_from_vector(direction) + animation.angle
 	case .IGNORE:
 	}
-	// fmt.println(position)
-	// fmt.println("PITION:", position.size)
-	// fmt.println("ANIM, POSITION", animation.w, animation.h)
+
 	dst_rec := rl.Rectangle {
 		position.pos.x + position.size.x / 2,
 		position.pos.y + position.size.y / 2,
@@ -136,12 +139,24 @@ draw_animated_sprite :: proc(position: Position, animation: ^Animation, directio
 		position.size.y,
 	}
 
-	rl.DrawTexturePro(animation.image^, src_rec, dst_rec, animation.source_origin, angle, rl.WHITE)
+	origin := Vector2{position.size.x / 2, position.size.y / 2}
+	rl.DrawTexturePro(animation.image^, src_rec, dst_rec, origin, angle, rl.WHITE)
 	when DEBUG_COLISION {
 		dst_rec.x -= position.size.x / 2
 		dst_rec.y -= position.size.y / 2
-		rl.DrawRectangleLinesEx(dst_rec, 1, rl.RED)
+		color := rl.WHITE
+		switch team {
+		case .NEUTRAL:
+			color = rl.GRAY
+		case .BAD:
+			color = rl.RED
+		case .GOOD:
+			color = rl.BLUE
+		}
+
+		rl.DrawRectangleLinesEx(dst_rec, 1, color)
 	}
+
 	if animation._time_on_frame >= animation.frame_delay && animation.kind != .STATIC {
 		animation._current_frame += 1
 		animation._time_on_frame = 0
@@ -195,7 +210,6 @@ load_animations :: proc() {
 		source_x       = 0,
 		source_y       = 0,
 		angle          = 90,
-		source_origin  = Vector2{PLAYER_SIZE / 2, PLAYER_SIZE / 2},
 		_current_frame = 0,
 		num_frames     = 0,
 		frame_delay    = 0,
@@ -210,7 +224,8 @@ load_animations :: proc() {
 		image          = &atlas,
 		w              = 32,
 		h              = 32,
-		source_origin  = Vector2{0, 64},
+		source_x       = 0,
+		source_y       = 64,
 		_current_frame = 0,
 		num_frames     = 2,
 		frame_delay    = 8,
@@ -225,7 +240,8 @@ load_animations :: proc() {
 		image          = &atlas,
 		w              = 32,
 		h              = 32,
-		source_origin  = Vector2{64, 64},
+		source_x       = 64,
+		source_y       = 64,
 		_current_frame = 0,
 		num_frames     = 2,
 		frame_delay    = 8,
@@ -240,7 +256,8 @@ load_animations :: proc() {
 		image          = &atlas,
 		w              = 32,
 		h              = 32,
-		source_origin  = Vector2{0, 128},
+		source_x       = 0,
+		source_y       = 128,
 		_current_frame = 0,
 		num_frames     = 1,
 		frame_delay    = 8,
@@ -255,7 +272,8 @@ load_animations :: proc() {
 		image          = &atlas,
 		w              = 32,
 		h              = 32,
-		source_origin  = Vector2{32, 128},
+		source_x       = 32,
+		source_y       = 128,
 		_current_frame = 0,
 		num_frames     = 4,
 		frame_delay    = 8,
@@ -271,7 +289,8 @@ load_animations :: proc() {
 		image          = &atlas,
 		w              = 32,
 		h              = 32,
-		source_origin  = Vector2{0, 64},
+		source_x       = 0,
+		source_y       = 64,
 		_current_frame = 0,
 		num_frames     = 2,
 		frame_delay    = 8,
@@ -283,16 +302,15 @@ load_animations :: proc() {
 	}
 
 	animation_bank[ANIMATION.CANDY] = Animation {
-		image         = &tx_candy,
-		w             = 16,
-		h             = 16,
-		source_x      = 0,
-		source_y      = 0,
-		source_origin = Vector2{CANDY_SIZE / 2, CANDY_SIZE / 2},
-		num_frames    = 16,
-		frame_delay   = 4,
-		kind          = .REPEAT,
-		angle_type    = .IGNORE,
+		image       = &tx_candy,
+		w           = 16,
+		h           = 16,
+		source_x    = 0,
+		source_y    = 0,
+		num_frames  = 16,
+		frame_delay = 4,
+		kind        = .REPEAT,
+		angle_type  = .IGNORE,
 	}
 
 }
@@ -386,7 +404,7 @@ unload_sounds :: proc() {
 
 load_scene :: proc(game: ^Game, scene: SCENES) {
 	old_ghost_pieces := game.player_body.ghost_pieces
-	game.player_position^ = {{360, 360}, {PLAYER_SIZE, PLAYER_SIZE}}
+	game.player_position^ = {{320, 320}, {PLAYER_SIZE, PLAYER_SIZE}}
 
 
 	game.player_body.ghost_pieces = old_ghost_pieces

@@ -23,7 +23,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 		Sprite{&atlas, Rect{{0, 96}, {32, 32}}, Rect{{0 + 800 / 2, 0 + 128 / 2}, {128, 800}}, 90},
 	)
 
-	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL})
+	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
 
 	add_entity(world, mask)
 	append(
@@ -43,7 +43,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 			270,
 		},
 	)
-	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL})
+	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
 
 	add_entity(world, mask)
 
@@ -54,7 +54,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 		Sprite{&atlas, Rect{{0, 96}, {32, 32}}, Rect{{128 / 2, 800 / 2}, {128, 800}}, 0},
 	)
 
-	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL})
+	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
 
 	add_entity(world, mask)
 	append(
@@ -69,7 +69,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 		&arquetype.sprites,
 		Sprite{&atlas, Rect{{0, 96}, {32, 32}}, Rect{{672 + 128 / 2, 800 / 2}, {128, 800}}, 180},
 	)
-	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL})
+	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
 
 
 	// CORNERS
@@ -88,7 +88,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 			90,
 		},
 	)
-	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL})
+	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
 
 
 	add_entity(world, mask)
@@ -101,7 +101,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 		&arquetype.sprites,
 		Sprite{&atlas, Rect{{32, 96}, {32, 32}}, Rect{{0 + 128 / 2, 0 + 128 / 2}, {128, 128}}, 0},
 	)
-	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL})
+	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
 
 
 	add_entity(world, mask)
@@ -119,7 +119,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 			180,
 		},
 	)
-	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL})
+	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
 
 
 	add_entity(world, mask)
@@ -137,7 +137,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 			270,
 		},
 	)
-	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL, .NORMAL})
+	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
 
 
 	spawn_areas := make([]rl.Rectangle, NUM_RECTANGLES_ON_SCENE)
