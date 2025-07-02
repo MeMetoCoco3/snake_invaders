@@ -356,82 +356,9 @@ draw_game :: proc(game: ^Game) {
 	RenderingSystem(game)
 }
 
-// draw_scene :: proc(game: ^Game) {
-// 	for i in 0 ..< game.scene.count_scenario {
-// 		rectangle := game.scene.scenario[i]
-// 		rec := rl.Rectangle {
-// 			rectangle.position.x,
-// 			rectangle.position.y,
-// 			rectangle.shape.(Rect).w,
-// 			rectangle.shape.(Rect).h,
-// 		}
-// 		rl.DrawRectangleRec(rec, rl.YELLOW)
-// 	}
-//
-// 	for i in 0 ..< game.scene.count_spawners {
-// 		rectangle := game.scene.spawn_areas[i]
-// 		rec := rl.Rectangle {
-// 			rectangle.position.x,
-// 			rectangle.position.y,
-// 			rectangle.shape.(Rect).w,
-// 			rectangle.shape.(Rect).h,
-// 		}
-// 		rl.DrawRectangleRec(rec, rl.PINK)
-// 	}
-//
-// 	for i in 0 ..< game.scene.count_entities {
-// 		entity := &game.scene.entities[i]
-// 		color: rl.Color
-//
-// 		switch entity.kind {
-// 		case .STATIC:
-// 			color = rl.YELLOW
-// 		case .CANDY:
-// 			color = rl.WHITE
-// 		}
-// 		switch s in entity.shape {
-// 		case Circle:
-// 			rl.DrawCircle(i32(entity.position.x), i32(entity.position.y), s.r / 2, color)
-// 			draw(entity)
-// 		case Square:
-// 			rec := rl.Rectangle{entity.position.x, entity.position.y, s.w, s.w}
-// 			rl.DrawRectangleRec(rec, color)
-// 			draw(entity)
-// 		case Rect:
-// 			rec := rl.Rectangle{entity.position.x, entity.position.y, s.w, s.h}
-// 			rl.DrawRectangleRec(rec, color)
-// 			draw(entity)
-// 		}
-//
-// 	}
-//
-// 	for i in 0 ..< game.scene.count_enemies {
-// 		enemy := &game.scene.enemies[i]
-// 		rl.DrawCircle(
-// 			i32(enemy.position.x),
-// 			i32(enemy.position.y),
-// 			enemy.shape.(Circle).r / 2 - EPSILON_COLISION,
-// 			rl.RED,
-// 		)
-// 		draw(enemy)
-//
-// 	}
-// 	for i in 0 ..< game.scene.count_bullets {
-// 		bullet := &game.scene.bullets[i]
-// 		rl.DrawCircle(
-// 			i32(bullet.position.x),
-// 			i32(bullet.position.y),
-// 			bullet.shape.(Circle).r / 2 - EPSILON_COLISION,
-// 			rl.BLUE,
-// 		)
-// 		draw(bullet)
-// 	}
-// }
-//
 draw_body :: proc(body: ^Body) {
 	for i in 0 ..< body.num_cells {
 		cell := body.cells[i]
-
 
 		rl.DrawRectangle(
 			i32(cell.position.x),

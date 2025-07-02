@@ -165,21 +165,16 @@ draw_animated_sprite :: proc(
 	animation._time_on_frame += 1
 }
 
-draw_sprite :: proc(sprite: Sprite) {
+draw_sprite :: proc(sprite: Sprite, position: Position) {
 	src_rec := rl.Rectangle {
 		sprite.src_rect.position.x,
 		sprite.src_rect.position.y,
 		sprite.src_rect.size.x,
 		sprite.src_rect.size.y,
 	}
-	dst_rec := rl.Rectangle {
-		sprite.dst_rect.position.x,
-		sprite.dst_rect.position.y,
-		sprite.dst_rect.size.x,
-		sprite.dst_rect.size.y,
-	}
-
-	origin := Vector2{sprite.dst_rect.size.x / 2, sprite.dst_rect.size.y / 2}
+	dst_rec := rl.Rectangle{position.pos.x, position.pos.y, position.size.x, position.size.y}
+	fmt.println(dst_rec)
+	origin := Vector2{position.size.x / 2, position.size.y / 2}
 	rl.DrawTexturePro(sprite.image^, src_rec, dst_rec, origin, sprite.rotation, rl.WHITE)
 }
 
@@ -363,11 +358,8 @@ draw_body_sprite :: proc(body: ^Body) {
 
 		sprite := sprite_bank[SPRITE.BODY_STRAIGHT]
 		sprite.rotation += angle_from_vector(cell.direction)
-		sprite.dst_rect = Rect {
-			position = cell.position + PLAYER_SIZE / 2,
-			size     = cell.size,
-		}
-		draw(sprite)
+
+		draw(sprite, Position{cell.position + PLAYER_SIZE / 2, cell.size})
 	}
 
 
@@ -380,13 +372,7 @@ draw_body_sprite :: proc(body: ^Body) {
 
 		sprite.rotation = cell.rotation
 
-		sprite.dst_rect = Rect {
-			position = cell.position + PLAYER_SIZE / 2,
-			size     = PLAYER_SIZE,
-		}
-
-		draw(sprite)
-
+		draw(sprite, Position{pos = cell.position + PLAYER_SIZE / 2, size = PLAYER_SIZE})
 
 		loop_index = (loop_index + 1) % MAX_RINGBUFFER_VALUES
 	}

@@ -7,6 +7,7 @@ SCENES :: enum {
 	ONE,
 }
 
+BORDER_SIZE :: 128
 
 load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 	world := game.world
@@ -16,50 +17,46 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 	add_entity(world, mask)
 	arquetype := world.archetypes[mask]
 
-	append(&arquetype.positions, Position{{0, 0}, {SCREEN_WIDTH, PLAYER_SIZE}})
-	append(&arquetype.colliders, Collider{{0, 0}, SCREEN_WIDTH, PLAYER_SIZE})
 	append(
-		&arquetype.sprites,
-		Sprite{&atlas, Rect{{0, 96}, {32, 32}}, Rect{{0 + 800 / 2, 0 + 128 / 2}, {128, 800}}, 90},
+		&arquetype.positions,
+		Position{{SCREEN_WIDTH / 2, BORDER_SIZE / 2}, {BORDER_SIZE, SCREEN_WIDTH}},
 	)
+
+	append(&arquetype.colliders, Collider{{0, 0}, SCREEN_WIDTH, PLAYER_SIZE})
+	append(&arquetype.sprites, Sprite{&atlas, Rect{{0, 96}, {32, 32}}, 90})
 
 	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
 
 	add_entity(world, mask)
 	append(
 		&arquetype.positions,
-		Position{{0, SCREEN_HEIGHT - PLAYER_SIZE}, {SCREEN_WIDTH, PLAYER_SIZE}},
+		Position {
+			{SCREEN_WIDTH / 2, SCREEN_HEIGHT - BORDER_SIZE / 2},
+			{BORDER_SIZE, SCREEN_HEIGHT},
+		},
 	)
 	append(
 		&arquetype.colliders,
-		Collider{{0, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE},
+		Collider{{SCREEN_WIDTH, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE},
 	)
-	append(
-		&arquetype.sprites,
-		Sprite {
-			&atlas,
-			Rect{{0, 96}, {32, 32}},
-			Rect{{0 + 800 / 2, 672 + 128 / 2}, {128, 800}},
-			270,
-		},
-	)
+	append(&arquetype.sprites, Sprite{&atlas, Rect{{0, 96}, {32, 32}}, 270})
 	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
 
 	add_entity(world, mask)
 
-	append(&arquetype.positions, Position{{0, 0}, {PLAYER_SIZE, SCREEN_HEIGHT}})
-	append(&arquetype.colliders, Collider{{0, 0}, PLAYER_SIZE, SCREEN_HEIGHT})
 	append(
-		&arquetype.sprites,
-		Sprite{&atlas, Rect{{0, 96}, {32, 32}}, Rect{{128 / 2, 800 / 2}, {128, 800}}, 0},
+		&arquetype.positions,
+		Position{{BORDER_SIZE / 2, SCREEN_WIDTH / 2}, {BORDER_SIZE, SCREEN_HEIGHT}},
 	)
+	append(&arquetype.colliders, Collider{{0, 0}, PLAYER_SIZE, SCREEN_HEIGHT})
+	append(&arquetype.sprites, Sprite{&atlas, Rect{{0, 96}, {32, 32}}, 0})
 
 	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
 
 	add_entity(world, mask)
 	append(
 		&arquetype.positions,
-		Position{{SCREEN_WIDTH - PLAYER_SIZE, 0}, {PLAYER_SIZE, SCREEN_HEIGHT}},
+		Position{{SCREEN_WIDTH - BORDER_SIZE / 2, SCREEN_WIDTH / 2}, {BORDER_SIZE, SCREEN_HEIGHT}},
 	)
 	append(
 		&arquetype.colliders,
@@ -67,7 +64,9 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 	)
 	append(
 		&arquetype.sprites,
-		Sprite{&atlas, Rect{{0, 96}, {32, 32}}, Rect{{672 + 128 / 2, 800 / 2}, {128, 800}}, 180},
+		Sprite{&atlas, Rect{{0, 96}, {32, 32}}, 180},
+
+		// Sprite{&atlas, Rect{{0, 96}, {32, 32}}, Rect{{672 + 128 / 2, 800 / 2}, {128, 800}}, 180},
 	)
 	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
 
@@ -84,7 +83,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 		Sprite {
 			&atlas,
 			Rect{{32, 96}, {32, 32}},
-			Rect{{800 - 128 / 2, 0 + 128 / 2}, {128, 128}},
+			// Rect{{800 - 128 / 2, 0 + 128 / 2}, {128, 128}},
 			90,
 		},
 	)
@@ -99,7 +98,8 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 	)
 	append(
 		&arquetype.sprites,
-		Sprite{&atlas, Rect{{32, 96}, {32, 32}}, Rect{{0 + 128 / 2, 0 + 128 / 2}, {128, 128}}, 0},
+		Sprite{&atlas, Rect{{32, 96}, {32, 32}}, 0},
+		// Rect{{0 + 128 / 2, 0 + 128 / 2}, {128, 128}},
 	)
 	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
 
@@ -115,7 +115,8 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 		Sprite {
 			&atlas,
 			Rect{{32, 96}, {32, 32}},
-			Rect{{800 - 128 / 2, 800 - 128 / 2}, {128, 128}},
+
+			// Rect{{800 - 128 / 2, 800 - 128 / 2}, {128, 128}},
 			180,
 		},
 	)
@@ -133,7 +134,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 		Sprite {
 			&atlas,
 			Rect{{32, 96}, {32, 32}},
-			Rect{{0 + 128 / 2, 800 - 128 / 2}, {128, 128}},
+			// Rect{{0 + 128 / 2, 800 - 128 / 2}, {128, 128}},
 			270,
 		},
 	)

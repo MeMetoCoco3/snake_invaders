@@ -470,7 +470,7 @@ RenderingSystem :: proc(game: ^Game) {
 			positions := arquetype.positions
 			sprites := arquetype.sprites
 			for i in 0 ..< len(arquetype.entities_id) {
-				draw(sprites[i])
+				draw(sprites[i], positions[i])
 			}
 		}
 

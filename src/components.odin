@@ -60,7 +60,6 @@ Velocity :: struct {
 Sprite :: struct {
 	image:    ^rl.Texture2D,
 	src_rect: Rect,
-	dst_rect: Rect,
 	rotation: f32,
 }
 
