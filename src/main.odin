@@ -3,6 +3,7 @@ package main
 import "core:fmt"
 import "core:math"
 import "core:math/rand"
+import vmem "core:mem/virtual"
 
 import rl "vendor:raylib"
 DEBUG_COLISION :: #config(DEBUG_COLISION, false)
@@ -16,6 +17,7 @@ DASH_DURATION :: 120
 RECOVER_DASH_TIME :: 240
 RECOVER_DMG_TIME :: 90
 
+MAX_HEALTH :: 1
 MAX_NUM_BODY :: 20
 MAX_NUM_MOVERS :: 100
 MAX_NUM_CANDIES :: 3
@@ -47,6 +49,9 @@ atlas: rl.Texture2D
 tx_candy: rl.Texture2D
 
 main :: proc() {
+	arena: vmem.Arena
+
+	arena_allocator := vmem.arena_allocator(&arena)
 
 	rl.InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "snake_invaders")
 	rl.InitAudioDevice()
@@ -68,20 +73,19 @@ main :: proc() {
 
 	world := new_world()
 
-	add_player(world)
-	player_arquetype := world.archetypes[player_mask]
 
 	game := Game {
-		player_body = Body{ghost_pieces = &Ringuffer_t{}, cells = [MAX_NUM_BODY]cell_t{}},
-		player_position = &player_arquetype.positions[0],
-		player_velocity = &player_arquetype.velocities[0],
-		player_data = &player_arquetype.players_data[0],
 		world = world,
 		audio = audio_system_t{fx = make([dynamic]^rl.Sound, 0, 20), bg_music = bg_music},
 	}
 
+	load_scene(&game, .ONE, arena_allocator)
+	fmt.println(game.player_body.ghost_pieces)
+	player_arquetype := world.archetypes[player_mask]
 
-	load_scene(&game, .ONE)
+	game.player_position = &player_arquetype.positions[0]
+	game.player_velocity = &player_arquetype.velocities[0]
+	game.player_data = &player_arquetype.players_data[0]
 
 
 	for !rl.WindowShouldClose() {
@@ -143,14 +147,13 @@ add_player :: proc(world: ^World) {
 			true,
 			RECOVER_DASH_TIME,
 			RECOVER_DMG_TIME,
-			3,
+			MAX_HEALTH,
 			0,
 			false,
 			false,
 		},
 	)
 
-	// ANY UPDATETO INITIAL POSITION MUST BE DONE ON LOAD SCENE
 	player_position := Position{Vector2{320, 320}, {PLAYER_SIZE, PLAYER_SIZE}}
 
 	append(&player_arquetype.positions, player_position)

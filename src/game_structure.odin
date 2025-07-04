@@ -1,8 +1,10 @@
 package main
+
 import "core:fmt"
 import "core:math"
+import "core:mem"
+import vmem "core:mem/virtual"
 import rl "vendor:raylib"
-
 Vector2 :: [2]f32
 
 Game :: struct {
@@ -366,6 +368,7 @@ draw_body_sprite :: proc(body: ^Body) {
 
 	rb := body.ghost_pieces
 	loop_index := rb.head
+
 	for i in 0 ..< rb.count {
 		cell := rb.values[loop_index]
 		sprite := sprite_bank[SPRITE.BODY_TURN]
@@ -380,8 +383,9 @@ draw_body_sprite :: proc(body: ^Body) {
 }
 
 
-unload_atlas :: proc() {
+unload_textures :: proc() {
 	rl.UnloadTexture(atlas)
+	rl.UnloadTexture(tx_candy)
 }
 
 
@@ -391,24 +395,24 @@ unload_sounds :: proc() {
 	}
 }
 
-load_scene :: proc(game: ^Game, scene: SCENES) {
-	old_ghost_pieces := game.player_body.ghost_pieces
-	game.player_position^ = {{320, 320}, {PLAYER_SIZE, PLAYER_SIZE}}
+load_scene :: proc(game: ^Game, scene: SCENES, arena: mem.Allocator) {
+	add_player(game.world)
 
-
-	game.player_body.ghost_pieces = old_ghost_pieces
-	game.player_body.ghost_pieces^ = Ringuffer_t {
-		values = [MAX_NUM_BODY]cell_ghost_t{},
-		head   = 0,
-		tail   = 0,
-		count  = 0,
+	game.player_body = {
+		ghost_pieces = &Ringuffer_t {
+			values = make([MAX_NUM_BODY]cell_ghost_t{}, arena),
+			head = 0,
+			tail = 0,
+			count = 0,
+		},
+		cells        = make([MAX_NUM_BODY]cell_t{}, arena),
 	}
 
+	fmt.println(game.player_body.ghost_pieces)
 	game.state = .PLAY
 	game.current_scene = scene
 	game.candy_respawn_time = 0
 	game.enemy_respawn_time = 0
-
 	load_scenario(game, scene)
 
 }

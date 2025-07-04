@@ -170,14 +170,46 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 }
 
 clean_up :: proc(game: ^Game) {
-	free(game)
+	free_all_entities(game)
+	fmt.println("AFTER FREE GAME")
 	unload_sounds()
-	// unload_textures()
+	unload_textures()
 
 	rl.UnloadMusicStream(game.audio.bg_music)
 
 	rl.CloseAudioDevice()
 	rl.CloseWindow()
+}
+
+free_all_entities :: proc(game: ^Game) {
+	for _, archetype in game.world.archetypes {
+		mask := archetype.component_mask
+		for component in COMPONENT_ID {
+			if (component & mask) == component {
+				switch component {
+				case .POSITION:
+					delete(archetype.positions)
+				case .VELOCITY:
+					delete(archetype.velocities)
+				case .SPRITE:
+					delete(archetype.sprites)
+				case .ANIMATION:
+					delete(archetype.animations)
+				case .DATA:
+					delete(archetype.data)
+				case .COLLIDER:
+					delete(archetype.colliders)
+				case .IA:
+					delete(archetype.ias)
+				case .PLAYER_DATA:
+					delete(archetype.players_data)
+				case .COUNT:
+				}
+			}
+		}
+	}
+
+
 }
 
 get_rec_from_cell :: proc(a, b, c, d: int) -> rl.Rectangle {

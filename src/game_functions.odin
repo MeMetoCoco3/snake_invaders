@@ -98,6 +98,7 @@ InputSystem :: proc(game: ^Game) {
 get_input_pause :: proc(game: ^Game) {
 	if (rl.IsKeyPressed(.ENTER)) {
 		if game.state == .DEAD {
+			free_all_entities(game)
 			load_scene(game, game.current_scene)
 		}
 		game.state = .PLAY
