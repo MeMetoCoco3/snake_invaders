@@ -57,7 +57,6 @@ CollisionSystem :: proc(game: ^Game) {
 		return
 	}
 
-	// No need to check 2 colliders if either have velocity
 	arquetypesB, _ := query_archetype(game.world, COMPONENT_ID.COLLIDER | .DATA | .POSITION)
 	for archetypeA in arquetypesA {
 		for i in 0 ..< len(archetypeA.entities_id) {
@@ -68,7 +67,6 @@ CollisionSystem :: proc(game: ^Game) {
 
 			is_player := false
 			is_turning := false
-			// dir_is_zero := false
 			colliderA_future_pos := Collider {
 				colliderA.position + velocityA.direction * velocityA.speed,
 				colliderA.h,
@@ -159,11 +157,18 @@ CollisionSystem :: proc(game: ^Game) {
 						if is_player &&
 						   dataB.state != .DEAD &&
 						   collide_no_edges(colliderB^, colliderA^) {
-							player_data := archetypeA.players_data[0].player_state
-							switch player_data {
+							player_data := &archetypeA.players_data[i]
+							switch player_data.player_state {
 							case .NORMAL:
-								game.state = .DEAD
-								break
+								if player_data.time_since_dmg > RECOVER_DMG_TIME {
+									player_data.health -= 1
+									player_data.time_since_dmg = 0
+
+									if player_data.health <= 0 {
+										game.state = .DEAD
+									}
+								}
+							// break
 							case .DASH:
 								fmt.println("WE EAT")
 								dataB.state = .DEAD
@@ -186,9 +191,17 @@ CollisionSystem :: proc(game: ^Game) {
 						are_colliding := collide(colliderB^, colliderA^)
 
 						if are_colliding {
-							fmt.println("COLLISION")
 							if dataB.team == .BAD && is_player {
-								game.state = .DEAD
+								player_data := &archetypeA.players_data[i]
+								if player_data.time_since_dmg > RECOVER_DMG_TIME {
+									player_data.health -= 1
+									player_data.time_since_dmg = 0
+
+									if player_data.health <= 0 {
+										game.state = .DEAD
+									}
+								}
+
 							} else if dataB.team == .GOOD && !is_player {
 								dataA.state = .DEAD
 								dataB.state = .DEAD
@@ -344,15 +357,9 @@ VelocitySystem :: proc(game: ^Game) {
 		mask := arquetype.component_mask
 		if (mask & COMPONENT_ID.PLAYER_DATA) == .PLAYER_DATA {
 			is_player = true
-			fmt.println("CURRENT DIR", velocities[0].direction)
-			fmt.println("PREV DIR", arquetype.players_data[0].previous_dir)
 		}
 
 		for i in 0 ..< len(arquetype.entities_id) {
-			if (arquetype.data[i].kind == .BULLET && arquetype.data[i].team == .GOOD) {
-				fmt.println("THE GOOD BULLET HAS SPEED = ", velocities[i].speed)
-				fmt.println("THE GOOD BULLET HAS DIRECTION = ", velocities[i].direction)
-			}
 			vector_move := (velocities[i].direction * velocities[i].speed)
 			if is_player {
 				player_data := &arquetype.players_data[i]
@@ -506,8 +513,12 @@ RenderingSystem :: proc(game: ^Game) {
 					}
 				}
 
+				color := rl.WHITE
+				if is_player && arquetype.players_data[i].time_since_dmg < RECOVER_DMG_TIME {
+					color = rl.RED
+				}
 
-				draw(positions[i], &animations[i], direction, team[i].team)
+				draw(positions[i], &animations[i], direction, team[i].team, color)
 			}
 		}
 	}

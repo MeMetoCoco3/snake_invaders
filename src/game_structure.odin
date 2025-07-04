@@ -9,6 +9,7 @@ Game :: struct {
 	state:              GAME_STATE,
 	player_position:    ^Position,
 	player_velocity:    ^Velocity,
+	player_data:        ^PlayerData,
 	player_body:        Body,
 	spawn_areas:        []rl.Rectangle,
 	count_spawn_areas:  int,
@@ -111,6 +112,7 @@ draw_animated_sprite :: proc(
 	animation: ^Animation,
 	direction: Vector2,
 	team: ENTITY_TEAM,
+	color: rl.Color,
 ) {
 	if animation._current_frame >= animation.num_frames {
 		animation._current_frame = 0
@@ -140,7 +142,7 @@ draw_animated_sprite :: proc(
 	}
 
 	origin := Vector2{position.size.x / 2, position.size.y / 2}
-	rl.DrawTexturePro(animation.image^, src_rec, dst_rec, origin, angle, rl.WHITE)
+	rl.DrawTexturePro(animation.image^, src_rec, dst_rec, origin, angle, color)
 	when DEBUG_COLISION {
 		dst_rec.x -= position.size.x / 2
 		dst_rec.y -= position.size.y / 2
@@ -173,7 +175,6 @@ draw_sprite :: proc(sprite: Sprite, position: Position) {
 		sprite.src_rect.size.y,
 	}
 	dst_rec := rl.Rectangle{position.pos.x, position.pos.y, position.size.x, position.size.y}
-	fmt.println(dst_rec)
 	origin := Vector2{position.size.x / 2, position.size.y / 2}
 	rl.DrawTexturePro(sprite.image^, src_rec, dst_rec, origin, sprite.rotation, rl.WHITE)
 }

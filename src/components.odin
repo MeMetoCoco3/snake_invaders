@@ -123,6 +123,7 @@ PlayerData :: struct {
 	previous_dir:     Vector2,
 	can_dash:         bool,
 	time_on_dash:     i32,
+	time_since_dmg:   i32,
 	health:           i32,
 	next_bullet_size: f32,
 	growing:          bool,

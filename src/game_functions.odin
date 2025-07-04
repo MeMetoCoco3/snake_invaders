@@ -183,6 +183,7 @@ update_scene :: proc(game: ^Game) {
 
 	game.enemy_respawn_time += 1
 	game.candy_respawn_time += 1
+	game.player_data.time_since_dmg += 1
 }
 
 grow_body :: proc(body: ^Body, head_pos, head_dir: Vector2) {

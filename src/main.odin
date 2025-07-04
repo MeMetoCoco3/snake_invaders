@@ -14,6 +14,7 @@ GRID_SIZE :: PLAYER_SIZE / 2
 PLAYER_SPEED :: 4
 DASH_DURATION :: 120
 RECOVER_DASH_TIME :: 240
+RECOVER_DMG_TIME :: 90
 
 MAX_NUM_BODY :: 20
 MAX_NUM_MOVERS :: 100
@@ -74,6 +75,7 @@ main :: proc() {
 		player_body = Body{ghost_pieces = &Ringuffer_t{}, cells = [MAX_NUM_BODY]cell_t{}},
 		player_position = &player_arquetype.positions[0],
 		player_velocity = &player_arquetype.velocities[0],
+		player_data = &player_arquetype.players_data[0],
 		world = world,
 		audio = audio_system_t{fx = make([dynamic]^rl.Sound, 0, 20), bg_music = bg_music},
 	}
@@ -140,6 +142,7 @@ add_player :: proc(world: ^World) {
 			Vector2{0, 0},
 			true,
 			RECOVER_DASH_TIME,
+			RECOVER_DMG_TIME,
 			3,
 			0,
 			false,
