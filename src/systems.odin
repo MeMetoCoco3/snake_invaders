@@ -94,15 +94,15 @@ CollisionSystem :: proc(game: ^Game) {
 
 
 				// Prohibe movimiento hacia atras.
-				if has_body {
-					dir := get_cardinal_direction(
-						head_position^,
-						game.player_body.cells[0].position,
-					)
-					if dir == head_data.next_dir {
-						head_data.next_dir = {0, 0}
-					}
-				}
+				// if has_body {
+				// 	dir := get_cardinal_direction(
+				// 		head_position^,
+				// 		game.player_body.cells[0].position,
+				// 	)
+				// 	if dir == head_data.next_dir {
+				// 		head_data.next_dir = {0, 0}
+				// 	}
+				// }
 
 				if can_turn &&
 				   try_set_dir(head_velocity, head_data.next_dir, head_direction, head_data) {
@@ -132,6 +132,7 @@ CollisionSystem :: proc(game: ^Game) {
 							add_sound(game, &sound_bank[FX.FX_EAT])
 
 							grow_body(
+								game,
 								&game.player_body,
 								positionA.pos,
 								game.player_velocity.direction,
@@ -174,6 +175,7 @@ CollisionSystem :: proc(game: ^Game) {
 								dataB.state = .DEAD
 								add_sound(game, &sound_bank[FX.FX_EAT])
 								grow_body(
+									game,
 									&game.player_body,
 									positionA.pos,
 									game.player_velocity.direction,
@@ -221,13 +223,14 @@ CollisionSystem :: proc(game: ^Game) {
 			player := game.world.archetypes[player_mask]
 			future_head_pos := head_position + head_velocity.direction * head_velocity.speed
 
-			if is_turning &&
-			   !aligned_vectors(head_position, future_head_pos, body.cells[0].position) &&
+			if body.num_cells > 0 &&
+			   is_turning &&
+			   !aligned_vectors(head_position, future_head_pos, body.first_cell_pos.pos) &&
 			   body.num_cells > 0 { 	// !dir_is_zero &&
 
 				rotation: f32 = 90
 				from_dir := player.velocities[0].direction
-				to_dir := get_cardinal_direction(head_position, body.cells[0].position)
+				to_dir := get_cardinal_direction(head_position, body.first_cell_pos.pos)
 				fmt.println("TO DIR", to_dir)
 
 				if (from_dir == {0, -1} && to_dir == {1, 0}) ||
@@ -247,7 +250,7 @@ CollisionSystem :: proc(game: ^Game) {
 				}
 
 				// Checks if the previous ghost is aligned with the head_position and the future_head_pos
-				if body.cells[0].count_turns_left > 0 {
+				if body.first_cell_data.count_turn_left > 0 {
 					ghost, ok := peek_head(body.ghost_pieces)
 					if aligned_vectors(ghost.position, head_position, future_head_pos) {
 						return
@@ -255,7 +258,7 @@ CollisionSystem :: proc(game: ^Game) {
 				}
 
 				put_cell(body.ghost_pieces, cell_ghost_t{head_position, from_dir, rotation})
-				add_turn_count(body)
+				add_turn_count(game.world, body)
 			}
 		}
 
@@ -393,81 +396,81 @@ VelocitySystem :: proc(game: ^Game) {
 		}
 	}
 
-
-	if head_direction != {0, 0} && !body.growing {
-		for i in 0 ..< body.num_cells {
-			curr_cell := &body.cells[i]
-
-			piece_to_follow: cell_t
-			ghost_index_being_followed: i8 = -1
-
-			if curr_cell.count_turns_left == 0 {
-				piece_to_follow = cell_t {
-					head_position^,
-					head_direction,
-					0,
-					PLAYER_SIZE,
-					Collider{},
-				}
-			} else {
-				ghost_index_being_followed =
-					(MAX_RINGBUFFER_VALUES + body.ghost_pieces.tail - curr_cell.count_turns_left) %
-					MAX_RINGBUFFER_VALUES
-				piece_to_follow = ghost_to_cell(
-					body.ghost_pieces.values[ghost_index_being_followed],
-				)
-			}
-
-			// BEGIN MOVEMENT
-			remaining_movement := head_velocity.speed
-			for {
-				direction := get_cardinal_direction(curr_cell.position, piece_to_follow.position)
-				distance_to_follow := vec2_distance(curr_cell.position, piece_to_follow.position)
-
-				if distance_to_follow <= remaining_movement {
-					curr_cell.position = piece_to_follow.position
-					curr_cell.direction = piece_to_follow.direction
-					remaining_movement -= distance_to_follow
-
-					if curr_cell.count_turns_left > 0 {
-						curr_cell.count_turns_left -= 1
-					}
-
-					if i == body.num_cells - 1 && ghost_index_being_followed >= 0 {
-						dealing_ghost_piece(body, i)
-					}
-
-					if curr_cell.count_turns_left == 0 {
-						piece_to_follow = cell_t {
-							head_position^,
-							head_direction,
-							0,
-							PLAYER_SIZE,
-							Collider{},
-						}
-						ghost_index_being_followed = -1
-					} else {
-						ghost_index_being_followed =
-							(MAX_RINGBUFFER_VALUES +
-								body.ghost_pieces.tail -
-								curr_cell.count_turns_left) %
-							MAX_RINGBUFFER_VALUES
-						piece_to_follow = ghost_to_cell(
-							body.ghost_pieces.values[ghost_index_being_followed],
-						)
-					}
-				} else {
-					curr_cell.direction = direction
-					curr_cell.position += direction * remaining_movement
-
-					if i == body.num_cells - 1 && ghost_index_being_followed >= 0 {
-						dealing_ghost_piece(body, i)
-					}
-					break
-				}
-			}
-		}
-	}
+	//
+	// if head_direction != {0, 0} && !body.growing {
+	// 	for i in 0 ..< body.num_cells {
+	// 		curr_cell := &body.cells[i]
+	//
+	// 		piece_to_follow: cell_t
+	// 		ghost_index_being_followed: i8 = -1
+	//
+	// 		if curr_cell.count_turns_left == 0 {
+	// 			piece_to_follow = cell_t {
+	// 				head_position^,
+	// 				head_direction,
+	// 				0,
+	// 				PLAYER_SIZE,
+	// 				Collider{},
+	// 			}
+	// 		} else {
+	// 			ghost_index_being_followed =
+	// 				(MAX_RINGBUFFER_VALUES + body.ghost_pieces.tail - curr_cell.count_turns_left) %
+	// 				MAX_RINGBUFFER_VALUES
+	// 			piece_to_follow = ghost_to_cell(
+	// 				body.ghost_pieces.values[ghost_index_being_followed],
+	// 			)
+	// 		}
+	//
+	// 		// BEGIN MOVEMENT
+	// 		remaining_movement := head_velocity.speed
+	// 		for {
+	// 			direction := get_cardinal_direction(curr_cell.position, piece_to_follow.position)
+	// 			distance_to_follow := vec2_distance(curr_cell.position, piece_to_follow.position)
+	//
+	// 			if distance_to_follow <= remaining_movement {
+	// 				curr_cell.position = piece_to_follow.position
+	// 				curr_cell.direction = piece_to_follow.direction
+	// 				remaining_movement -= distance_to_follow
+	//
+	// 				if curr_cell.count_turns_left > 0 {
+	// 					curr_cell.count_turns_left -= 1
+	// 				}
+	//
+	// 				if i == body.num_cells - 1 && ghost_index_being_followed >= 0 {
+	// 					dealing_ghost_piece(body, i)
+	// 				}
+	//
+	// 				if curr_cell.count_turns_left == 0 {
+	// 					piece_to_follow = cell_t {
+	// 						head_position^,
+	// 						head_direction,
+	// 						0,
+	// 						PLAYER_SIZE,
+	// 						Collider{},
+	// 					}
+	// 					ghost_index_being_followed = -1
+	// 				} else {
+	// 					ghost_index_being_followed =
+	// 						(MAX_RINGBUFFER_VALUES +
+	// 							body.ghost_pieces.tail -
+	// 							curr_cell.count_turns_left) %
+	// 						MAX_RINGBUFFER_VALUES
+	// 					piece_to_follow = ghost_to_cell(
+	// 						body.ghost_pieces.values[ghost_index_being_followed],
+	// 					)
+	// 				}
+	// 			} else {
+	// 				curr_cell.direction = direction
+	// 				curr_cell.position += direction * remaining_movement
+	//
+	// 				if i == body.num_cells - 1 && ghost_index_being_followed >= 0 {
+	// 					dealing_ghost_piece(body, i)
+	// 				}
+	// 				break
+	// 			}
+	// 		}
+	// 	}
+	// }
 }
 
 RenderingSystem :: proc(game: ^Game) {

@@ -44,15 +44,18 @@ InputSystem :: proc(game: ^Game) {
 	body := &game.player_body
 
 	if rl.IsKeyDown(.Z) && body.num_cells > 0 && player_data.next_bullet_size <= 3 {
-		last_cell := &body.cells[body.num_cells - 1]
-		last_cell.size = math.lerp(last_cell.size, f32(0.0), f32(SMOOTHING / 2))
 
-		if last_cell.size < f32(EPSILON) {
+		last_cell_pos, last_cell_velocity, last_cell_data, ok := get_last_cell(game)
+		last_cell_pos.size = math.lerp(last_cell_pos.size, f32(0.0), f32(SMOOTHING / 2))
+
+		// TODO: CHECK THIS SIZE.X CAUSE ITS WRONG SHOULD BE DIFFERENT DEPENDING ON DIRECTION
+		if last_cell_pos.size.x < f32(EPSILON) {
 			last_ghost, ok := peek_head(body.ghost_pieces)
 
+			count_turns_left := last_cell_data.count_turn_left
 			if ok &&
-			   last_cell.count_turns_left <= 1 &&
-			   vec2_distance(last_cell.position, last_ghost.position) < PLAYER_SIZE {
+			   count_turns_left <= 1 &&
+			   vec2_distance(last_cell_pos.pos, last_ghost.position) < PLAYER_SIZE {
 				pop_cell(body.ghost_pieces)
 			}
 
@@ -60,13 +63,21 @@ InputSystem :: proc(game: ^Game) {
 			body.num_cells -= 1
 		}
 	} else if body.num_cells > 0 {
-		last_cell := &body.cells[body.num_cells - 1]
-		if PLAYER_SIZE - last_cell.size > EPSILON {
-			last_cell.size = math.lerp(last_cell.size, f32(PLAYER_SIZE), f32(SMOOTHING / 2))
+
+		last_cell_pos, last_cell_velocity, last_cell_data, ok := get_last_cell(game)
+		// TODO: CHECK THIS SIZE.X CAUSE ITS WRONG SHOULD BE DIFFERENT DEPENDING ON DIRECTION
+		if PLAYER_SIZE - last_cell_pos.size.x > EPSILON {
+			last_cell_pos.size = math.lerp(
+				Vector2{last_cell_pos.size.x, last_cell_pos.size.y},
+				f32(PLAYER_SIZE),
+				f32(SMOOTHING / 2),
+			)
 		} else {
-			last_cell.size = PLAYER_SIZE
+			last_cell_pos.size = PLAYER_SIZE
 		}
 	}
+
+
 	if (rl.IsKeyReleased(.Z)) && player_data.next_bullet_size > 0 {
 		add_sound(game, &sound_bank[FX.FX_SHOOT])
 		// THIS ORIGIN MARKS THE VERTEZ SO I SHOULD TAKEON ACCOUT ALSO THE SIZE OF THE BULLET
@@ -99,7 +110,7 @@ get_input_pause :: proc(game: ^Game) {
 	if (rl.IsKeyPressed(.ENTER)) {
 		if game.state == .DEAD {
 			free_all_entities(game)
-			load_scene(game, game.current_scene)
+			load_scene(game, game.current_scene, game.arena)
 		}
 		game.state = .PLAY
 		rl.ResumeMusicStream(game.audio.bg_music)
@@ -187,36 +198,58 @@ update_scene :: proc(game: ^Game) {
 	game.player_data.time_since_dmg += 1
 }
 
-grow_body :: proc(body: ^Body, head_pos, head_dir: Vector2) {
+
+get_last_cell :: proc(game: ^Game) -> (^Position, ^Velocity, ^PlayerData, bool) {
+	body_mask := (COMPONENT_ID.VELOCITY | .SPRITE | .POSITION | .PLAYER_DATA | .DATA)
+	archetype := game.world.archetypes[body_mask]
+
+	for i in 0 ..< len(archetype.entities_id) {
+		if archetype.data[i].kind == .BODY {
+			return &archetype.positions[i],
+				&archetype.velocities[i],
+				&archetype.players_data[i],
+				true
+		}
+	}
+	return nil, nil, nil, true
+}
+
+grow_body :: proc(game: ^Game, body: ^Body, head_pos, head_dir: Vector2) {
 	if body.num_cells < MAX_NUM_BODY {
 		body.growing = true
 		body.num_cells += 1
 
-		if body.num_cells > 0 {
-			shift_array_right(&body.cells, int(body.num_cells))
-		}
 
-		body.cells[0] = cell_t {
-			position         = head_pos,
-			direction        = head_dir,
-			count_turns_left = 0,
-			size             = PLAYER_SIZE,
-		}
+		body_mask := (COMPONENT_ID.VELOCITY | .SPRITE | .POSITION | .PLAYER_DATA | .DATA)
+		add_entity(game.world, body_mask)
+		archetype := game.world.archetypes[body_mask]
+		index := len(archetype.entities_id) - 1
+		fmt.println(len(archetype.entities_id))
+		append(&archetype.positions, Position{pos = head_pos, size = PLAYER_SIZE})
+		append(&archetype.velocities, Velocity{direction = head_dir, speed = 0})
+		append(&archetype.sprites, sprite_bank[SPRITE.BODY_STRAIGHT])
+		append(&archetype.data, Data{kind = .BODY, state = .ALIVE, team = .GOOD})
+		append(&archetype.players_data, PlayerData{player_state = .NORMAL, count_turn_left = 0})
 
+		game.player_body.first_cell_pos = &archetype.positions[index]
+
+		game.player_body.first_cell_data = &archetype.players_data[index]
+		// game.player_body.last_cell_pos = &archetype.positions[len(archetype.entities_id)]
 	} else {
 		fmt.println("WE DO NOT GROW!")
 	}
 }
 
 
-dealing_ghost_piece :: proc(body: ^Body, last_piece: i8) {
+dealing_ghost_piece :: proc(game: ^Game, body: ^Body, last_piece: i8) {
 	ghost_piece, ok := peek_head(body.ghost_pieces)
 	if !ok {
 		return
 	}
 
+	last_cell_pos, last_cell_velocity, last_cell_data, _ := get_last_cell(game)
 	is_colliding := rec_colliding(
-		body.cells[last_piece].position,
+		last_cell_pos.pos,
 		PLAYER_SIZE,
 		PLAYER_SIZE,
 		ghost_piece.position,
@@ -224,7 +257,7 @@ dealing_ghost_piece :: proc(body: ^Body, last_piece: i8) {
 		PLAYER_SIZE,
 	)
 
-	if (is_colliding && body.cells[last_piece].direction == ghost_piece.direction) {
+	if (is_colliding && last_cell_velocity.direction == ghost_piece.direction) {
 		pop_cell(body.ghost_pieces)
 	}
 }
@@ -359,18 +392,18 @@ draw_game :: proc(game: ^Game) {
 }
 
 draw_body :: proc(body: ^Body) {
-	for i in 0 ..< body.num_cells {
-		cell := body.cells[i]
-
-		rl.DrawRectangle(
-			i32(cell.position.x),
-			i32(cell.position.y),
-			i32(math.round(cell.size)),
-			i32(math.round(cell.size)),
-			rl.ORANGE,
-		)
-
-	}
+	// for i in 0 ..< body.num_cells {
+	// 	cell := body.cells[i]
+	//
+	// 	rl.DrawRectangle(
+	// 		i32(cell.position.x),
+	// 		i32(cell.position.y),
+	// 		i32(math.round(cell.size)),
+	// 		i32(math.round(cell.size)),
+	// 		rl.ORANGE,
+	// 	)
+	//
+	// }
 
 	draw_body_sprite(body)
 }

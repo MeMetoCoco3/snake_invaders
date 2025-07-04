@@ -22,13 +22,15 @@ Game :: struct {
 	count_candies:      int,
 	audio:              audio_system_t,
 	world:              ^World,
+	arena:              ^mem.Allocator,
 }
 
 Body :: struct {
-	cells:        [MAX_NUM_BODY]cell_t,
-	num_cells:    i8,
-	ghost_pieces: ^Ringuffer_t,
-	growing:      bool,
+	first_cell_pos:  ^Position,
+	first_cell_data: ^PlayerData,
+	num_cells:       i8,
+	ghost_pieces:    ^Ringuffer_t,
+	growing:         bool,
 }
 
 GAME_STATE :: enum {
@@ -356,14 +358,14 @@ load_sprites :: proc() {
 
 
 draw_body_sprite :: proc(body: ^Body) {
-	for i in 0 ..< body.num_cells {
-		cell := body.cells[i]
-
-		sprite := sprite_bank[SPRITE.BODY_STRAIGHT]
-		sprite.rotation += angle_from_vector(cell.direction)
-
-		draw(sprite, Position{cell.position + PLAYER_SIZE / 2, cell.size})
-	}
+	// for i in 0 ..< body.num_cells {
+	// 	cell := body.cells[i]
+	//
+	// 	sprite := sprite_bank[SPRITE.BODY_STRAIGHT]
+	// 	sprite.rotation += angle_from_vector(cell.direction)
+	//
+	// 	draw(sprite, Position{cell.position + PLAYER_SIZE / 2, cell.size})
+	// }
 
 
 	rb := body.ghost_pieces
@@ -395,17 +397,17 @@ unload_sounds :: proc() {
 	}
 }
 
-load_scene :: proc(game: ^Game, scene: SCENES, arena: mem.Allocator) {
+load_scene :: proc(game: ^Game, scene: SCENES, arena: ^mem.Allocator) {
 	add_player(game.world)
 
 	game.player_body = {
 		ghost_pieces = &Ringuffer_t {
-			values = make([MAX_NUM_BODY]cell_ghost_t{}, arena),
+			values = make([]cell_ghost_t, MAX_RINGBUFFER_VALUES, arena^),
 			head = 0,
 			tail = 0,
 			count = 0,
 		},
-		cells        = make([MAX_NUM_BODY]cell_t{}, arena),
+		// cells        = make([MAX_NUM_BODY]cell_t{}, arena),
 	}
 
 	fmt.println(game.player_body.ghost_pieces)

@@ -37,10 +37,24 @@ try_set_dir :: proc(
 }
 
 
-add_turn_count :: proc(body: ^Body) {
-	for i in 0 ..< body.num_cells {
-		body.cells[i].count_turns_left += 1
+add_turn_count :: proc(world: ^World, body: ^Body) {
+	archetypes, ok := query_archetype(world, (COMPONENT_ID.PLAYER_DATA))
+	if !ok {
+		return
 	}
+
+	for archetype in archetypes {
+		for i in 0 ..< len(archetype.entities_id) {
+			if archetype.data[i].kind == .BODY {
+				archetype.players_data[i].count_turn_left += 1
+			}
+		}
+
+	}
+	//
+	// for i in 0 ..< body.num_cells {
+	// 	body.cells[i].count_turns_left += 1
+	// }
 }
 
 ghost_to_cell :: proc(cell: cell_ghost_t) -> cell_t {

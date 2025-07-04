@@ -4,7 +4,7 @@ import "core:fmt"
 MAX_RINGBUFFER_VALUES :: 20
 
 Ringuffer_t :: struct {
-	values: [MAX_RINGBUFFER_VALUES]cell_ghost_t,
+	values: []cell_ghost_t,
 	head:   i8,
 	tail:   i8,
 	count:  i8,

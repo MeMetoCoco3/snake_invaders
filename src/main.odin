@@ -79,7 +79,7 @@ main :: proc() {
 		audio = audio_system_t{fx = make([dynamic]^rl.Sound, 0, 20), bg_music = bg_music},
 	}
 
-	load_scene(&game, .ONE, arena_allocator)
+	load_scene(&game, .ONE, &arena_allocator)
 	fmt.println(game.player_body.ghost_pieces)
 	player_arquetype := world.archetypes[player_mask]
 
@@ -151,6 +151,7 @@ add_player :: proc(world: ^World) {
 			0,
 			false,
 			false,
+			0,
 		},
 	)
 
