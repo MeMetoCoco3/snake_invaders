@@ -91,8 +91,6 @@ InputSystem :: proc(game: ^Game) {
 			direction = player_data.previous_dir
 		}
 
-		fmt.println("SPEED HERE: ", speed)
-		fmt.println("DIR HERE", direction)
 		spawn_bullet(
 			game,
 			origin,
@@ -200,9 +198,7 @@ update_scene :: proc(game: ^Game) {
 
 
 get_last_cell :: proc(game: ^Game) -> (^Position, ^Velocity, ^PlayerData, bool) {
-	body_mask := (COMPONENT_ID.VELOCITY | .SPRITE | .POSITION | .PLAYER_DATA | .DATA)
 	archetype := game.world.archetypes[body_mask]
-
 	for i in 0 ..< len(archetype.entities_id) {
 		if archetype.data[i].kind == .BODY {
 			return &archetype.positions[i],
@@ -216,32 +212,56 @@ get_last_cell :: proc(game: ^Game) -> (^Position, ^Velocity, ^PlayerData, bool) 
 
 grow_body :: proc(game: ^Game, body: ^Body, head_pos, head_dir: Vector2) {
 	if body.num_cells < MAX_NUM_BODY {
-		body.growing = true
-		body.num_cells += 1
 
-
-		body_mask := (COMPONENT_ID.VELOCITY | .SPRITE | .POSITION | .PLAYER_DATA | .DATA)
 		add_entity(game.world, body_mask)
 		archetype := game.world.archetypes[body_mask]
 		index := len(archetype.entities_id) - 1
 		fmt.println(len(archetype.entities_id))
-		append(&archetype.positions, Position{pos = head_pos, size = PLAYER_SIZE})
+		append(&archetype.positions, Position{pos = head_pos, size = {PLAYER_SIZE, PLAYER_SIZE}})
 		append(&archetype.velocities, Velocity{direction = head_dir, speed = 0})
 		append(&archetype.sprites, sprite_bank[SPRITE.BODY_STRAIGHT])
 		append(&archetype.data, Data{kind = .BODY, state = .ALIVE, team = .GOOD})
-		append(&archetype.players_data, PlayerData{player_state = .NORMAL, count_turn_left = 0})
-
+		append(
+			&archetype.players_data,
+			PlayerData{player_state = .NORMAL, count_turn_left = 0, body_index = -1},
+		)
+		append(&archetype.colliders, Collider{})
 		game.player_body.first_cell_pos = &archetype.positions[index]
-
 		game.player_body.first_cell_data = &archetype.players_data[index]
-		// game.player_body.last_cell_pos = &archetype.positions[len(archetype.entities_id)]
+		game.player_data.body_index = -1
+
+
+		add_body_index(game.world)
+
+		body.growing = true
+		body.num_cells += 1
 	} else {
 		fmt.println("WE DO NOT GROW!")
 	}
 }
 
+add_body_index :: proc(world: ^World) {
+	archetypes, is_empty := query_archetype(world, body_mask)
+	if is_empty {
+		return
+	}
+
+	for archetype in archetypes {
+		for i in 0 ..< len(archetype.entities_id) {
+			if archetype.data[i].kind == .BODY {
+
+				archetype.players_data[i].body_index += 1
+			}
+		}
+
+	}
+
+
+}
+
 
 dealing_ghost_piece :: proc(game: ^Game, body: ^Body, last_piece: i8) {
+	fmt.println("DEALING WITH GHOST!")
 	ghost_piece, ok := peek_head(body.ghost_pieces)
 	if !ok {
 		return
@@ -298,11 +318,6 @@ spawn_enemy :: proc(game: ^Game) {
 	append(&archetype.ias, IA{.APPROACH, 60, 100, 500, 0})
 
 	game.count_enemies += 1
-
-	fmt.println("APPENDED NEW ENEMY")
-	fmt.println("POSITION:  ", enemy_position)
-	fmt.println("COLLIDER: ", enemy_collider)
-
 }
 
 spawn_bullet :: proc(
@@ -392,18 +407,7 @@ draw_game :: proc(game: ^Game) {
 }
 
 draw_body :: proc(body: ^Body) {
-	// for i in 0 ..< body.num_cells {
-	// 	cell := body.cells[i]
-	//
-	// 	rl.DrawRectangle(
-	// 		i32(cell.position.x),
-	// 		i32(cell.position.y),
-	// 		i32(math.round(cell.size)),
-	// 		i32(math.round(cell.size)),
-	// 		rl.ORANGE,
-	// 	)
-	//
-	// }
+
 
 	draw_body_sprite(body)
 }

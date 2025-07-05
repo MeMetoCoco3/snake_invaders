@@ -11,14 +11,15 @@ Ringuffer_t :: struct {
 }
 
 
-put_cell :: proc(rb: ^Ringuffer_t, cell: cell_ghost_t) {
+put_cell :: proc(rb: ^Ringuffer_t, cell: cell_ghost_t) -> bool {
 	if rb.count >= MAX_RINGBUFFER_VALUES {
-		return
+		return false
 	}
 	rb.values[rb.tail] = cell
 
 	rb.tail = (rb.tail + 1) % MAX_RINGBUFFER_VALUES
 	rb.count += 1
+	return true
 }
 
 

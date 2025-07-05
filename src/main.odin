@@ -17,15 +17,15 @@ DASH_DURATION :: 120
 RECOVER_DASH_TIME :: 240
 RECOVER_DMG_TIME :: 90
 
-MAX_HEALTH :: 1
+MAX_HEALTH :: 3
 MAX_NUM_BODY :: 20
 MAX_NUM_MOVERS :: 100
-MAX_NUM_CANDIES :: 3
+MAX_NUM_CANDIES :: 10
 CANDY_SIZE :: 32
 CANDY_RESPAWN_TIME :: 2
 
-MAX_NUM_ENEMIES :: 1
-ENEMY_RESPAWN_TIME :: 10
+MAX_NUM_ENEMIES :: 5
+ENEMY_RESPAWN_TIME :: 50
 ENEMY_SIZE :: 32
 ENEMY_SPEED :: 1
 ENEMY_COLLIDER_THRESHOLD :: 4
@@ -44,6 +44,9 @@ NUM_ENTITIES :: 1000
 
 
 player_mask := COMPONENT_ID.POSITION | .VELOCITY | .ANIMATION | .DATA | .COLLIDER | .PLAYER_DATA
+
+body_mask := (COMPONENT_ID.VELOCITY | .SPRITE | .POSITION | .PLAYER_DATA | .DATA | .COLLIDER)
+
 
 atlas: rl.Texture2D
 tx_candy: rl.Texture2D
@@ -79,8 +82,9 @@ main :: proc() {
 		audio = audio_system_t{fx = make([dynamic]^rl.Sound, 0, 20), bg_music = bg_music},
 	}
 
+
 	load_scene(&game, .ONE, &arena_allocator)
-	fmt.println(game.player_body.ghost_pieces)
+	fmt.println(game.player_body.ghost_pieces.values)
 	player_arquetype := world.archetypes[player_mask]
 
 	game.player_position = &player_arquetype.positions[0]
@@ -97,6 +101,8 @@ main :: proc() {
 			InputSystem(&game)
 
 			IASystem(&game)
+
+			rb := game.player_body.ghost_pieces
 			CollisionSystem(&game)
 			VelocitySystem(&game)
 			update(&game)
@@ -151,6 +157,7 @@ add_player :: proc(world: ^World) {
 			0,
 			false,
 			false,
+			0,
 			0,
 		},
 	)

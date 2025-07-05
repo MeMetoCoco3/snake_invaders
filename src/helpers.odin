@@ -23,14 +23,11 @@ try_set_dir :: proc(
 	next_dir, current_dir: Vector2,
 	data: ^PlayerData,
 ) -> bool {
-	// fmt.printfln("NEXT DIR %v, CURRENT DIR %v", next_dir, current_dir)
 	if !oposite_directions(next_dir, current_dir) && next_dir != current_dir {
 		velocity.direction = next_dir
 		if current_dir != {0, 0} {
-			fmt.println(current_dir)
 			data.previous_dir = current_dir
 		}
-		// fmt.println("NEW PLAYER DIRECTION", next_dir)
 		return true
 	}
 	return false
@@ -38,23 +35,25 @@ try_set_dir :: proc(
 
 
 add_turn_count :: proc(world: ^World, body: ^Body) {
-	archetypes, ok := query_archetype(world, (COMPONENT_ID.PLAYER_DATA))
-	if !ok {
+
+	fmt.println("WE ADD TURN TO COUT")
+	archetypes, is_empty := query_archetype(world, body_mask)
+	if is_empty {
 		return
 	}
 
 	for archetype in archetypes {
+		fmt.println("NUMBER OF ENTITIES ", len(archetype.entities_id))
 		for i in 0 ..< len(archetype.entities_id) {
+			fmt.println("INDEX OF ENTITY: ", i)
 			if archetype.data[i].kind == .BODY {
+
 				archetype.players_data[i].count_turn_left += 1
 			}
 		}
 
 	}
-	//
-	// for i in 0 ..< body.num_cells {
-	// 	body.cells[i].count_turns_left += 1
-	// }
+
 }
 
 ghost_to_cell :: proc(cell: cell_ghost_t) -> cell_t {

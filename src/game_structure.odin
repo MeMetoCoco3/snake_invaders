@@ -180,6 +180,7 @@ draw_sprite :: proc(sprite: Sprite, position: Position) {
 	}
 	dst_rec := rl.Rectangle{position.pos.x, position.pos.y, position.size.x, position.size.y}
 	origin := Vector2{position.size.x / 2, position.size.y / 2}
+	fmt.println(sprite.rotation)
 	rl.DrawTexturePro(sprite.image^, src_rec, dst_rec, origin, sprite.rotation, rl.WHITE)
 }
 
@@ -358,16 +359,6 @@ load_sprites :: proc() {
 
 
 draw_body_sprite :: proc(body: ^Body) {
-	// for i in 0 ..< body.num_cells {
-	// 	cell := body.cells[i]
-	//
-	// 	sprite := sprite_bank[SPRITE.BODY_STRAIGHT]
-	// 	sprite.rotation += angle_from_vector(cell.direction)
-	//
-	// 	draw(sprite, Position{cell.position + PLAYER_SIZE / 2, cell.size})
-	// }
-
-
 	rb := body.ghost_pieces
 	loop_index := rb.head
 
@@ -399,18 +390,11 @@ unload_sounds :: proc() {
 
 load_scene :: proc(game: ^Game, scene: SCENES, arena: ^mem.Allocator) {
 	add_player(game.world)
+	raw, _ := mem.alloc(size_of(Ringuffer_t), allocator = arena^)
+	rb := cast(^Ringuffer_t)raw
+	rb.values = make([]cell_ghost_t, MAX_RINGBUFFER_VALUES, arena^)
+	game.player_body.ghost_pieces = rb
 
-	game.player_body = {
-		ghost_pieces = &Ringuffer_t {
-			values = make([]cell_ghost_t, MAX_RINGBUFFER_VALUES, arena^),
-			head = 0,
-			tail = 0,
-			count = 0,
-		},
-		// cells        = make([MAX_NUM_BODY]cell_t{}, arena),
-	}
-
-	fmt.println(game.player_body.ghost_pieces)
 	game.state = .PLAY
 	game.current_scene = scene
 	game.candy_respawn_time = 0

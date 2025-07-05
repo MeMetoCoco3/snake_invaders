@@ -49,6 +49,7 @@ DrawCollidersSystem :: proc(game: ^Game) {
 }
 
 CollisionSystem :: proc(game: ^Game) {
+	rb := game.player_body.ghost_pieces
 	arquetypesA, is_empty := query_archetype(
 		game.world,
 		COMPONENT_ID.COLLIDER | .DATA | .VELOCITY | .POSITION,
@@ -130,13 +131,14 @@ CollisionSystem :: proc(game: ^Game) {
 						   collide_no_edges(colliderB^, colliderA^) {
 							dataB.state = .DEAD
 							add_sound(game, &sound_bank[FX.FX_EAT])
-
+							fmt.println(game.world.entity_count)
 							grow_body(
 								game,
 								&game.player_body,
 								positionA.pos,
 								game.player_velocity.direction,
 							)
+
 							archetypeA.players_data[0].distance = 0
 						}
 
@@ -182,6 +184,7 @@ CollisionSystem :: proc(game: ^Game) {
 								)
 								// Distancia recorrida, en este caso medimos la distancia recorrida despues de empezar a crecer.
 								archetypeA.players_data[0].distance = 0
+								game.count_enemies -= 1
 							}
 						}
 
@@ -257,13 +260,19 @@ CollisionSystem :: proc(game: ^Game) {
 					}
 				}
 
-				put_cell(body.ghost_pieces, cell_ghost_t{head_position, from_dir, rotation})
-				add_turn_count(game.world, body)
+				rb := game.player_body.ghost_pieces
+				fmt.printfln("WE PUT CELL, COUNT %v TAIL %v ", rb.count, rb.tail)
+				ok := put_cell(
+					game.player_body.ghost_pieces,
+					cell_ghost_t{head_position, from_dir, rotation},
+				)
+
+				if ok {
+					add_turn_count(game.world, &game.player_body)
+				}
 			}
 		}
-
 	}
-
 }
 
 
@@ -335,13 +344,11 @@ VelocitySystem :: proc(game: ^Game) {
 	player := game.world.archetypes[player_mask]
 	body := &game.player_body
 
-
-	head_position := &player.positions[0].pos
-	head_direction := player.velocities[0].direction
-	head_velocity := &player.velocities[0]
-	head_data := &player.players_data[0]
-	head_colision := &player.colliders[0]
-	has_body := game.player_body.num_cells > 0 ? true : false
+	head_position := game.player_position
+	head_direction := game.player_velocity.direction
+	head_velocity := game.player_velocity
+	head_data := game.player_data
+	// head_colision := &player.colliders[0]
 
 	arquetypes, is_empty := query_archetype(
 		game.world,
@@ -351,126 +358,145 @@ VelocitySystem :: proc(game: ^Game) {
 	if is_empty {
 		return
 	}
+
+	head_direction = game.player_velocity.direction
+	if body.growing && head_direction != {0, 0} {
+		distance := head_data.distance
+
+		if distance >= PLAYER_SIZE {
+			body.growing = false
+		}
+	}
+
 	for arquetype in arquetypes {
 		velocities := arquetype.velocities
 		positions := arquetype.positions
 		colliders := arquetype.colliders
 		is_player := false
-
 		mask := arquetype.component_mask
 		if (mask & COMPONENT_ID.PLAYER_DATA) == .PLAYER_DATA {
 			is_player = true
 		}
 
 		for i in 0 ..< len(arquetype.entities_id) {
-			vector_move := (velocities[i].direction * velocities[i].speed)
-			if is_player {
-				player_data := &arquetype.players_data[i]
-				if !player_data.can_dash {
-					player_data.time_on_dash += 1
 
-					if player_data.time_on_dash >= RECOVER_DASH_TIME {
-						player_data.can_dash = true
+			is_body := arquetype.data[i].kind == .BODY
+
+			if !is_body {
+				vector_move := (velocities[i].direction * velocities[i].speed)
+				if is_player {
+					player_data := &arquetype.players_data[i]
+					if !player_data.can_dash {
+						player_data.time_on_dash += 1
+
+						if player_data.time_on_dash >= RECOVER_DASH_TIME {
+							player_data.can_dash = true
+						}
+					}
+
+					if player_data.time_on_dash >= DASH_DURATION {
+						velocities[i].speed = PLAYER_SPEED
+						vector_move = (velocities[i].direction * velocities[i].speed)
+						player_data.player_state = .NORMAL
+					}
+
+					head_data.distance += abs(vector_move.x + vector_move.y)
+				}
+				positions[i].pos += vector_move
+				colliders[i].position += vector_move
+			} else if is_body {
+				curr_cell_pos := &positions[i]
+				curr_cell_data := &arquetype.players_data[i]
+				curr_cell_velocity := &velocities[i]
+				if head_direction != {0, 0} && !body.growing {
+					piece_to_follow: cell_t
+					ghost_index_being_followed: int = -1
+					if curr_cell_data.count_turn_left == 0 {
+						piece_to_follow = cell_t {
+							head_position.pos,
+							head_direction,
+							0,
+							PLAYER_SIZE,
+							Collider{},
+						}
+					} else {
+						// fmt.println("WE GONNA FOLLOW A GHOST")
+						ghost_index_being_followed =
+							(MAX_RINGBUFFER_VALUES +
+								int(body.ghost_pieces.tail) -
+								curr_cell_data.count_turn_left) %
+							MAX_RINGBUFFER_VALUES
+						piece_to_follow = ghost_to_cell(
+							body.ghost_pieces.values[ghost_index_being_followed],
+						)
+					}
+
+					// BEGIN MOVEMENT
+					remaining_movement := head_velocity.speed
+					for {
+						direction := get_cardinal_direction(
+							curr_cell_pos.pos,
+							piece_to_follow.position,
+						)
+						distance_to_follow := vec2_distance(
+							curr_cell_pos.pos,
+							piece_to_follow.position,
+						)
+						if distance_to_follow <= remaining_movement {
+							curr_cell_pos.pos = piece_to_follow.position
+							curr_cell_velocity.direction = piece_to_follow.direction
+							remaining_movement -= distance_to_follow
+
+							if curr_cell_data.count_turn_left > 0 {
+								curr_cell_data.count_turn_left -= 1
+							}
+
+
+							if curr_cell_data.body_index == int(game.player_body.num_cells - 1) &&
+							   ghost_index_being_followed >= 0 {
+								fmt.println("WE GONNA DEAL WITH THE GHOST!")
+								dealing_ghost_piece(game, body, i8(curr_cell_data.body_index))
+							}
+
+							if curr_cell_data.count_turn_left == 0 {
+								piece_to_follow = cell_t {
+									head_position.pos,
+									head_direction,
+									0,
+									PLAYER_SIZE,
+									Collider{},
+								}
+								ghost_index_being_followed = -1
+							} else {
+								ghost_index_being_followed =
+									(MAX_RINGBUFFER_VALUES +
+										int(body.ghost_pieces.tail) -
+										curr_cell_data.count_turn_left) %
+									MAX_RINGBUFFER_VALUES
+								piece_to_follow = ghost_to_cell(
+									body.ghost_pieces.values[ghost_index_being_followed],
+								)
+							}
+						} else {
+							curr_cell_velocity.direction = direction
+							curr_cell_pos.pos += direction * remaining_movement
+
+							if curr_cell_data.body_index == int(game.player_body.num_cells - 1) &&
+							   ghost_index_being_followed >= 0 {
+
+								dealing_ghost_piece(game, body, i8(curr_cell_data.body_index))
+							}
+							break
+						}
 					}
 				}
 
-				if player_data.time_on_dash >= DASH_DURATION {
-					velocities[i].speed = PLAYER_SPEED
-					vector_move = (velocities[i].direction * velocities[i].speed)
-					player_data.player_state = .NORMAL
-				}
 
-				head_data.distance += abs(vector_move.x + vector_move.y)
 			}
-			positions[i].pos += vector_move
-			colliders[i].position += vector_move
 		}
 	}
 
-	head_direction = player.velocities[0].direction
-	if body.growing && head_direction != {0, 0} {
-		distance := head_data.distance
 
-		if distance > PLAYER_SIZE {
-			body.growing = false
-		}
-	}
-
-	//
-	// if head_direction != {0, 0} && !body.growing {
-	// 	for i in 0 ..< body.num_cells {
-	// 		curr_cell := &body.cells[i]
-	//
-	// 		piece_to_follow: cell_t
-	// 		ghost_index_being_followed: i8 = -1
-	//
-	// 		if curr_cell.count_turns_left == 0 {
-	// 			piece_to_follow = cell_t {
-	// 				head_position^,
-	// 				head_direction,
-	// 				0,
-	// 				PLAYER_SIZE,
-	// 				Collider{},
-	// 			}
-	// 		} else {
-	// 			ghost_index_being_followed =
-	// 				(MAX_RINGBUFFER_VALUES + body.ghost_pieces.tail - curr_cell.count_turns_left) %
-	// 				MAX_RINGBUFFER_VALUES
-	// 			piece_to_follow = ghost_to_cell(
-	// 				body.ghost_pieces.values[ghost_index_being_followed],
-	// 			)
-	// 		}
-	//
-	// 		// BEGIN MOVEMENT
-	// 		remaining_movement := head_velocity.speed
-	// 		for {
-	// 			direction := get_cardinal_direction(curr_cell.position, piece_to_follow.position)
-	// 			distance_to_follow := vec2_distance(curr_cell.position, piece_to_follow.position)
-	//
-	// 			if distance_to_follow <= remaining_movement {
-	// 				curr_cell.position = piece_to_follow.position
-	// 				curr_cell.direction = piece_to_follow.direction
-	// 				remaining_movement -= distance_to_follow
-	//
-	// 				if curr_cell.count_turns_left > 0 {
-	// 					curr_cell.count_turns_left -= 1
-	// 				}
-	//
-	// 				if i == body.num_cells - 1 && ghost_index_being_followed >= 0 {
-	// 					dealing_ghost_piece(body, i)
-	// 				}
-	//
-	// 				if curr_cell.count_turns_left == 0 {
-	// 					piece_to_follow = cell_t {
-	// 						head_position^,
-	// 						head_direction,
-	// 						0,
-	// 						PLAYER_SIZE,
-	// 						Collider{},
-	// 					}
-	// 					ghost_index_being_followed = -1
-	// 				} else {
-	// 					ghost_index_being_followed =
-	// 						(MAX_RINGBUFFER_VALUES +
-	// 							body.ghost_pieces.tail -
-	// 							curr_cell.count_turns_left) %
-	// 						MAX_RINGBUFFER_VALUES
-	// 					piece_to_follow = ghost_to_cell(
-	// 						body.ghost_pieces.values[ghost_index_being_followed],
-	// 					)
-	// 				}
-	// 			} else {
-	// 				curr_cell.direction = direction
-	// 				curr_cell.position += direction * remaining_movement
-	//
-	// 				if i == body.num_cells - 1 && ghost_index_being_followed >= 0 {
-	// 					dealing_ghost_piece(body, i)
-	// 				}
-	// 				break
-	// 			}
-	// 		}
-	// 	}
-	// }
 }
 
 RenderingSystem :: proc(game: ^Game) {
@@ -480,11 +506,33 @@ RenderingSystem :: proc(game: ^Game) {
 			positions := arquetype.positions
 			sprites := arquetype.sprites
 			for i in 0 ..< len(arquetype.entities_id) {
-				draw(sprites[i], positions[i])
+				kind := arquetype.data[i].kind
+				pos := positions[i]
+				rotation := sprites[i].rotation
+				if kind == .STATIC {
+					continue
+				}
+				if kind == .BODY {
+					rl.DrawRectangle(
+						i32(positions[i].pos.x),
+						i32(positions[i].pos.y),
+						PLAYER_SIZE,
+						PLAYER_SIZE,
+						rl.ORANGE,
+					)
+					pos.pos += pos.size / 2
+					direction := arquetype.velocities[i].direction
+					if direction != {0, 0} {
+						rotation = 90 + angle_from_vector(direction)
+						fmt.println(sprites[i].rotation)
+					}
+				}
+				sprites[i].rotation = rotation
+				draw(sprites[i], pos)
+
+
 			}
 		}
-
-
 	}
 
 	arquetypes, is_empty = query_archetype(game.world, COMPONENT_ID.POSITION | .ANIMATION)

@@ -129,6 +129,7 @@ PlayerData :: struct {
 	growing:          bool,
 	gona_dash:        bool,
 	count_turn_left:  int,
+	body_index:       int,
 }
 
 ENEMY_BEHAVIOR :: enum {
