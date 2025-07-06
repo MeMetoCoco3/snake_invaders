@@ -35,7 +35,6 @@ try_set_dir :: proc(
 
 
 add_turn_count :: proc(world: ^World, body: ^Body) {
-
 	fmt.println("WE ADD TURN TO COUT")
 	archetypes, is_empty := query_archetype(world, body_mask)
 	if is_empty {

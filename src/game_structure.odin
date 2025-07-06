@@ -180,7 +180,6 @@ draw_sprite :: proc(sprite: Sprite, position: Position) {
 	}
 	dst_rec := rl.Rectangle{position.pos.x, position.pos.y, position.size.x, position.size.y}
 	origin := Vector2{position.size.x / 2, position.size.y / 2}
-	fmt.println(sprite.rotation)
 	rl.DrawTexturePro(sprite.image^, src_rec, dst_rec, origin, sprite.rotation, rl.WHITE)
 }
 
@@ -193,7 +192,9 @@ play_sound :: proc(game: ^Game) {
 		fx := game.audio.fx[0]
 		unordered_remove(&game.audio.fx, 0)
 		rl.PlaySound(fx^)
+		fmt.println(fx)
 	}
+
 }
 
 load_sounds :: proc() {

@@ -24,7 +24,7 @@ MAX_NUM_CANDIES :: 10
 CANDY_SIZE :: 32
 CANDY_RESPAWN_TIME :: 2
 
-MAX_NUM_ENEMIES :: 5
+MAX_NUM_ENEMIES :: 0
 ENEMY_RESPAWN_TIME :: 50
 ENEMY_SIZE :: 32
 ENEMY_SPEED :: 1
@@ -71,7 +71,7 @@ main :: proc() {
 	load_sounds()
 
 	bg_music := bg_music
-	rl.SetMusicVolume(bg_music, 0.001)
+	rl.SetMusicVolume(bg_music, 0.01)
 	rl.PlayMusicStream(bg_music)
 
 	world := new_world()
@@ -84,7 +84,6 @@ main :: proc() {
 
 
 	load_scene(&game, .ONE, &arena_allocator)
-	fmt.println(game.player_body.ghost_pieces.values)
 	player_arquetype := world.archetypes[player_mask]
 
 	game.player_position = &player_arquetype.positions[0]
@@ -102,7 +101,7 @@ main :: proc() {
 
 			IASystem(&game)
 
-			rb := game.player_body.ghost_pieces
+			// rb := game.player_body.ghost_pieces
 			CollisionSystem(&game)
 			VelocitySystem(&game)
 			update(&game)
@@ -157,6 +156,7 @@ add_player :: proc(world: ^World) {
 			0,
 			false,
 			false,
+			0,
 			0,
 			0,
 		},

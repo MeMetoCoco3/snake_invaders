@@ -217,6 +217,7 @@ grow_body :: proc(game: ^Game, body: ^Body, head_pos, head_dir: Vector2) {
 		archetype := game.world.archetypes[body_mask]
 		index := len(archetype.entities_id) - 1
 		fmt.println(len(archetype.entities_id))
+
 		append(&archetype.positions, Position{pos = head_pos, size = {PLAYER_SIZE, PLAYER_SIZE}})
 		append(&archetype.velocities, Velocity{direction = head_dir, speed = 0})
 		append(&archetype.sprites, sprite_bank[SPRITE.BODY_STRAIGHT])
@@ -225,20 +226,27 @@ grow_body :: proc(game: ^Game, body: ^Body, head_pos, head_dir: Vector2) {
 			&archetype.players_data,
 			PlayerData{player_state = .NORMAL, count_turn_left = 0, body_index = -1},
 		)
-		append(&archetype.colliders, Collider{})
+		append(
+			&archetype.colliders,
+			Collider {
+				position = head_pos + EPSILON_COLISION,
+				w = PLAYER_SIZE - 2 * EPSILON_COLISION,
+				h = PLAYER_SIZE - 2 * EPSILON_COLISION,
+			},
+		)
+
 		game.player_body.first_cell_pos = &archetype.positions[index]
 		game.player_body.first_cell_data = &archetype.players_data[index]
-		game.player_data.body_index = -1
 
 
 		add_body_index(game.world)
-
 		body.growing = true
 		body.num_cells += 1
 	} else {
 		fmt.println("WE DO NOT GROW!")
 	}
 }
+
 
 add_body_index :: proc(world: ^World) {
 	archetypes, is_empty := query_archetype(world, body_mask)
@@ -249,14 +257,19 @@ add_body_index :: proc(world: ^World) {
 	for archetype in archetypes {
 		for i in 0 ..< len(archetype.entities_id) {
 			if archetype.data[i].kind == .BODY {
+				index := &archetype.players_data[i].body_index
+				fmt.printfln(">> Entity %v had index %v", archetype.entities_id[i], index^)
 
-				archetype.players_data[i].body_index += 1
+				if index^ == -1 {
+					index^ = 0
+					fmt.printfln(">> Setting index to 0")
+				} else if index^ >= 0 {
+					index^ += 1
+					fmt.printfln(">> Incrementing index to %v", index^)
+				}
 			}
 		}
-
 	}
-
-
 }
 
 

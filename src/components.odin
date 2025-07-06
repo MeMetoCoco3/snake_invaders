@@ -130,6 +130,7 @@ PlayerData :: struct {
 	gona_dash:        bool,
 	count_turn_left:  int,
 	body_index:       int,
+	time_since_turn:  f32,
 }
 
 ENEMY_BEHAVIOR :: enum {
