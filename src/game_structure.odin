@@ -192,9 +192,7 @@ play_sound :: proc(game: ^Game) {
 		fx := game.audio.fx[0]
 		unordered_remove(&game.audio.fx, 0)
 		rl.PlaySound(fx^)
-		fmt.println(fx)
 	}
-
 }
 
 load_sounds :: proc() {

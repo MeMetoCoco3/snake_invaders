@@ -11,6 +11,7 @@ DEBUG_COLISION :: #config(DEBUG_COLISION, false)
 SCREEN_WIDTH :: 800
 SCREEN_HEIGHT :: 800
 PLAYER_SIZE :: 32
+BODY_WIDTH :: 16
 GRID_SIZE :: PLAYER_SIZE / 2
 PLAYER_SPEED :: 4
 DASH_DURATION :: 120
@@ -97,14 +98,13 @@ main :: proc() {
 		case .PLAY:
 			clear_dead(&game)
 
+			update(&game)
 			InputSystem(&game)
 
 			IASystem(&game)
 
-			// rb := game.player_body.ghost_pieces
 			CollisionSystem(&game)
 			VelocitySystem(&game)
-			update(&game)
 
 			rl.BeginDrawing()
 
@@ -156,6 +156,7 @@ add_player :: proc(world: ^World) {
 			0,
 			false,
 			false,
+			0,
 			0,
 			0,
 			0,

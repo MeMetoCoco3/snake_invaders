@@ -28,31 +28,28 @@ try_set_dir :: proc(
 		if current_dir != {0, 0} {
 			data.previous_dir = current_dir
 		}
-		return true
+
+		if next_dir != {0, 0} {
+			return true
+		}
 	}
 	return false
 }
 
 
 add_turn_count :: proc(world: ^World, body: ^Body) {
-	fmt.println("WE ADD TURN TO COUT")
 	archetypes, is_empty := query_archetype(world, body_mask)
 	if is_empty {
 		return
 	}
 
 	for archetype in archetypes {
-		fmt.println("NUMBER OF ENTITIES ", len(archetype.entities_id))
 		for i in 0 ..< len(archetype.entities_id) {
-			fmt.println("INDEX OF ENTITY: ", i)
 			if archetype.data[i].kind == .BODY {
-
 				archetype.players_data[i].count_turn_left += 1
 			}
 		}
-
 	}
-
 }
 
 ghost_to_cell :: proc(cell: cell_ghost_t) -> cell_t {

@@ -108,6 +108,7 @@ CollisionSystem :: proc(game: ^Game) {
 
 				if can_turn &&
 				   try_set_dir(head_velocity, head_data.next_dir, head_direction, head_data) {
+					fmt.println("WE ARE TURNING")
 					is_turning = true
 				}
 				colliderA_future_pos.position =
@@ -132,15 +133,7 @@ CollisionSystem :: proc(game: ^Game) {
 						   collide_no_edges(colliderB^, colliderA^) {
 							dataB.state = .DEAD
 							add_sound(game, &sound_bank[FX.FX_EAT])
-							fmt.println(game.world.entity_count)
-							grow_body(
-								game,
-								&game.player_body,
-								positionA.pos,
-								game.player_velocity.direction,
-							)
-
-							archetypeA.players_data[i].distance = 0
+							game.player_data.cells_to_grow += 1
 						}
 
 					case .STATIC:
@@ -172,18 +165,13 @@ CollisionSystem :: proc(game: ^Game) {
 										game.state = .DEAD
 									}
 								}
-							// break
+
 							case .DASH:
 								fmt.println("WE EAT")
 								dataB.state = .DEAD
 								add_sound(game, &sound_bank[FX.FX_EAT])
-								grow_body(
-									game,
-									&game.player_body,
-									positionA.pos,
-									game.player_velocity.direction,
-								)
-								// Distancia recorrida, en este caso medimos la distancia recorrida despues de empezar a crecer.
+
+								game.player_data.cells_to_grow += 1
 								archetypeA.players_data[0].distance = 0
 								game.count_enemies -= 1
 							}
@@ -230,7 +218,6 @@ CollisionSystem :: proc(game: ^Game) {
 
 
 								if archetypeB.players_data[j].body_index > 1 {
-									fmt.println("j")
 									fmt.println(archetypeA.positions[i].pos)
 									fmt.println(archetypeB.positions[j].pos)
 									archetypeA.velocities[i].direction = Vector2{0, 0}
@@ -257,15 +244,18 @@ CollisionSystem :: proc(game: ^Game) {
 			player := game.world.archetypes[player_mask]
 			future_head_pos := head_position + head_velocity.direction * head_velocity.speed
 
+
+			continuous_dir := game.player_data.previous_dir == game.player_data.next_dir
+			fmt.println(continuous_dir)
+
 			if body.num_cells > 0 &&
 			   is_turning &&
-			   !aligned_vectors(head_position, future_head_pos, body.first_cell_pos.pos) &&
-			   game.player_data.time_since_turn > PLAYER_SIZE / 2 {
-
+			   !continuous_dir &&
+			   game.player_data.time_since_turn >= PLAYER_SIZE / 2 { 	// !aligned_vectors(head_position, future_head_pos, body.first_cell_pos.pos) &&
+				fmt.println("123")
 				rotation: f32 = 90
 				from_dir := player.velocities[0].direction
 				to_dir := get_cardinal_direction(head_position, body.first_cell_pos.pos)
-				fmt.println("TO DIR", to_dir)
 
 				if (from_dir == {0, -1} && to_dir == {1, 0}) ||
 				   (from_dir == {1, 0} && to_dir == {0, -1}) {
@@ -279,25 +269,25 @@ CollisionSystem :: proc(game: ^Game) {
 				} else if (from_dir == {0, 1} && to_dir == {1, 0}) ||
 				   (from_dir == {1, 0} && to_dir == {0, 1}) {
 					rotation += 0
-				} else {
-					return
 				}
-
 				// Checks if the previous ghost is aligned with the head_position and the future_head_pos
 				if body.first_cell_data.count_turn_left > 0 {
 					ghost, ok := peek_head(body.ghost_pieces)
 					if aligned_vectors(ghost.position, head_position, future_head_pos) {
+						fmt.println("321")
 						return
 					}
 				}
 
 				rb := game.player_body.ghost_pieces
+
 				ok := put_cell(
 					game.player_body.ghost_pieces,
 					cell_ghost_t{head_position, from_dir, rotation},
 				)
-
+				fmt.println(ok)
 				if ok {
+					fmt.println("432")
 					game.player_data.time_since_turn = 0
 					add_turn_count(game.world, &game.player_body)
 				}
@@ -365,7 +355,6 @@ IASystem :: proc(game: ^Game) {
 			case .GOAWAY:
 				velocities[i].direction = -direction
 			}
-
 		}
 	}
 }
@@ -451,7 +440,6 @@ VelocitySystem :: proc(game: ^Game) {
 							Collider{},
 						}
 					} else {
-						// fmt.println("WE GONNA FOLLOW A GHOST")
 						ghost_index_being_followed =
 							(MAX_RINGBUFFER_VALUES +
 								int(body.ghost_pieces.tail) -
@@ -475,18 +463,32 @@ VelocitySystem :: proc(game: ^Game) {
 						)
 						if distance_to_follow <= remaining_movement {
 							curr_cell_pos.pos = piece_to_follow.position
-							// arquetype.colliders[i].position = piece_to_follow.position
 							curr_cell_velocity.direction = piece_to_follow.direction
 							remaining_movement -= distance_to_follow
+
+
+							collider := Collider {
+								position = curr_cell_pos.pos + direction * remaining_movement,
+							}
+							if direction == {0, 1} || direction == {0, -1} {
+								collider.h = PLAYER_SIZE
+								collider.w = GRID_SIZE
+								collider.position.x += f32(PLAYER_SIZE / 2 - collider.w / 2)
+							} else {
+								collider.h = GRID_SIZE
+								collider.w = PLAYER_SIZE
+								collider.position.y += f32(PLAYER_SIZE / 2 - collider.h / 2)
+							}
+
+							colliders[i] = collider
+							colliders[i].position += direction * remaining_movement
 
 							if curr_cell_data.count_turn_left > 0 {
 								curr_cell_data.count_turn_left -= 1
 							}
 
-
 							if curr_cell_data.body_index == int(game.player_body.num_cells - 1) &&
 							   ghost_index_being_followed >= 0 {
-								fmt.println("WE GONNA DEAL WITH THE GHOST!")
 								dealing_ghost_piece(game, body, i8(curr_cell_data.body_index))
 							}
 
@@ -513,7 +515,23 @@ VelocitySystem :: proc(game: ^Game) {
 							curr_cell_velocity.direction = direction
 							curr_cell_pos.pos += direction * remaining_movement
 
-							arquetype.colliders[i].position = curr_cell_pos.pos + EPSILON_COLISION
+
+							collider := Collider {
+								position = curr_cell_pos.pos + direction * remaining_movement,
+							}
+
+							if direction == {0, 1} || direction == {0, -1} {
+								collider.h = PLAYER_SIZE
+								collider.w = GRID_SIZE
+								collider.position.x += f32(PLAYER_SIZE / 2 - collider.w / 2)
+							} else {
+								collider.h = GRID_SIZE
+								collider.w = PLAYER_SIZE
+								collider.position.y += f32(PLAYER_SIZE / 2 - collider.h / 2)
+							}
+
+							colliders[i] = collider
+
 							if curr_cell_data.body_index == int(game.player_body.num_cells - 1) &&
 							   ghost_index_being_followed >= 0 {
 
@@ -526,8 +544,6 @@ VelocitySystem :: proc(game: ^Game) {
 			}
 		}
 	}
-
-
 }
 
 RenderingSystem :: proc(game: ^Game) {

@@ -128,9 +128,10 @@ PlayerData :: struct {
 	next_bullet_size: f32,
 	growing:          bool,
 	gona_dash:        bool,
-	count_turn_left:  int,
+	cells_to_grow:    int,
 	body_index:       int,
 	time_since_turn:  f32,
+	count_turn_left:  int,
 }
 
 ENEMY_BEHAVIOR :: enum {

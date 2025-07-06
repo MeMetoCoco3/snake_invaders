@@ -7,6 +7,13 @@ import rl "vendor:raylib"
 ///////////
 // INPUT //
 ///////////
+
+
+collider_body := [2]Collider {
+	{position = {0, 0}, w = PLAYER_SIZE, h = BODY_WIDTH},
+	{position = {0, 0}, w = BODY_WIDTH, h = PLAYER_SIZE},
+}
+
 InputSystem :: proc(game: ^Game) {
 	player_velocity := &game.world.archetypes[player_mask].velocities[0]
 	player_data := &game.world.archetypes[player_mask].players_data[0]
@@ -127,6 +134,19 @@ update :: proc(game: ^Game) {
 	play_sound(game)
 	update_scene(game)
 	// TESTING(game)
+
+
+	if game.player_data.cells_to_grow > 0 && aligned_to_grid(game.player_position.pos) {
+		game.player_data.cells_to_grow -= 1
+		grow_body(
+			game,
+			&game.player_body,
+			game.player_position.pos,
+			game.player_velocity.direction,
+		)
+		game.player_data.distance = 0
+	}
+
 }
 
 
@@ -179,7 +199,6 @@ update_scene :: proc(game: ^Game) {
 	if game.candy_respawn_time >= CANDY_RESPAWN_TIME {
 		game.candy_respawn_time = 0
 		if game.count_candies < MAX_NUM_CANDIES {
-			fmt.println("SPAWN THE CANDYYY")
 			spawn_candy(game)
 		}
 	}
@@ -216,7 +235,6 @@ grow_body :: proc(game: ^Game, body: ^Body, head_pos, head_dir: Vector2) {
 		add_entity(game.world, body_mask)
 		archetype := game.world.archetypes[body_mask]
 		index := len(archetype.entities_id) - 1
-		fmt.println(len(archetype.entities_id))
 
 		append(&archetype.positions, Position{pos = head_pos, size = {PLAYER_SIZE, PLAYER_SIZE}})
 		append(&archetype.velocities, Velocity{direction = head_dir, speed = 0})
@@ -226,14 +244,23 @@ grow_body :: proc(game: ^Game, body: ^Body, head_pos, head_dir: Vector2) {
 			&archetype.players_data,
 			PlayerData{player_state = .NORMAL, count_turn_left = 0, body_index = -1},
 		)
-		append(
-			&archetype.colliders,
-			Collider {
-				position = head_pos + EPSILON_COLISION,
-				w = PLAYER_SIZE - 2 * EPSILON_COLISION,
-				h = PLAYER_SIZE - 2 * EPSILON_COLISION,
-			},
-		)
+
+		collider := Collider {
+			position = head_pos,
+		}
+		if head_dir == {0, 1} || head_dir == {0, -1} {
+
+			collider.h = PLAYER_SIZE
+			collider.w = GRID_SIZE
+			collider.position.x += f32(PLAYER_SIZE / 2 - collider.w / 2)
+		} else {
+
+			collider.h = GRID_SIZE
+			collider.w = PLAYER_SIZE
+			collider.position.y += f32(PLAYER_SIZE / 2 - collider.h / 2)
+		}
+
+		append(&archetype.colliders, collider)
 
 		game.player_body.first_cell_pos = &archetype.positions[index]
 		game.player_body.first_cell_data = &archetype.players_data[index]
@@ -258,15 +285,11 @@ add_body_index :: proc(world: ^World) {
 		for i in 0 ..< len(archetype.entities_id) {
 			if archetype.data[i].kind == .BODY {
 				index := &archetype.players_data[i].body_index
-				fmt.printfln(">> Entity %v had index %v", archetype.entities_id[i], index^)
-
-				if index^ == -1 {
-					index^ = 0
-					fmt.printfln(">> Setting index to 0")
-				} else if index^ >= 0 {
-					index^ += 1
-					fmt.printfln(">> Incrementing index to %v", index^)
-				}
+				// if index^ == -1 {
+				// index^ = 0
+				// } else if index^ >= 0 {
+				index^ += 1
+				// }
 			}
 		}
 	}
@@ -274,7 +297,6 @@ add_body_index :: proc(world: ^World) {
 
 
 dealing_ghost_piece :: proc(game: ^Game, body: ^Body, last_piece: i8) {
-	fmt.println("DEALING WITH GHOST!")
 	ghost_piece, ok := peek_head(body.ghost_pieces)
 	if !ok {
 		return
@@ -415,13 +437,11 @@ draw_game :: proc(game: ^Game) {
 	draw_grid({100, 100, 100, 255})
 	// draw_scene(game)
 	draw_body(&game.player_body)
-	// draw_ghost_cells(game.player_body.ghost_pieces)
+	draw_ghost_cells(game.player_body.ghost_pieces)
 	RenderingSystem(game)
 }
 
 draw_body :: proc(body: ^Body) {
-
-
 	draw_body_sprite(body)
 }
 
