@@ -109,6 +109,8 @@ CollisionSystem :: proc(game: ^Game) {
 						if collide(colliderB^, colliderA_future_pos) {
 							if is_player {
 								game.player_data.next_dir = Vector2{0, 0}
+								// game.player_data.time_since_turn = PLAYER_SIZE
+								fmt.printfln("WE COLLIDE on loop: %v", game.loops)
 								continue
 							}
 
@@ -185,8 +187,8 @@ CollisionSystem :: proc(game: ^Game) {
 						if collide(colliderB_future_pos, colliderA_future_pos) {
 							if is_player {
 								if archetypeB.players_data[j].body_index > 1 {
-									archetypeA.players_data[i].time_since_turn = PLAYER_SIZE
 									game.player_data.next_dir = Vector2{0, 0}
+									fmt.println("WE COLLIDE")
 									continue
 								} else {
 									continue
@@ -216,17 +218,7 @@ CollisionSystem :: proc(game: ^Game) {
 				has_body := game.player_body.num_cells > 0 ? true : false
 
 				is_player = true
-				can_turn := true
-
-				if game.player_data.time_since_turn < PLAYER_SIZE {
-					can_turn = false
-					head_data.next_dir = {0, 0}
-				} else if try_set_dir(
-					head_velocity,
-					head_data.next_dir,
-					head_direction,
-					head_data,
-				) {
+				if try_set_dir(head_velocity, head_data.next_dir, head_direction, head_data) {
 					is_turning = true
 				}
 			}
@@ -243,11 +235,11 @@ CollisionSystem :: proc(game: ^Game) {
 
 
 			if is_turning {
-				if body.num_cells > 0 &&
-				   !continuous_dir &&
-				   game.player_data.time_since_turn >= PLAYER_SIZE / 2 {
+				if body.num_cells > 0 && !continuous_dir {
+					// game.player_data.time_since_turn >= PLAYER_SIZE / 2 
+
 					rotation: f32 = 90
-					game.player_data.time_since_turn = 0
+					// game.player_data.time_since_turn = 0
 					from_dir := player.velocities[0].direction
 					to_dir := get_cardinal_direction(head_position, body.first_cell_pos.pos)
 
@@ -283,7 +275,7 @@ CollisionSystem :: proc(game: ^Game) {
 						add_turn_count(game.world, &game.player_body)
 					}
 				} else {
-					game.player_data.time_since_turn = 0
+					// game.player_data.time_since_turn = 0
 				}
 
 			}
@@ -415,7 +407,7 @@ VelocitySystem :: proc(game: ^Game) {
 					}
 
 					head_data.distance += abs(vector_move.x + vector_move.y)
-					head_data.time_since_turn += abs(vector_move.x + vector_move.y)
+					// head_data.time_since_turn += abs(vector_move.x + vector_move.y)
 				}
 				positions[i].pos += vector_move
 				colliders[i].position += vector_move

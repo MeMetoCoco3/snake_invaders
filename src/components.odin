@@ -122,6 +122,8 @@ PlayerData :: struct {
 	next_dir:         Vector2,
 	previous_dir:     Vector2,
 	can_dash:         bool,
+	// going_to_collide: bool,
+	// distance_to_move: f32,
 	time_on_dash:     i32,
 	time_since_dmg:   i32,
 	health:           i32,
@@ -130,7 +132,7 @@ PlayerData :: struct {
 	gona_dash:        bool,
 	cells_to_grow:    int,
 	body_index:       int,
-	time_since_turn:  f32,
+	// time_since_turn:  f32,
 	count_turn_left:  int,
 }
 

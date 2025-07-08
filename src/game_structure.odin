@@ -8,6 +8,7 @@ import rl "vendor:raylib"
 Vector2 :: [2]f32
 
 Game :: struct {
+	loops:              int,
 	state:              GAME_STATE,
 	player_position:    ^Position,
 	player_velocity:    ^Velocity,

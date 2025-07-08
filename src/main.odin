@@ -93,6 +93,7 @@ main :: proc() {
 
 
 	for !rl.WindowShouldClose() {
+		game.loops += 1
 		rl.UpdateMusicStream(game.audio.bg_music)
 		switch game.state {
 		case .PLAY:
@@ -158,7 +159,7 @@ add_player :: proc(world: ^World) {
 			false,
 			0,
 			0,
-			PLAYER_SIZE,
+			// PLAYER_SIZE,
 			0,
 		},
 	)
@@ -170,12 +171,5 @@ add_player :: proc(world: ^World) {
 	append(&player_arquetype.animations, animation_bank[ANIMATION.PLAYER])
 
 	append(&player_arquetype.data, Data{.PLAYER, .ALIVE, .GOOD})
-	append(
-		&player_arquetype.colliders,
-		Collider {
-			player_position.pos + EPSILON_COLISION,
-			PLAYER_SIZE - 2 * EPSILON_COLISION,
-			PLAYER_SIZE - 2 * EPSILON_COLISION,
-		},
-	)
+	append(&player_arquetype.colliders, Collider{player_position.pos, PLAYER_SIZE, PLAYER_SIZE})
 }
