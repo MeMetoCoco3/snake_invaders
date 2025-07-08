@@ -15,6 +15,12 @@ collider_body := [2]Collider {
 }
 
 InputSystem :: proc(game: ^Game) {
+
+	if rl.IsMouseButtonPressed(rl.MouseButton.LEFT) {
+		fmt.println(rl.GetMousePosition())
+	}
+
+
 	player_velocity := &game.world.archetypes[player_mask].velocities[0]
 	player_data := &game.world.archetypes[player_mask].players_data[0]
 	player_position := &game.world.archetypes[player_mask].positions[0]
@@ -27,6 +33,8 @@ InputSystem :: proc(game: ^Game) {
 		player_data.next_dir = {0, 1}
 	} else if (rl.IsKeyDown(.K) || rl.IsKeyDown(.UP)) {
 		player_data.next_dir = {0, -1}
+	} else {
+		player_data.next_dir = {0, 0}
 	}
 
 
@@ -39,13 +47,13 @@ InputSystem :: proc(game: ^Game) {
 		player_data.gona_dash = true
 
 
-		if aligned_to_grid(player_position.pos) {
-			player_velocity.speed = PLAYER_SPEED * 2
-			player_data.can_dash = false
-			player_data.time_on_dash = 0
-			player_data.player_state = .DASH
-			player_data.gona_dash = false
-		}
+		// if aligned_to_grid(player_position.pos) {
+		player_velocity.speed = PLAYER_SPEED * 2
+		player_data.can_dash = false
+		player_data.time_on_dash = 0
+		player_data.player_state = .DASH
+		player_data.gona_dash = false
+		// }
 	}
 
 	body := &game.player_body
@@ -136,7 +144,9 @@ update :: proc(game: ^Game) {
 	// TESTING(game)
 
 
-	if game.player_data.cells_to_grow > 0 && aligned_to_grid(game.player_position.pos) {
+	// if game.player_data.cells_to_grow > 0 || aligned_to_grid(){
+
+	if game.player_data.cells_to_grow > 0 {
 		game.player_data.cells_to_grow -= 1
 		grow_body(
 			game,
@@ -251,11 +261,11 @@ grow_body :: proc(game: ^Game, body: ^Body, head_pos, head_dir: Vector2) {
 		if head_dir == {0, 1} || head_dir == {0, -1} {
 
 			collider.h = PLAYER_SIZE
-			collider.w = GRID_SIZE
+			collider.w = BODY_WIDTH
 			collider.position.x += f32(PLAYER_SIZE / 2 - collider.w / 2)
 		} else {
 
-			collider.h = GRID_SIZE
+			collider.h = BODY_WIDTH
 			collider.w = PLAYER_SIZE
 			collider.position.y += f32(PLAYER_SIZE / 2 - collider.h / 2)
 		}
@@ -462,6 +472,7 @@ draw_ghost_cells :: proc(rb: ^Ringuffer_t) {
 	}
 }
 aligned_to_grid :: proc(p: Vector2) -> bool {
+	fmt.println(i32(p.x) % GRID_SIZE == 0 && i32(p.y) % GRID_SIZE == 0)
 	return i32(p.x) % GRID_SIZE == 0 && i32(p.y) % GRID_SIZE == 0
 }
 

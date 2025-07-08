@@ -23,7 +23,10 @@ try_set_dir :: proc(
 	next_dir, current_dir: Vector2,
 	data: ^PlayerData,
 ) -> bool {
+	fmt.println("JA")
 	if !oposite_directions(next_dir, current_dir) && next_dir != current_dir {
+		fmt.println(next_dir)
+		fmt.println("JO")
 		velocity.direction = next_dir
 		if current_dir != {0, 0} {
 			data.previous_dir = current_dir
