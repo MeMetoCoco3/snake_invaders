@@ -1,11 +1,36 @@
 package main
 import "core:fmt"
+import "core:log"
 import "core:math"
+import "core:os"
 import rl "vendor:raylib"
-
 ////////////
 // OTHERS //
 ////////////
+
+
+get_logger :: proc() -> log.Logger {
+	mode: int = 0
+	when ODIN_OS == .Linux || ODIN_OS == .Darwin {
+		mode = os.S_IRUSR | os.S_IWUSR | os.S_IRGRP | os.S_IROTH
+	}
+
+	logh, logh_err := os.open("log.txt", (os.O_CREATE | os.O_TRUNC | os.O_RDWR), mode)
+
+	if logh_err == os.ERROR_NONE {
+		os.stdout = logh
+		os.stderr = logh
+	}
+
+	return log.create_file_logger(logh)
+}
+
+delete_logger :: proc(logger: log.Logger) {
+	log.destroy_file_logger(logger)
+
+}
+
+
 draw_grid :: proc(col: rl.Color) {
 	for i: i32 = 0; i < SCREEN_WIDTH; i += GRID_SIZE {
 		rl.DrawLine(i, 0, i, SCREEN_HEIGHT, col)
@@ -17,22 +42,58 @@ draw_grid :: proc(col: rl.Color) {
 aligned :: proc(v0: Vector2, v1: Vector2) -> bool {
 	return v0.x == v1.x || v0.y == v1.y
 }
+//
+// try_set_dir :: proc(
+// 	velocity: ^Velocity,
+// 	next_dir, current_dir: Vector2,
+// 	data: ^PlayerData,
+// ) -> bool {
+// 	if !is_oposite_directions(next_dir, current_dir) && next_dir != current_dir {
+// 		velocity.direction = next_dir
+// 		if current_dir != {0, 0} {
+// 			data.previous_dir = current_dir
+// 		}
+//
+// 		if next_dir != {0, 0} {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
 
-try_set_dir :: proc(
+set_dir :: proc(velocity: ^Velocity, next_dir, current_dir: Vector2, data: ^PlayerData) -> bool {
+	velocity.direction = next_dir
+	if current_dir != {0, 0} {
+		data.previous_dir = current_dir
+	}
+	if next_dir != {0, 0} {
+		return true
+	}
+
+	return false
+}
+
+is_move_allowed :: proc(
 	velocity: ^Velocity,
 	next_dir, current_dir: Vector2,
 	data: ^PlayerData,
+	game: ^Game,
 ) -> bool {
-	if !oposite_directions(next_dir, current_dir) && next_dir != current_dir {
-		fmt.println(next_dir)
-		velocity.direction = next_dir
-		if current_dir != {0, 0} {
-			data.previous_dir = current_dir
-		}
+	moved_enough := data.time_since_turn >= PLAYER_SIZE ? true : false
 
-		if next_dir != {0, 0} {
-			return true
+	if !moved_enough && game.player_body.num_cells > 0 {
+		last_index := (MAX_RINGBUFFER_VALUES + game.directions.tail - 2) % MAX_RINGBUFFER_VALUES
+		last_dir := game.directions.values[last_index]
+
+		fmt.println(last_dir)
+		log.infof("WE CHECKING NEXT_DIR: %v WITH LAST_DIR: %v\n", next_dir, last_dir)
+		if is_oposite_directions(next_dir, last_dir) {
+			velocity.direction = {0, 0}
+			return false
 		}
+	}
+	if !is_oposite_directions(next_dir, current_dir) && next_dir != current_dir {
+		return true
 	}
 	return false
 }
@@ -165,6 +226,6 @@ shift_array_right :: proc(arr: ^[20]cell_t, count: int) {
 	}
 }
 
-oposite_directions :: proc(new, curr: Vector2) -> bool {
+is_oposite_directions :: proc(new, curr: Vector2) -> bool {
 	return new.x == -curr.x && new.y == -curr.y
 }

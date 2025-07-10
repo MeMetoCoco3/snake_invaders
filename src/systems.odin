@@ -85,6 +85,40 @@ CollisionSystem :: proc(game: ^Game) {
 			}
 
 
+			if dataA.kind == .PLAYER {
+
+				player := game.world.archetypes[player_mask]
+				body := &game.player_body
+				head_position := &player.positions[i].pos
+				head_direction := player.velocities[i].direction
+				head_velocity := &player.velocities[i]
+				head_data := &player.players_data[i]
+				head_colision := &player.colliders[i]
+				has_body := game.player_body.num_cells > 0 ? true : false
+
+				is_player = true
+
+
+				if is_move_allowed(
+					head_velocity,
+					head_data.next_dir,
+					head_direction,
+					head_data,
+					game,
+				) {
+					if set_dir(head_velocity, head_data.next_dir, head_direction, head_data) {
+						is_turning = true
+						head_data.time_since_turn = 0
+						if head_velocity.direction != {0, 0} {
+							put_cell(game.directions, head_velocity.direction)
+							print_ringbuffer(game.directions)
+						}
+					}
+				}
+
+			}
+
+
 			for archetypeB in arquetypesB {
 				for j in 0 ..< len(archetypeB.entities_id) {
 					dataB := &archetypeB.data[j]
@@ -108,9 +142,8 @@ CollisionSystem :: proc(game: ^Game) {
 					case .STATIC:
 						if collide(colliderB^, colliderA_future_pos) {
 							if is_player {
-								game.player_data.next_dir = Vector2{0, 0}
-								// game.player_data.time_since_turn = PLAYER_SIZE
-								fmt.printfln("WE COLLIDE on loop: %v", game.loops)
+								// game.player_data.next_dir = Vector2{0, 0}
+								velocityA.direction = {0, 0}
 								continue
 							}
 
@@ -179,16 +212,16 @@ CollisionSystem :: proc(game: ^Game) {
 					case .BODY:
 						colliderB_future_pos := Collider {
 							colliderB.position +
-							archetypeB.velocities[j].direction * velocityA.speed, // A SPEED CAUSE EVERYTHING MOVES AT SPEED OF HEAD
+							archetypeB.velocities[j].direction * velocityA.speed,
 							colliderB.h,
 							colliderB.w,
 						}
 
-						if collide(colliderB_future_pos, colliderA_future_pos) {
+						if collide_no_edges(colliderB_future_pos, colliderA_future_pos) {
 							if is_player {
-								if archetypeB.players_data[j].body_index > 1 {
-									game.player_data.next_dir = Vector2{0, 0}
-									fmt.println("WE COLLIDE")
+								if (archetypeB.players_data[j].body_index > 1) {
+									velocityA.direction = {0, 0}
+									// game.player_data.next_dir = Vector2{0, 0}
 									continue
 								} else {
 									continue
@@ -205,25 +238,46 @@ CollisionSystem :: proc(game: ^Game) {
 				}
 			}
 
-
-			if dataA.kind == .PLAYER {
-
-				player := game.world.archetypes[player_mask]
-				body := &game.player_body
-				head_position := &player.positions[i].pos
-				head_direction := player.velocities[i].direction
-				head_velocity := &player.velocities[i]
-				head_data := &player.players_data[i]
-				head_colision := &player.colliders[i]
-				has_body := game.player_body.num_cells > 0 ? true : false
-
-				is_player = true
-				if try_set_dir(head_velocity, head_data.next_dir, head_direction, head_data) {
-					is_turning = true
-				}
-			}
-
-
+			//
+			// if dataA.kind == .PLAYER {
+			//
+			// 	player := game.world.archetypes[player_mask]
+			// 	body := &game.player_body
+			// 	head_position := &player.positions[i].pos
+			// 	head_direction := player.velocities[i].direction
+			// 	head_velocity := &player.velocities[i]
+			// 	head_data := &player.players_data[i]
+			// 	head_colision := &player.colliders[i]
+			// 	has_body := game.player_body.num_cells > 0 ? true : false
+			//
+			// 	is_player = true
+			//
+			//
+			// 	if is_move_allowed(
+			// 		head_velocity,
+			// 		head_data.next_dir,
+			// 		head_direction,
+			// 		head_data,
+			// 		game,
+			// 	) {
+			// 		// dir_to_body := get_cardinal_direction(
+			// 		// 	head_position^,
+			// 		// 	game.player_body.first_cell_pos.pos,
+			// 		// )
+			// 		// if is_oposite_directions(dir_to_body, head_data.next_dir) &&
+			// 		//    head_data.time_since_turn > PLAYER_SIZE / 2 {
+			// 		// }
+			// 		//
+			// 		if set_dir(head_velocity, head_data.next_dir, head_direction, head_data) {
+			// 			is_turning = true
+			// 			head_data.time_since_turn = 0
+			//
+			// 		}
+			// 	}
+			//
+			// }
+			//
+			//
 			// We check if a turn is made after the collision is checked, if it is, we spawn a ghost.
 			head_position := game.player_position.pos
 			head_velocity := game.player_velocity
@@ -274,10 +328,7 @@ CollisionSystem :: proc(game: ^Game) {
 					if ok {
 						add_turn_count(game.world, &game.player_body)
 					}
-				} else {
-					// game.player_data.time_since_turn = 0
 				}
-
 			}
 		}
 	}
@@ -407,7 +458,7 @@ VelocitySystem :: proc(game: ^Game) {
 					}
 
 					head_data.distance += abs(vector_move.x + vector_move.y)
-					// head_data.time_since_turn += abs(vector_move.x + vector_move.y)
+					head_data.time_since_turn += abs(vector_move.x + vector_move.y)
 				}
 				positions[i].pos += vector_move
 				colliders[i].position += vector_move

@@ -146,7 +146,9 @@ update :: proc(game: ^Game) {
 
 	// if game.player_data.cells_to_grow > 0 || aligned_to_grid(){
 
+
 	if game.player_data.cells_to_grow > 0 {
+		fmt.println(" WE GROW")
 		game.player_data.cells_to_grow -= 1
 		grow_body(
 			game,
@@ -455,7 +457,7 @@ draw_body :: proc(body: ^Body) {
 	draw_body_sprite(body)
 }
 
-draw_ghost_cells :: proc(rb: ^Ringuffer_t) {
+draw_ghost_cells :: proc(rb: ^Ringuffer_t(cell_ghost_t)) {
 	for i in 0 ..< rb.count {
 		current := rb.head + i
 		if current >= MAX_RINGBUFFER_VALUES {

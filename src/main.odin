@@ -1,11 +1,12 @@
 package main
 
 import "core:fmt"
+import "core:log"
 import "core:math"
 import "core:math/rand"
 import vmem "core:mem/virtual"
-
 import rl "vendor:raylib"
+
 DEBUG_COLISION :: #config(DEBUG_COLISION, false)
 
 SCREEN_WIDTH :: 800
@@ -53,8 +54,11 @@ atlas: rl.Texture2D
 tx_candy: rl.Texture2D
 
 main :: proc() {
-	arena: vmem.Arena
 
+	context.logger = get_logger()
+	log.info("START")
+
+	arena: vmem.Arena
 	arena_allocator := vmem.arena_allocator(&arena)
 
 	rl.InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "snake_invaders")
@@ -97,6 +101,10 @@ main :: proc() {
 		rl.UpdateMusicStream(game.audio.bg_music)
 		switch game.state {
 		case .PLAY:
+			// fmt.println(game.player_data.previous_dir)
+			// fmt.println(game.player_data.next_dir)
+
+
 			clear_dead(&game)
 
 			update(&game)
@@ -160,6 +168,7 @@ add_player :: proc(world: ^World) {
 			0,
 			0,
 			// PLAYER_SIZE,
+			PLAYER_SIZE,
 			0,
 		},
 	)

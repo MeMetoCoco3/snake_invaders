@@ -177,6 +177,8 @@ clean_up :: proc(game: ^Game) {
 
 	rl.UnloadMusicStream(game.audio.bg_music)
 
+	delete_logger(context.logger)
+
 	rl.CloseAudioDevice()
 	rl.CloseWindow()
 }
