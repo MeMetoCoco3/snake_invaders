@@ -259,18 +259,20 @@ grow_body :: proc(game: ^Game, body: ^Body, head_pos, head_dir: Vector2) {
 
 		collider := Collider {
 			position = head_pos,
+			w        = PLAYER_SIZE,
+			h        = PLAYER_SIZE,
 		}
-		if head_dir == {0, 1} || head_dir == {0, -1} {
-
-			collider.h = PLAYER_SIZE
-			collider.w = BODY_WIDTH
-			collider.position.x += f32(PLAYER_SIZE / 2 - collider.w / 2)
-		} else {
-
-			collider.h = BODY_WIDTH
-			collider.w = PLAYER_SIZE
-			collider.position.y += f32(PLAYER_SIZE / 2 - collider.h / 2)
-		}
+		// if head_dir == {0, 1} || head_dir == {0, -1} {
+		//
+		// 	collider.h = PLAYER_SIZE
+		// 	collider.w = BODY_WIDTH
+		// 	collider.position.x += f32(PLAYER_SIZE / 2 - collider.w / 2)
+		// } else {
+		//
+		// 	collider.h = BODY_WIDTH
+		// 	collider.w = PLAYER_SIZE
+		// 	collider.position.y += f32(PLAYER_SIZE / 2 - collider.h / 2)
+		// }
 
 		append(&archetype.colliders, collider)
 
@@ -309,6 +311,14 @@ add_body_index :: proc(world: ^World) {
 
 
 dealing_ghost_piece :: proc(game: ^Game, body: ^Body, last_piece: i8) {
+	fmt.println("DEALING GHOST")
+	fmt.printfln(
+		"COUNT BEFORE = %v, TAIL BEFORE = %v, HEAD BEFORE = %v",
+		body.ghost_pieces.count,
+		body.ghost_pieces.tail,
+		body.ghost_pieces.head,
+	)
+	print_ringbuffer(body.ghost_pieces)
 	ghost_piece, ok := peek_head(body.ghost_pieces)
 	if !ok {
 		return
@@ -325,8 +335,21 @@ dealing_ghost_piece :: proc(game: ^Game, body: ^Body, last_piece: i8) {
 	)
 
 	if (is_colliding && last_cell_velocity.direction == ghost_piece.direction) {
+		fmt.printfln(
+			"WE DESTROY THE GHOST PIECE %v, WITH THE PIECE %v",
+			ghost_piece.position,
+			last_cell_pos.pos,
+		)
 		pop_cell(body.ghost_pieces)
 	}
+
+
+	fmt.printfln(
+		"COUNT after = %v, TAIL BEFORE = %v, HEAD BEFORE = %v\n",
+		body.ghost_pieces.count,
+		body.ghost_pieces.tail,
+		body.ghost_pieces.head,
+	)
 }
 
 ///////////

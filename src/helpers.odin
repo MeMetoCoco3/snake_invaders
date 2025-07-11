@@ -84,19 +84,46 @@ is_move_allowed :: proc(
 	if !moved_enough && game.player_body.num_cells > 0 {
 		last_index := (MAX_RINGBUFFER_VALUES + game.directions.tail - 2) % MAX_RINGBUFFER_VALUES
 		last_dir := game.directions.values[last_index]
-
-		fmt.println(last_dir)
-		log.infof("WE CHECKING NEXT_DIR: %v WITH LAST_DIR: %v\n", next_dir, last_dir)
 		if is_oposite_directions(next_dir, last_dir) {
 			velocity.direction = {0, 0}
 			return false
 		}
 	}
+
 	if !is_oposite_directions(next_dir, current_dir) && next_dir != current_dir {
 		return true
 	}
+
 	return false
 }
+
+// is_move_allowed :: proc(
+// 	velocity: ^Velocity,
+// 	next_dir, current_dir: Vector2,
+// 	data: ^PlayerData,
+// 	game: ^Game,
+// ) -> bool {
+// 	moved_enough := data.time_since_turn >= PLAYER_SIZE ? true : false
+//
+// 	if !moved_enough && game.player_body.num_cells > 0 {
+// 		last_index := (MAX_RINGBUFFER_VALUES + game.directions.tail - 2) % MAX_RINGBUFFER_VALUES
+// 		last_dir := game.directions.values[last_index]
+//
+// 		log.infof("WE CHECKING NEXT_DIR: %v WITH LAST_DIR: %v\n", next_dir, last_dir)
+// 		if is_oposite_directions(next_dir, last_dir) {
+// 			log.infof("WE GOT OPOSITE DIRECTION\n")
+// 			velocity.direction = {0, 0}
+// 			return false
+// 		}
+// 	}
+//
+// 	if is_oposite_directions(next_dir, current_dir) {
+// 		velocity.direction = {0, 0}
+// 		return false
+// 	}
+//
+// 	return true
+// }
 
 
 add_turn_count :: proc(world: ^World, body: ^Body) {
