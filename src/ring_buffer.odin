@@ -26,8 +26,6 @@ print_ringbuffer :: proc(rb: ^Ringuffer_t($T)) {
 }
 
 put_cell :: proc(rb: ^Ringuffer_t($T), val: T) -> bool {
-	fmt.println("WE PUT")
-	fmt.printfln("COUNT: %v", rb.count)
 	rb.values[rb.tail] = val
 
 	rb.tail = (rb.tail + 1) % MAX_RINGBUFFER_VALUES

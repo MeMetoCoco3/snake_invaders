@@ -100,10 +100,6 @@ main :: proc() {
 		rl.UpdateMusicStream(game.audio.bg_music)
 		switch game.state {
 		case .PLAY:
-			// fmt.println(game.player_data.previous_dir)
-			// fmt.println(game.player_data.next_dir)
-
-
 			clear_dead(&game)
 
 			update(&game)
@@ -131,6 +127,7 @@ main :: proc() {
 			rl.ClearBackground(rl.BLACK)
 			rl.EndDrawing()
 		case .QUIT:
+			print_ringbuffer(game.directions)
 			clean_up(&game)
 		case .DEAD:
 			text_position := Vector2{SCREEN_WIDTH, SCREEN_HEIGHT} / 2

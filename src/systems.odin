@@ -107,14 +107,19 @@ CollisionSystem :: proc(game: ^Game) {
 					head_data,
 					game,
 				) {
-					if set_dir(head_velocity, head_data.next_dir, head_direction, head_data) {
+					if set_dir(
+						game,
+						head_velocity,
+						head_data.next_dir,
+						head_direction,
+						head_data,
+					) {
 						head_data.time_since_turn = 0
 						last_dir_chosen, _ := peek_last(game.directions)
 						if head_velocity.direction != {0, 0} &&
 						   head_velocity.direction != last_dir_chosen {
 
 							is_turning = true
-							fmt.println(1)
 							if has_body {
 								put_cell(game.directions, head_velocity.direction)
 								// print_ringbuffer(game.directions)
@@ -262,13 +267,9 @@ CollisionSystem :: proc(game: ^Game) {
 		prev_dir := game.directions.values[index_prev_dir]
 		curr_dir := game.player_velocity.direction
 		continuous_dir := prev_dir == curr_dir
-		fmt.println(prev_dir, curr_dir)
 
 		if body.num_cells > 0 && !continuous_dir {
-			// game.player_data.time_since_turn >= PLAYER_SIZE / 2 
-
 			rotation: f32 = 90
-			// game.player_data.time_since_turn = 0
 			from_dir := game.player_velocity.direction
 			to_dir := get_cardinal_direction(head_pos, body.first_cell_pos.pos)
 
@@ -286,8 +287,6 @@ CollisionSystem :: proc(game: ^Game) {
 				rotation += 0
 			}
 
-			// Checks if the previous ghost is aligned with the head_position and the future_head_pos
-
 			future_head_pos :=
 				head_pos + game.player_velocity.direction * game.player_velocity.speed
 			if body.first_cell_data.count_turn_left > 0 {
@@ -297,7 +296,6 @@ CollisionSystem :: proc(game: ^Game) {
 				}
 			}
 
-			fmt.println(2)
 			put_cell(game.player_body.ghost_pieces, cell_ghost_t{head_pos, from_dir, rotation})
 			add_turn_count(game.world, &game.player_body)
 		}
@@ -500,7 +498,6 @@ VelocitySystem :: proc(game: ^Game) {
 
 							if curr_cell_data.body_index == int(game.player_body.num_cells - 1) &&
 							   ghost_index_being_followed >= 0 {
-								fmt.println("WE transport")
 								dealing_ghost_piece(game, body, i8(curr_cell_data.body_index))
 							}
 
@@ -546,8 +543,6 @@ VelocitySystem :: proc(game: ^Game) {
 
 							if curr_cell_data.body_index == int(game.player_body.num_cells - 1) &&
 							   ghost_index_being_followed >= 0 {
-
-								fmt.println("WE APPROACH")
 								dealing_ghost_piece(game, body, i8(curr_cell_data.body_index))
 							}
 							break

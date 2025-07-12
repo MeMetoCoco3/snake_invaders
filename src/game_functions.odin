@@ -16,9 +16,7 @@ collider_body := [2]Collider {
 
 InputSystem :: proc(game: ^Game) {
 
-	if rl.IsMouseButtonPressed(rl.MouseButton.LEFT) {
-		fmt.println(rl.GetMousePosition())
-	}
+	if rl.IsKeyPressed(.TAB) do print_ringbuffer(game.directions)
 
 
 	player_velocity := &game.world.archetypes[player_mask].velocities[0]
@@ -45,15 +43,11 @@ InputSystem :: proc(game: ^Game) {
 
 	if player_data.can_dash && rl.IsKeyPressed(.X) || player_data.gona_dash {
 		player_data.gona_dash = true
-
-
-		// if aligned_to_grid(player_position.pos) {
 		player_velocity.speed = PLAYER_SPEED * 2
 		player_data.can_dash = false
 		player_data.time_on_dash = 0
 		player_data.player_state = .DASH
 		player_data.gona_dash = false
-		// }
 	}
 
 	body := &game.player_body
@@ -142,13 +136,7 @@ update :: proc(game: ^Game) {
 	play_sound(game)
 	update_scene(game)
 	// TESTING(game)
-
-
-	// if game.player_data.cells_to_grow > 0 || aligned_to_grid(){
-
-
 	if game.player_data.cells_to_grow > 0 {
-		fmt.println(" WE GROW")
 		game.player_data.cells_to_grow -= 1
 		grow_body(
 			game,
@@ -311,14 +299,6 @@ add_body_index :: proc(world: ^World) {
 
 
 dealing_ghost_piece :: proc(game: ^Game, body: ^Body, last_piece: i8) {
-	fmt.println("DEALING GHOST")
-	fmt.printfln(
-		"COUNT BEFORE = %v, TAIL BEFORE = %v, HEAD BEFORE = %v",
-		body.ghost_pieces.count,
-		body.ghost_pieces.tail,
-		body.ghost_pieces.head,
-	)
-	print_ringbuffer(body.ghost_pieces)
 	ghost_piece, ok := peek_head(body.ghost_pieces)
 	if !ok {
 		return
@@ -335,21 +315,8 @@ dealing_ghost_piece :: proc(game: ^Game, body: ^Body, last_piece: i8) {
 	)
 
 	if (is_colliding && last_cell_velocity.direction == ghost_piece.direction) {
-		fmt.printfln(
-			"WE DESTROY THE GHOST PIECE %v, WITH THE PIECE %v",
-			ghost_piece.position,
-			last_cell_pos.pos,
-		)
 		pop_cell(body.ghost_pieces)
 	}
-
-
-	fmt.printfln(
-		"COUNT after = %v, TAIL BEFORE = %v, HEAD BEFORE = %v\n",
-		body.ghost_pieces.count,
-		body.ghost_pieces.tail,
-		body.ghost_pieces.head,
-	)
 }
 
 ///////////
@@ -497,7 +464,6 @@ draw_ghost_cells :: proc(rb: ^Ringuffer_t(cell_ghost_t)) {
 	}
 }
 aligned_to_grid :: proc(p: Vector2) -> bool {
-	fmt.println(i32(p.x) % GRID_SIZE == 0 && i32(p.y) % GRID_SIZE == 0)
 	return i32(p.x) % GRID_SIZE == 0 && i32(p.y) % GRID_SIZE == 0
 }
 

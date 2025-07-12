@@ -42,26 +42,13 @@ draw_grid :: proc(col: rl.Color) {
 aligned :: proc(v0: Vector2, v1: Vector2) -> bool {
 	return v0.x == v1.x || v0.y == v1.y
 }
-//
-// try_set_dir :: proc(
-// 	velocity: ^Velocity,
-// 	next_dir, current_dir: Vector2,
-// 	data: ^PlayerData,
-// ) -> bool {
-// 	if !is_oposite_directions(next_dir, current_dir) && next_dir != current_dir {
-// 		velocity.direction = next_dir
-// 		if current_dir != {0, 0} {
-// 			data.previous_dir = current_dir
-// 		}
-//
-// 		if next_dir != {0, 0} {
-// 			return true
-// 		}
-// 	}
-// 	return false
-// }
 
-set_dir :: proc(velocity: ^Velocity, next_dir, current_dir: Vector2, data: ^PlayerData) -> bool {
+set_dir :: proc(
+	game: ^Game,
+	velocity: ^Velocity,
+	next_dir, current_dir: Vector2,
+	data: ^PlayerData,
+) -> bool {
 	velocity.direction = next_dir
 	if current_dir != {0, 0} {
 		data.previous_dir = current_dir
@@ -80,15 +67,33 @@ is_move_allowed :: proc(
 	game: ^Game,
 ) -> bool {
 	moved_enough := data.time_since_turn >= PLAYER_SIZE ? true : false
+	has_body := game.player_body.num_cells > 0
 
-	if !moved_enough && game.player_body.num_cells > 0 {
+	if !has_body {
+		return true
+	}
+
+
+	if !moved_enough {
 		last_index := (MAX_RINGBUFFER_VALUES + game.directions.tail - 2) % MAX_RINGBUFFER_VALUES
+		last_dir := game.directions.values[last_index]
+		fmt.printfln("WE DID NOT MOVE ENOUGH\nNEXT_DIR %v, LAST_DIR %v", next_dir, last_dir)
+		if is_oposite_directions(next_dir, last_dir) {
+			fmt.println("THEY OPPOSITE")
+			velocity.direction = {0, 0}
+			return false
+		}
+	}
+
+	if game.player_body.num_cells > 0 {
+		last_index := (MAX_RINGBUFFER_VALUES + game.directions.tail - 1) % MAX_RINGBUFFER_VALUES
 		last_dir := game.directions.values[last_index]
 		if is_oposite_directions(next_dir, last_dir) {
 			velocity.direction = {0, 0}
 			return false
 		}
 	}
+
 
 	if !is_oposite_directions(next_dir, current_dir) && next_dir != current_dir {
 		return true
@@ -97,34 +102,66 @@ is_move_allowed :: proc(
 	return false
 }
 
+
+//
 // is_move_allowed :: proc(
 // 	velocity: ^Velocity,
 // 	next_dir, current_dir: Vector2,
 // 	data: ^PlayerData,
 // 	game: ^Game,
 // ) -> bool {
-// 	moved_enough := data.time_since_turn >= PLAYER_SIZE ? true : false
 //
-// 	if !moved_enough && game.player_body.num_cells > 0 {
-// 		last_index := (MAX_RINGBUFFER_VALUES + game.directions.tail - 2) % MAX_RINGBUFFER_VALUES
+// 	num_cells := game.player_body.num_cells
+// 	switch {
+// 	case num_cells > 0:
+// 		moved_enough := data.time_since_turn >= PLAYER_SIZE ? true : false
+// 		last_index := (MAX_RINGBUFFER_VALUES + game.directions.tail - 1) % MAX_RINGBUFFER_VALUES
 // 		last_dir := game.directions.values[last_index]
 //
-// 		log.infof("WE CHECKING NEXT_DIR: %v WITH LAST_DIR: %v\n", next_dir, last_dir)
-// 		if is_oposite_directions(next_dir, last_dir) {
-// 			log.infof("WE GOT OPOSITE DIRECTION\n")
-// 			velocity.direction = {0, 0}
+// 		if !moved_enough {
+// 			before_last_index :=
+// 				(MAX_RINGBUFFER_VALUES + game.directions.tail - 2) % MAX_RINGBUFFER_VALUES
+// 			before_last_dir := game.directions.values[before_last_index]
+//
+// 			if is_oposite_directions(next_dir, last_dir) ||
+// 			   is_oposite_directions(next_dir, before_last_dir) {
+// 				velocity.direction = {0, 0}
+// 				return false
+// 			}
+// 		} else {
+// 			if is_oposite_directions(next_dir, last_dir) {
+// 				velocity.direction = {0, 0}
+// 				return false
+// 			}
+// 		}
+//
+// 	case num_cells == 0:
+// 		last_index := (MAX_RINGBUFFER_VALUES + game.directions.tail - 1) % MAX_RINGBUFFER_VALUES
+// 		last_dir := game.directions.values[last_index]
+//
+// 		if next_dir == current_dir {
 // 			return false
 // 		}
 // 	}
+// 	return true
+// }
 //
-// 	if is_oposite_directions(next_dir, current_dir) {
+// moved_enough := data.time_since_turn >= PLAYER_SIZE ? true : false
+//
+// if !moved_enough && game.player_body.num_cells > 0 {
+// 	last_index := (MAX_RINGBUFFER_VALUES + game.directions.tail - 1) % MAX_RINGBUFFER_VALUES
+// 	last_dir := game.directions.values[last_index]
+// 	if is_oposite_directions(next_dir, last_dir) {
 // 		velocity.direction = {0, 0}
 // 		return false
 // 	}
+// }
 //
+// if !is_oposite_directions(next_dir, current_dir) && next_dir != current_dir {
 // 	return true
 // }
-
+//
+// return false
 
 add_turn_count :: proc(world: ^World, body: ^Body) {
 	archetypes, is_empty := query_archetype(world, body_mask)
