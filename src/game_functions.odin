@@ -17,6 +17,12 @@ collider_body := [2]Collider {
 InputSystem :: proc(game: ^Game) {
 
 	if rl.IsKeyPressed(.TAB) do print_ringbuffer(game.directions)
+	if rl.IsMouseButtonPressed(.LEFT) {
+		archetype := game.world.archetypes[ghost_mask]
+		for i in 0 ..< len(archetype.entities_id) {
+			fmt.println(archetype.colliders[i])
+		}
+	}
 
 
 	player_velocity := &game.world.archetypes[player_mask].velocities[0]
@@ -276,32 +282,42 @@ grow_body :: proc(game: ^Game, body: ^Body, head_pos, head_dir: Vector2) {
 	}
 }
 
-
-add_body_index :: proc(world: ^World) {
-	archetypes, is_empty := query_archetype(world, body_mask)
-	if is_empty {
-		return
-	}
-
-	for archetype in archetypes {
-		for i in 0 ..< len(archetype.entities_id) {
-			if archetype.data[i].kind == .BODY {
-				index := &archetype.players_data[i].body_index
-				// if index^ == -1 {
-				// index^ = 0
-				// } else if index^ >= 0 {
-				index^ += 1
-				// }
-			}
+add_ghost_body_index :: proc(world: ^World) {
+	archetype := world.archetypes[ghost_mask]
+	// fmt.printfln("Add ghost body index on len = %v", len(archetype.entities_id))
+	for i in 0 ..< len(archetype.entities_id) {
+		if archetype.data[i].kind == .GHOST_PIECE && archetype.data[i].state == .ALIVE {
+			// fmt.printfln(
+			// 	"ID %v, Body indexbefore: %v",
+			// 	archetype.entities_id[i],
+			// 	archetype.players_data[i].body_index,
+			// )
+			archetype.players_data[i].body_index += 1
+			// fmt.printfln("Index: %v, Body indexafter: %v", i, archetype.players_data[i].body_index)
 		}
 	}
 }
 
 
-dealing_ghost_piece :: proc(game: ^Game, body: ^Body, last_piece: i8) {
+add_body_index :: proc(world: ^World) {
+	archetype := world.archetypes[body_mask]
+	for i in 0 ..< len(archetype.entities_id) {
+		if archetype.data[i].kind == .BODY {
+			index := &archetype.players_data[i].body_index
+			// if index^ == -1 {
+			// index^ = 0
+			// } else if index^ >= 0 {
+			index^ += 1
+			// }
+		}
+	}
+}
+
+
+dealing_ghost_piece :: proc(game: ^Game, body: ^Body, last_piece: i8) -> (cell_ghost_t, bool) {
 	ghost_piece, ok := peek_head(body.ghost_pieces)
 	if !ok {
-		return
+		return {}, false
 	}
 
 	last_cell_pos, last_cell_velocity, last_cell_data, _ := get_last_cell(game)
@@ -315,8 +331,12 @@ dealing_ghost_piece :: proc(game: ^Game, body: ^Body, last_piece: i8) {
 	)
 
 	if (is_colliding && last_cell_velocity.direction == ghost_piece.direction) {
-		pop_cell(body.ghost_pieces)
+		ghost, _ := pop_cell(body.ghost_pieces)
+		ghost_archetype := game.world.archetypes[ghost_mask]
+		kill_entity(ghost_archetype, ghost.entity_id)
+		return ghost, true
 	}
+	return {}, false
 }
 
 ///////////
@@ -334,7 +354,7 @@ spawn_enemy :: proc(game: ^Game) {
 	y = math.floor(y / PLAYER_SIZE) * PLAYER_SIZE
 
 	mask := (COMPONENT_ID.POSITION | .VELOCITY | .ANIMATION | .COLLIDER | .DATA | .IA)
-	add_entity(game.world, mask)
+	id := add_entity(game.world, mask)
 
 	archetype := game.world.archetypes[mask]
 	enemy_position := Position{{x, y}, {ENEMY_SIZE, ENEMY_SIZE}}
@@ -366,7 +386,7 @@ spawn_bullet :: proc(
 	team: ENTITY_TEAM,
 ) {
 	mask := (COMPONENT_ID.POSITION | .VELOCITY | .ANIMATION | .COLLIDER | .DATA)
-	add_entity(game.world, mask)
+	id := add_entity(game.world, mask)
 
 	archetype := game.world.archetypes[mask]
 
@@ -390,7 +410,7 @@ spawn_bullet :: proc(
 
 spawn_candy :: proc(game: ^Game) {
 	mask := (COMPONENT_ID.POSITION | .ANIMATION | .COLLIDER | .DATA)
-	add_entity(game.world, mask)
+	id := add_entity(game.world, mask)
 
 	archetype := game.world.archetypes[mask]
 

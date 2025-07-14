@@ -1,5 +1,6 @@
 package main
 import "core:fmt"
+import "core:log"
 import "core:math"
 import rl "vendor:raylib"
 
@@ -36,6 +37,10 @@ DrawCollidersSystem :: proc(game: ^Game) {
 			case .GOOD:
 				color = rl.BLUE
 			}
+			if arquetype.data[i].kind == .GHOST_PIECE {
+				color = rl.WHITE
+			}
+
 
 			rect := rl.Rectangle {
 				x      = colliders[i].position.x,
@@ -48,7 +53,6 @@ DrawCollidersSystem :: proc(game: ^Game) {
 	}
 }
 
-on_col := false
 CollisionSystem :: proc(game: ^Game) {
 	rb := game.player_body.ghost_pieces
 	arquetypesA, is_empty := query_archetype(
@@ -116,15 +120,19 @@ CollisionSystem :: proc(game: ^Game) {
 					) {
 						head_data.time_since_turn = 0
 						last_dir_chosen, _ := peek_last(game.directions)
-						if head_velocity.direction != {0, 0} &&
-						   head_velocity.direction != last_dir_chosen {
 
+						actual_turn :=
+							head_velocity.direction != {0, 0} &&
+							head_velocity.direction != last_dir_chosen
+
+						if actual_turn {
 							is_turning = true
 							if has_body {
 								put_cell(game.directions, head_velocity.direction)
 								// print_ringbuffer(game.directions)
 							}
 						} else {
+
 							game.player_body.growing = true
 						}
 					}
@@ -233,8 +241,8 @@ CollisionSystem :: proc(game: ^Game) {
 						if collide_no_edges(colliderB_future_pos, colliderA_future_pos) {
 							if is_player {
 								if (archetypeB.players_data[j].body_index > 1) {
+									fmt.println("WE COLLIDE WITH BODY")
 									velocityA.direction = {0, 0}
-									on_col = true
 									continue
 								} else {
 									continue
@@ -247,6 +255,27 @@ CollisionSystem :: proc(game: ^Game) {
 							}
 							velocityA.direction = {0, 0}
 						}
+
+					case .GHOST_PIECE:
+						if collide_no_edges(colliderB^, colliderA_future_pos) {
+							if is_player {
+								if (archetypeB.players_data[j].body_index > 1) &&
+								   archetypeB.data[j].state == .ALIVE {
+									fmt.println("WE COLLIDE WITH GHOSTPIECE")
+									velocityA.direction = {0, 0}
+									continue
+								} else {
+									continue
+								}
+							}
+
+							is_bullet := dataA.kind == .BULLET
+							if is_bullet {
+								dataA.state = .DEAD
+							}
+						}
+
+
 					}
 				}
 			}
@@ -295,14 +324,52 @@ CollisionSystem :: proc(game: ^Game) {
 					return
 				}
 			}
-
-			put_cell(game.player_body.ghost_pieces, cell_ghost_t{head_pos, from_dir, rotation})
-			add_turn_count(game.world, &game.player_body)
+			spawn_ghost_cell(game, head_pos, from_dir, rotation)
 		}
 	}
-
 }
 
+spawn_ghost_cell :: proc(game: ^Game, head_pos, from_dir: Vector2, rotation: f32) {
+
+
+	entity_id := add_entity(game.world, ghost_mask)
+	archetype := game.world.archetypes[ghost_mask]
+
+	append(&archetype.positions, Position{pos = head_pos, size = {PLAYER_SIZE, PLAYER_SIZE}})
+	// append(&archetype.sprites, sprite_bank[SPRITE.BODY_STRAIGHT])
+	append(&archetype.data, Data{kind = .GHOST_PIECE, state = .ALIVE, team = .GOOD})
+	append(
+		&archetype.players_data,
+		PlayerData{player_state = .NORMAL, count_turn_left = 0, body_index = -1},
+	)
+
+	collider := Collider {
+		position = head_pos,
+		w        = PLAYER_SIZE,
+		h        = PLAYER_SIZE,
+	}
+	append(&archetype.colliders, collider)
+
+	put_cell(
+		game.player_body.ghost_pieces,
+		cell_ghost_t{entity_id, 0, head_pos, from_dir, rotation},
+	)
+
+	add_turn_count(game.world)
+	add_ghost_body_index(game.world)
+
+	index := len(game.world.archetypes[ghost_mask].entities_id) - 1
+
+
+	for i in 0 ..< len(archetype.entities_id) {
+		fmt.printfln(
+			"INDEX: %v, ENTITY ID %v, body_index %v",
+			i,
+			archetype.entities_id[i],
+			archetype.players_data[i].body_index,
+		)
+	}
+}
 
 IASystem :: proc(game: ^Game) {
 	arquetypes, is_empty := query_archetype(game.world, COMPONENT_ID.IA | .VELOCITY | .POSITION)
@@ -409,7 +476,6 @@ VelocitySystem :: proc(game: ^Game) {
 
 		for i in 0 ..< len(arquetype.entities_id) {
 			is_body := arquetype.data[i].kind == .BODY
-
 			if !is_body {
 				vector_move := (velocities[i].direction * velocities[i].speed)
 				if is_player {
@@ -459,6 +525,7 @@ VelocitySystem :: proc(game: ^Game) {
 						)
 					}
 
+
 					// BEGIN MOVEMENT
 					remaining_movement := head_velocity.speed
 					for {
@@ -479,15 +546,6 @@ VelocitySystem :: proc(game: ^Game) {
 							collider := Collider {
 								position = curr_cell_pos.pos + direction * remaining_movement,
 							}
-							// if direction == {0, 1} || direction == {0, -1} {
-							// 	collider.h = PLAYER_SIZE
-							// 	collider.w = BODY_WIDTH
-							// 	collider.position.x += f32(PLAYER_SIZE / 2 - collider.w / 2)
-							// } else {
-							// 	collider.h = BODY_WIDTH
-							// 	collider.w = PLAYER_SIZE
-							// 	collider.position.y += f32(PLAYER_SIZE / 2 - collider.h / 2)
-							// }
 
 							colliders[i] = collider
 							colliders[i].position += direction * remaining_movement
@@ -499,6 +557,14 @@ VelocitySystem :: proc(game: ^Game) {
 							if curr_cell_data.body_index == int(game.player_body.num_cells - 1) &&
 							   ghost_index_being_followed >= 0 {
 								dealing_ghost_piece(game, body, i8(curr_cell_data.body_index))
+								// ghost, change := dealing_ghost_piece(
+								// 	game,
+								// 	body,
+								// 	i8(curr_cell_data.body_index),
+								// )
+								// if change {
+								// 	curr_cell_velocity.direction = ghost.direction
+								// }
 							}
 
 							if curr_cell_data.count_turn_left == 0 {
@@ -544,6 +610,15 @@ VelocitySystem :: proc(game: ^Game) {
 							if curr_cell_data.body_index == int(game.player_body.num_cells - 1) &&
 							   ghost_index_being_followed >= 0 {
 								dealing_ghost_piece(game, body, i8(curr_cell_data.body_index))
+
+								ghost, change := dealing_ghost_piece(
+									game,
+									body,
+									i8(curr_cell_data.body_index),
+								)
+								if change {
+									curr_cell_velocity.direction = ghost.direction
+								}
 							}
 							break
 						}

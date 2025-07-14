@@ -47,8 +47,9 @@ NUM_ENTITIES :: 1000
 
 player_mask := (COMPONENT_ID.POSITION | .VELOCITY | .ANIMATION | .DATA | .COLLIDER | .PLAYER_DATA)
 body_mask := (COMPONENT_ID.VELOCITY | .SPRITE | .POSITION | .PLAYER_DATA | .DATA | .COLLIDER)
+// ghost_mask := (COMPONENT_ID.SPRITE | .POSITION | .DATA | .COLLIDER)
 
-
+ghost_mask := (COMPONENT_ID.POSITION | .DATA | .COLLIDER | .PLAYER_DATA)
 atlas: rl.Texture2D
 tx_candy: rl.Texture2D
 
@@ -144,7 +145,7 @@ main :: proc() {
 
 
 add_player :: proc(world: ^World) {
-	add_entity(world, player_mask)
+	id := add_entity(world, player_mask)
 
 	player_arquetype := world.archetypes[player_mask]
 	append(

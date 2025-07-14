@@ -77,9 +77,7 @@ is_move_allowed :: proc(
 	if !moved_enough {
 		last_index := (MAX_RINGBUFFER_VALUES + game.directions.tail - 2) % MAX_RINGBUFFER_VALUES
 		last_dir := game.directions.values[last_index]
-		fmt.printfln("WE DID NOT MOVE ENOUGH\nNEXT_DIR %v, LAST_DIR %v", next_dir, last_dir)
 		if is_oposite_directions(next_dir, last_dir) {
-			fmt.println("THEY OPPOSITE")
 			velocity.direction = {0, 0}
 			return false
 		}
@@ -94,80 +92,18 @@ is_move_allowed :: proc(
 		}
 	}
 
-
 	if !is_oposite_directions(next_dir, current_dir) && next_dir != current_dir {
 		return true
 	}
-
 	return false
 }
 
-
-//
-// is_move_allowed :: proc(
-// 	velocity: ^Velocity,
-// 	next_dir, current_dir: Vector2,
-// 	data: ^PlayerData,
-// 	game: ^Game,
-// ) -> bool {
-//
-// 	num_cells := game.player_body.num_cells
-// 	switch {
-// 	case num_cells > 0:
-// 		moved_enough := data.time_since_turn >= PLAYER_SIZE ? true : false
-// 		last_index := (MAX_RINGBUFFER_VALUES + game.directions.tail - 1) % MAX_RINGBUFFER_VALUES
-// 		last_dir := game.directions.values[last_index]
-//
-// 		if !moved_enough {
-// 			before_last_index :=
-// 				(MAX_RINGBUFFER_VALUES + game.directions.tail - 2) % MAX_RINGBUFFER_VALUES
-// 			before_last_dir := game.directions.values[before_last_index]
-//
-// 			if is_oposite_directions(next_dir, last_dir) ||
-// 			   is_oposite_directions(next_dir, before_last_dir) {
-// 				velocity.direction = {0, 0}
-// 				return false
-// 			}
-// 		} else {
-// 			if is_oposite_directions(next_dir, last_dir) {
-// 				velocity.direction = {0, 0}
-// 				return false
-// 			}
-// 		}
-//
-// 	case num_cells == 0:
-// 		last_index := (MAX_RINGBUFFER_VALUES + game.directions.tail - 1) % MAX_RINGBUFFER_VALUES
-// 		last_dir := game.directions.values[last_index]
-//
-// 		if next_dir == current_dir {
-// 			return false
-// 		}
-// 	}
-// 	return true
-// }
-//
-// moved_enough := data.time_since_turn >= PLAYER_SIZE ? true : false
-//
-// if !moved_enough && game.player_body.num_cells > 0 {
-// 	last_index := (MAX_RINGBUFFER_VALUES + game.directions.tail - 1) % MAX_RINGBUFFER_VALUES
-// 	last_dir := game.directions.values[last_index]
-// 	if is_oposite_directions(next_dir, last_dir) {
-// 		velocity.direction = {0, 0}
-// 		return false
-// 	}
-// }
-//
-// if !is_oposite_directions(next_dir, current_dir) && next_dir != current_dir {
-// 	return true
-// }
-//
-// return false
-
-add_turn_count :: proc(world: ^World, body: ^Body) {
+add_turn_count :: proc(world: ^World) {
 	archetypes, is_empty := query_archetype(world, body_mask)
 	if is_empty {
 		return
 	}
+
 
 	for archetype in archetypes {
 		for i in 0 ..< len(archetype.entities_id) {

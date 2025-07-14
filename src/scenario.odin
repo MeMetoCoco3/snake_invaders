@@ -14,7 +14,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 
 	mask := COMPONENT_ID.COLLIDER | .SPRITE | .DATA | .POSITION
 
-	add_entity(world, mask)
+	id := add_entity(world, mask)
 	arquetype := world.archetypes[mask]
 
 	append(
@@ -27,7 +27,8 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 
 	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
 
-	add_entity(world, mask)
+	id = add_entity(world, mask)
+
 	append(
 		&arquetype.positions,
 		Position {
@@ -40,9 +41,10 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 		Collider{{SCREEN_WIDTH, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE},
 	)
 	append(&arquetype.sprites, Sprite{&atlas, Rect{{0, 96}, {32, 32}}, 270})
+
 	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
 
-	add_entity(world, mask)
+	id = add_entity(world, mask)
 
 	append(
 		&arquetype.positions,
@@ -72,7 +74,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 
 
 	// CORNERS
-	add_entity(world, mask)
+	id = add_entity(world, mask)
 	append(&arquetype.positions, Position{{0, SCREEN_HEIGHT - PLAYER_SIZE}, {32, 32}})
 	append(
 		&arquetype.colliders,
@@ -89,8 +91,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 	)
 	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
 
-
-	add_entity(world, mask)
+	id = add_entity(world, mask)
 	append(&arquetype.positions, Position{{0, SCREEN_HEIGHT - PLAYER_SIZE}, {32, 32}})
 	append(
 		&arquetype.colliders,
@@ -103,8 +104,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 	)
 	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
 
-
-	add_entity(world, mask)
+	id = add_entity(world, mask)
 	append(&arquetype.positions, Position{{0, SCREEN_HEIGHT - PLAYER_SIZE}, {32, 32}})
 	append(
 		&arquetype.colliders,
@@ -123,7 +123,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
 
 
-	add_entity(world, mask)
+	id = add_entity(world, mask)
 	append(&arquetype.positions, Position{{0, SCREEN_HEIGHT - PLAYER_SIZE}, {32, 32}})
 	append(
 		&arquetype.colliders,

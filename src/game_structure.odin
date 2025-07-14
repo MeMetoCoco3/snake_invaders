@@ -55,6 +55,8 @@ cell_t :: struct {
 }
 
 cell_ghost_t :: struct {
+	entity_id:           u32,
+	body_index:          u32,
 	position, direction: Vector2,
 	rotation:            f32,
 }

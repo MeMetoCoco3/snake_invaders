@@ -9,11 +9,11 @@
 - ~Change shotting so it works correctly.~
 - ~Add visuals and sounds.BANK OF ANIMATIONS~
 - ~Mkae use of odin vector multiplication~
-- NOT NECCESSSSSSARY~Compose player from entity~
+- ~Compose player from entity~
 - ~BUG WHEN DEAD AND PRESS ENTER: animation was being overwritten on load scene~
 
-
-
+- Transform ecs functions to get a slice not com | com | com
+- Make ghost_cells have collider
 - Move player to stack alloc.
 - Add other objectives for player.
 - Add state to enemies.
