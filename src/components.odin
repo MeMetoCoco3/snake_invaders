@@ -100,6 +100,7 @@ ANIM_DIRECTION :: enum {
 Collider :: struct {
 	position: Vector2,
 	w, h:     int,
+	active:   bool,
 }
 
 

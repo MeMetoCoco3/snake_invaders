@@ -51,7 +51,6 @@ add_entity :: proc(world: ^World, mask: COMPONENT_ID) -> u32 {
 import "core:fmt"
 kill_entity :: proc(archetype: ^Archetype, id: u32) {
 	for entity_id, i in archetype.entities_id {
-		fmt.printfln("ENTITY NUM %v, ID: %v", entity_id, i)
 		if entity_id == id {
 			archetype.data[i].state = .DEAD
 		}

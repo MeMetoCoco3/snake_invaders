@@ -48,7 +48,6 @@ NUM_ENTITIES :: 1000
 player_mask := (COMPONENT_ID.POSITION | .VELOCITY | .ANIMATION | .DATA | .COLLIDER | .PLAYER_DATA)
 body_mask := (COMPONENT_ID.VELOCITY | .SPRITE | .POSITION | .PLAYER_DATA | .DATA | .COLLIDER)
 // ghost_mask := (COMPONENT_ID.SPRITE | .POSITION | .DATA | .COLLIDER)
-
 ghost_mask := (COMPONENT_ID.POSITION | .DATA | .COLLIDER | .PLAYER_DATA)
 atlas: rl.Texture2D
 tx_candy: rl.Texture2D
@@ -97,6 +96,11 @@ main :: proc() {
 
 
 	for !rl.WindowShouldClose() {
+		if game.player_body.ghost_colliders == nil {
+			log.info("ITS GOOD")
+		} else {
+			log.info(" EVEN BETTER")
+		}
 		game.loops += 1
 		rl.UpdateMusicStream(game.audio.bg_music)
 		switch game.state {
@@ -177,5 +181,8 @@ add_player :: proc(world: ^World) {
 	append(&player_arquetype.animations, animation_bank[ANIMATION.PLAYER])
 
 	append(&player_arquetype.data, Data{.PLAYER, .ALIVE, .GOOD})
-	append(&player_arquetype.colliders, Collider{player_position.pos, PLAYER_SIZE, PLAYER_SIZE})
+	append(
+		&player_arquetype.colliders,
+		Collider{player_position.pos, PLAYER_SIZE, PLAYER_SIZE, true},
+	)
 }

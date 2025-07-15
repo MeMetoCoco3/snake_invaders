@@ -368,6 +368,7 @@ spawn_enemy :: proc(game: ^Game) {
 		colision_origin,
 		ENEMY_SIZE - EPSILON_COLISION * 4,
 		ENEMY_SIZE - EPSILON_COLISION * 4,
+		true,
 	}
 	append(&archetype.colliders, enemy_collider)
 
@@ -403,6 +404,7 @@ spawn_bullet :: proc(
 			origin + EPSILON_COLISION,
 			int(bullet_size) - EPSILON_COLISION * 2,
 			int(bullet_size) - EPSILON_COLISION * 2,
+			true,
 		},
 	)
 	append(&archetype.data, Data{.BULLET, .ALIVE, team})
@@ -447,6 +449,7 @@ spawn_candy :: proc(game: ^Game) {
 			collider_position,
 			CANDY_SIZE - EPSILON_COLISION * 2,
 			CANDY_SIZE - EPSILON_COLISION * 2,
+			true,
 		},
 	)
 	game.count_candies += 1

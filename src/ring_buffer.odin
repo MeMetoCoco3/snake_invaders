@@ -1,7 +1,7 @@
 package main
 import "core:fmt"
 import "core:math"
-MAX_RINGBUFFER_VALUES :: 20
+MAX_RINGBUFFER_VALUES :: 50
 
 Ringuffer_t :: struct($T: typeid) {
 	values: []T,

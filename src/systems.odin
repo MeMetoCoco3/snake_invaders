@@ -77,6 +77,7 @@ CollisionSystem :: proc(game: ^Game) {
 				colliderA.position + velocityA.direction * velocityA.speed,
 				colliderA.h,
 				colliderA.w,
+				true,
 			}
 
 
@@ -86,6 +87,7 @@ CollisionSystem :: proc(game: ^Game) {
 					colliderA.position + archetypeA.players_data[i].next_dir * velocityA.speed,
 					colliderA.h,
 					colliderA.w,
+					true,
 				}
 			}
 
@@ -236,9 +238,12 @@ CollisionSystem :: proc(game: ^Game) {
 							archetypeB.velocities[j].direction * velocityA.speed,
 							colliderB.h,
 							colliderB.w,
+							true,
 						}
 
-						if collide_no_edges(colliderB_future_pos, colliderA_future_pos) {
+						// if collide_no_edges(colliderB_future_pos, colliderA_future_pos) {
+
+						if collide_no_edges(colliderB^, colliderA_future_pos) {
 							if is_player {
 								if (archetypeB.players_data[j].body_index > 1) {
 									fmt.println("WE COLLIDE WITH BODY")
@@ -259,9 +264,21 @@ CollisionSystem :: proc(game: ^Game) {
 					case .GHOST_PIECE:
 						if collide_no_edges(colliderB^, colliderA_future_pos) {
 							if is_player {
-								if (archetypeB.players_data[j].body_index > 1) &&
-								   archetypeB.data[j].state == .ALIVE {
-									fmt.println("WE COLLIDE WITH GHOSTPIECE")
+								if (archetypeB.players_data[j].body_index > 2) &&
+								   archetypeB.data[j].state == .ALIVE &&
+								   archetypeB.colliders[j].active {
+									// fmt.printfln(
+									// 	"Player Position: %v, Player future position",
+									// 	colliderA,
+									// 	colliderA_future_pos,
+									// )
+									// fmt.printfln(
+									// 	"Ghost_piece info: Entity ID %v Collider Position: %v, body_index: %v",
+									// 	archetypeB.entities_id[j],
+									// 	archetypeB.colliders[j].position,
+									// 	archetypeB.players_data[j].body_index,
+									// )
+									// print_ringbuffer(game.player_body.ghost_pieces)
 									velocityA.direction = {0, 0}
 									continue
 								} else {
@@ -272,6 +289,14 @@ CollisionSystem :: proc(game: ^Game) {
 							is_bullet := dataA.kind == .BULLET
 							if is_bullet {
 								dataA.state = .DEAD
+							}
+						} else if !archetypeB.colliders[j].active && is_player {
+							distance := vec2_distance(
+								colliderB.position,
+								colliderA_future_pos.position,
+							)
+							if distance >= PLAYER_SIZE {
+								colliderB.active = true
 							}
 						}
 
@@ -330,10 +355,12 @@ CollisionSystem :: proc(game: ^Game) {
 }
 
 spawn_ghost_cell :: proc(game: ^Game, head_pos, from_dir: Vector2, rotation: f32) {
-
-
 	entity_id := add_entity(game.world, ghost_mask)
 	archetype := game.world.archetypes[ghost_mask]
+
+	if game.player_body.ghost_colliders == nil {
+		game.player_body.ghost_colliders = &archetype.colliders
+	}
 
 	append(&archetype.positions, Position{pos = head_pos, size = {PLAYER_SIZE, PLAYER_SIZE}})
 	// append(&archetype.sprites, sprite_bank[SPRITE.BODY_STRAIGHT])
@@ -347,6 +374,7 @@ spawn_ghost_cell :: proc(game: ^Game, head_pos, from_dir: Vector2, rotation: f32
 		position = head_pos,
 		w        = PLAYER_SIZE,
 		h        = PLAYER_SIZE,
+		active   = false,
 	}
 	append(&archetype.colliders, collider)
 
@@ -610,15 +638,15 @@ VelocitySystem :: proc(game: ^Game) {
 							if curr_cell_data.body_index == int(game.player_body.num_cells - 1) &&
 							   ghost_index_being_followed >= 0 {
 								dealing_ghost_piece(game, body, i8(curr_cell_data.body_index))
-
-								ghost, change := dealing_ghost_piece(
-									game,
-									body,
-									i8(curr_cell_data.body_index),
-								)
-								if change {
-									curr_cell_velocity.direction = ghost.direction
-								}
+								//
+								// ghost, change := dealing_ghost_piece(
+								// 	game,
+								// 	body,
+								// 	i8(curr_cell_data.body_index),
+								// )
+								// if change {
+								// 	curr_cell_velocity.direction = ghost.direction
+								// }
 							}
 							break
 						}

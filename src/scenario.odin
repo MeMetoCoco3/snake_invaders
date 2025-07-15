@@ -22,7 +22,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 		Position{{SCREEN_WIDTH / 2, BORDER_SIZE / 2}, {BORDER_SIZE, SCREEN_WIDTH}},
 	)
 
-	append(&arquetype.colliders, Collider{{0, 0}, SCREEN_WIDTH, PLAYER_SIZE})
+	append(&arquetype.colliders, Collider{{0, 0}, SCREEN_WIDTH, PLAYER_SIZE, true})
 	append(&arquetype.sprites, Sprite{&atlas, Rect{{0, 96}, {32, 32}}, 90})
 
 	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
@@ -38,7 +38,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 	)
 	append(
 		&arquetype.colliders,
-		Collider{{SCREEN_WIDTH, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE},
+		Collider{{SCREEN_WIDTH, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE, true},
 	)
 	append(&arquetype.sprites, Sprite{&atlas, Rect{{0, 96}, {32, 32}}, 270})
 
@@ -50,7 +50,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 		&arquetype.positions,
 		Position{{BORDER_SIZE / 2, SCREEN_WIDTH / 2}, {BORDER_SIZE, SCREEN_HEIGHT}},
 	)
-	append(&arquetype.colliders, Collider{{0, 0}, PLAYER_SIZE, SCREEN_HEIGHT})
+	append(&arquetype.colliders, Collider{{0, 0}, PLAYER_SIZE, SCREEN_HEIGHT, true})
 	append(&arquetype.sprites, Sprite{&atlas, Rect{{0, 96}, {32, 32}}, 0})
 
 	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
@@ -62,7 +62,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 	)
 	append(
 		&arquetype.colliders,
-		Collider{{SCREEN_WIDTH - PLAYER_SIZE, 0}, PLAYER_SIZE, SCREEN_HEIGHT},
+		Collider{{SCREEN_WIDTH - PLAYER_SIZE, 0}, PLAYER_SIZE, SCREEN_HEIGHT, true},
 	)
 	append(
 		&arquetype.sprites,
@@ -78,7 +78,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 	append(&arquetype.positions, Position{{0, SCREEN_HEIGHT - PLAYER_SIZE}, {32, 32}})
 	append(
 		&arquetype.colliders,
-		Collider{{0, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE},
+		Collider{{0, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE, true},
 	)
 	append(
 		&arquetype.sprites,
@@ -95,7 +95,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 	append(&arquetype.positions, Position{{0, SCREEN_HEIGHT - PLAYER_SIZE}, {32, 32}})
 	append(
 		&arquetype.colliders,
-		Collider{{0, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE},
+		Collider{{0, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE, true},
 	)
 	append(
 		&arquetype.sprites,
@@ -108,7 +108,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 	append(&arquetype.positions, Position{{0, SCREEN_HEIGHT - PLAYER_SIZE}, {32, 32}})
 	append(
 		&arquetype.colliders,
-		Collider{{0, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE},
+		Collider{{0, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE, true},
 	)
 	append(
 		&arquetype.sprites,
@@ -127,7 +127,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 	append(&arquetype.positions, Position{{0, SCREEN_HEIGHT - PLAYER_SIZE}, {32, 32}})
 	append(
 		&arquetype.colliders,
-		Collider{{0, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE},
+		Collider{{0, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE, true},
 	)
 	append(
 		&arquetype.sprites,

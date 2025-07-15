@@ -33,6 +33,7 @@ Body :: struct {
 	num_cells:       i8,
 	ghost_pieces:    ^Ringuffer_t(cell_ghost_t),
 	growing:         bool,
+	ghost_colliders: ^[dynamic]Collider,
 }
 
 GAME_STATE :: enum {
