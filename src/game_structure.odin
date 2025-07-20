@@ -413,6 +413,12 @@ load_scene :: proc(game: ^Game, scene: SCENES) {
 	set_body_0(game)
 	set_directions_0(game)
 
+
+	game.audio = audio_system_t {
+		fx       = make([dynamic]^rl.Sound, 0, 20),
+		bg_music = bg_music,
+	}
+
 	game.state = .PLAY
 	game.current_scene = scene
 	game.count_candies = 0

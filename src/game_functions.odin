@@ -109,8 +109,7 @@ InputSystem :: proc(game: ^Game) {
 InputSystemPause :: proc(game: ^Game) {
 	if (rl.IsKeyPressed(.ENTER)) {
 		if game.state == .DEAD {
-			AFTER_DEATH = true
-			vmem.arena_destroy(game.arena)
+			vmem.arena_free_all(game.arena)
 			load_scene(game, game.current_scene)
 		}
 		game.state = .PLAY
@@ -452,7 +451,7 @@ draw_game :: proc(game: ^Game) {
 	draw_ghost_cells(game.player_body.ghost_pieces)
 	RenderingSystem(game)
 	when DEBUG_COLISION {
-		DrawCollidersSystem(&game)
+		DrawCollidersSystem(game)
 	}
 
 	rl.ClearBackground(rl.BLACK)

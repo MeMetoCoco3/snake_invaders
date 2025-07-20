@@ -84,16 +84,12 @@ main :: proc() {
 		audio = audio_system_t{fx = make([dynamic]^rl.Sound, 0, 20), bg_music = bg_music},
 		arena = &arena,
 	}
-
-
 	load_scene(&game, .ONE)
-	player_arquetype, ok := game.world.archetypes[player_mask]
 
 	for !rl.WindowShouldClose() {
 		rl.UpdateMusicStream(game.audio.bg_music)
 		switch game.state {
 		case .PLAY:
-			fmt.println(game.candy_respawn_time)
 			clear_dead(&game)
 			update(&game)
 
@@ -108,6 +104,7 @@ main :: proc() {
 
 		case .PAUSE:
 			InputSystemPause(&game)
+
 			rl.BeginDrawing()
 			rl.DrawText("PAUSED GAME", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 30, rl.RED)
 			rl.ClearBackground(rl.BLACK)
@@ -116,6 +113,7 @@ main :: proc() {
 			clean_up(&game)
 		case .DEAD:
 			InputSystemPause(&game)
+
 			rl.BeginDrawing()
 			rl.DrawText("WANT TO PLAY AGAIN?", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 30, rl.RED)
 			rl.ClearBackground(rl.BLACK)
