@@ -24,7 +24,7 @@ Game :: struct {
 	directions:         ^Ringuffer_t(Vector2),
 	audio:              audio_system_t,
 	world:              ^World,
-	arena:              ^mem.Allocator,
+	arena:              ^vmem.Arena,
 }
 
 Body :: struct {
@@ -392,20 +392,31 @@ unload_sounds :: proc() {
 	}
 }
 
-load_scene :: proc(game: ^Game, scene: SCENES, arena: ^mem.Allocator) {
-	add_player(game.world)
-	raw, _ := mem.alloc(size_of(Ringuffer_t(cell_ghost_t)), allocator = arena^)
+set_body_0 :: proc(game: ^Game) {
+	raw, _ := mem.alloc(size_of(Ringuffer_t(cell_ghost_t)))
 	rb_ghost := cast(^Ringuffer_t(cell_ghost_t))raw
-	rb_ghost.values = make([]cell_ghost_t, MAX_RINGBUFFER_VALUES, arena^)
+	rb_ghost.values = make([]cell_ghost_t, MAX_RINGBUFFER_VALUES)
 	game.player_body.ghost_pieces = rb_ghost
+}
 
-	raw, _ = mem.alloc(size_of(Ringuffer_t(Vector2)), allocator = arena^)
+set_directions_0 :: proc(game: ^Game) {
+	raw, _ := mem.alloc(size_of(Ringuffer_t(Vector2)))
 	rb_dir := cast(^Ringuffer_t(Vector2))raw
-	rb_dir.values = make([]Vector2, MAX_RINGBUFFER_VALUES, arena^)
+	rb_dir.values = make([]Vector2, MAX_RINGBUFFER_VALUES)
 	game.directions = rb_dir
+
+}
+
+load_scene :: proc(game: ^Game, scene: SCENES) {
+	game.world = new_world()
+	add_player(game)
+	set_body_0(game)
+	set_directions_0(game)
 
 	game.state = .PLAY
 	game.current_scene = scene
+	game.count_candies = 0
+	game.count_enemies = 0
 	game.candy_respawn_time = 0
 	game.enemy_respawn_time = 0
 	load_scenario(game, scene)

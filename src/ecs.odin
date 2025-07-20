@@ -1,7 +1,7 @@
 package main
 
+import "core:fmt"
 import rl "vendor:raylib"
-
 
 Archetype :: struct {
 	component_mask: COMPONENT_ID,
@@ -48,7 +48,6 @@ add_entity :: proc(world: ^World, mask: COMPONENT_ID) -> u32 {
 	return entity_id
 }
 
-import "core:fmt"
 kill_entity :: proc(archetype: ^Archetype, id: u32) {
 	for entity_id, i in archetype.entities_id {
 		if entity_id == id {
@@ -74,7 +73,7 @@ alloc_archetype :: proc(mask: COMPONENT_ID) -> ^Archetype {
 
 
 query_archetype :: proc(world: ^World, mask: COMPONENT_ID) -> ([dynamic]^Archetype, bool) {
-	archetypes := make([dynamic]^Archetype)
+	archetypes := make([dynamic]^Archetype) //  TODO: IM NOT FREEING THIS!!
 	empty := true
 	for k, v in world.archetypes {
 		if (k & mask) == mask {

@@ -186,32 +186,31 @@ clean_up :: proc(game: ^Game) {
 free_all_entities :: proc(game: ^Game) {
 	for _, archetype in game.world.archetypes {
 		mask := archetype.component_mask
+		clear(&archetype.entities_id)
 		for component in COMPONENT_ID {
 			if (component & mask) == component {
 				switch component {
 				case .POSITION:
-					delete(archetype.positions)
+					clear(&archetype.positions)
 				case .VELOCITY:
-					delete(archetype.velocities)
+					clear(&archetype.velocities)
 				case .SPRITE:
-					delete(archetype.sprites)
+					clear(&archetype.sprites)
 				case .ANIMATION:
-					delete(archetype.animations)
+					clear(&archetype.animations)
 				case .DATA:
-					delete(archetype.data)
+					clear(&archetype.data)
 				case .COLLIDER:
-					delete(archetype.colliders)
+					clear(&archetype.colliders)
 				case .IA:
-					delete(archetype.ias)
+					clear(&archetype.ias)
 				case .PLAYER_DATA:
-					delete(archetype.players_data)
+					clear(&archetype.players_data)
 				case .COUNT:
 				}
 			}
 		}
 	}
-
-
 }
 
 get_rec_from_cell :: proc(a, b, c, d: int) -> rl.Rectangle {

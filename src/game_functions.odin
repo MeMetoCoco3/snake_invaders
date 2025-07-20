@@ -2,12 +2,11 @@ package main
 import "core:fmt"
 import "core:math"
 import "core:math/rand"
+import vmem "core:mem/virtual"
 import rl "vendor:raylib"
-
 ///////////
 // INPUT //
 ///////////
-
 
 collider_body := [2]Collider {
 	{position = {0, 0}, w = PLAYER_SIZE, h = BODY_WIDTH},
@@ -15,16 +14,6 @@ collider_body := [2]Collider {
 }
 
 InputSystem :: proc(game: ^Game) {
-
-	if rl.IsKeyPressed(.TAB) do print_ringbuffer(game.directions)
-	if rl.IsMouseButtonPressed(.LEFT) {
-		archetype := game.world.archetypes[ghost_mask]
-		for i in 0 ..< len(archetype.entities_id) {
-			fmt.println(archetype.colliders[i])
-		}
-	}
-
-
 	player_velocity := &game.world.archetypes[player_mask].velocities[0]
 	player_data := &game.world.archetypes[player_mask].players_data[0]
 	player_position := &game.world.archetypes[player_mask].positions[0]
@@ -57,9 +46,7 @@ InputSystem :: proc(game: ^Game) {
 	}
 
 	body := &game.player_body
-
 	if rl.IsKeyDown(.Z) && body.num_cells > 0 && player_data.next_bullet_size <= 3 {
-
 		last_cell_pos, last_cell_velocity, last_cell_data, ok := get_last_cell(game)
 		last_cell_pos.size = math.lerp(last_cell_pos.size, f32(0.0), f32(SMOOTHING / 2))
 
@@ -119,11 +106,12 @@ InputSystem :: proc(game: ^Game) {
 	}
 }
 
-get_input_pause :: proc(game: ^Game) {
+InputSystemPause :: proc(game: ^Game) {
 	if (rl.IsKeyPressed(.ENTER)) {
 		if game.state == .DEAD {
-			free_all_entities(game)
-			load_scene(game, game.current_scene, game.arena)
+			AFTER_DEATH = true
+			vmem.arena_destroy(game.arena)
+			load_scene(game, game.current_scene)
 		}
 		game.state = .PLAY
 		rl.ResumeMusicStream(game.audio.bg_music)
@@ -164,7 +152,6 @@ clear_dead :: proc(game: ^Game) {
 
 	for archetype in archetypes {
 		data := archetype.data
-
 		for i := 0; i < len(archetype.entities_id); {
 			if data[i].state == .DEAD {
 				unordered_remove(&archetype.entities_id, i)
@@ -203,8 +190,8 @@ clear_dead :: proc(game: ^Game) {
 
 update_scene :: proc(game: ^Game) {
 	if game.candy_respawn_time >= CANDY_RESPAWN_TIME {
-		game.candy_respawn_time = 0
 		if game.count_candies < MAX_NUM_CANDIES {
+			game.candy_respawn_time = 0
 			spawn_candy(game)
 		}
 	}
@@ -464,6 +451,11 @@ draw_game :: proc(game: ^Game) {
 	draw_body(&game.player_body)
 	draw_ghost_cells(game.player_body.ghost_pieces)
 	RenderingSystem(game)
+	when DEBUG_COLISION {
+		DrawCollidersSystem(&game)
+	}
+
+	rl.ClearBackground(rl.BLACK)
 }
 
 draw_body :: proc(body: ^Body) {

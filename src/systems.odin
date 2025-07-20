@@ -160,6 +160,7 @@ CollisionSystem :: proc(game: ^Game) {
 							dataB.state = .DEAD
 							add_sound(game, &sound_bank[FX.FX_EAT])
 							game.player_data.cells_to_grow += 1
+							game.count_candies -= 1
 						}
 
 					case .STATIC:
@@ -387,16 +388,6 @@ spawn_ghost_cell :: proc(game: ^Game, head_pos, from_dir: Vector2, rotation: f32
 	add_ghost_body_index(game.world)
 
 	index := len(game.world.archetypes[ghost_mask].entities_id) - 1
-
-
-	for i in 0 ..< len(archetype.entities_id) {
-		fmt.printfln(
-			"INDEX: %v, ENTITY ID %v, body_index %v",
-			i,
-			archetype.entities_id[i],
-			archetype.players_data[i].body_index,
-		)
-	}
 }
 
 IASystem :: proc(game: ^Game) {

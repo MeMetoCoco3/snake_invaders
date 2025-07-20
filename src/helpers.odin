@@ -18,7 +18,7 @@ get_logger :: proc() -> log.Logger {
 	logh, logh_err := os.open("log.txt", (os.O_CREATE | os.O_TRUNC | os.O_RDWR), mode)
 
 	if logh_err == os.ERROR_NONE {
-		os.stdout = logh
+		// os.stdout = logh
 		os.stderr = logh
 	}
 
