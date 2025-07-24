@@ -50,6 +50,11 @@ NUM_ENTITIES :: 1000
 player_mask := (COMPONENT_ID.POSITION | .VELOCITY | .ANIMATION | .DATA | .COLLIDER | .PLAYER_DATA)
 body_mask := (COMPONENT_ID.VELOCITY | .SPRITE | .POSITION | .PLAYER_DATA | .DATA | .COLLIDER)
 ghost_mask := (COMPONENT_ID.POSITION | .DATA | .COLLIDER | .PLAYER_DATA)
+candy_mask := (COMPONENT_ID.POSITION | .ANIMATION | .COLLIDER | .DATA)
+enemy_mask := (COMPONENT_ID.POSITION | .VELOCITY | .ANIMATION | .COLLIDER | .DATA | .IA)
+bullet_mask := (COMPONENT_ID.POSITION | .VELOCITY | .ANIMATION | .COLLIDER | .DATA)
+mask_static := COMPONENT_ID.COLLIDER | .SPRITE | .DATA | .POSITION
+
 atlas: rl.Texture2D
 tx_candy: rl.Texture2D
 
@@ -81,7 +86,6 @@ main :: proc() {
 
 
 	game := Game {
-		audio = audio_system_t{fx = make([dynamic]^rl.Sound, 0, 20), bg_music = bg_music},
 		arena = &arena,
 	}
 	load_scene(&game, .ONE)
@@ -125,44 +129,39 @@ main :: proc() {
 
 add_player :: proc(game: ^Game) {
 	world := game.world
-	id := add_entity(world, player_mask)
-
-	player_arquetype := world.archetypes[player_mask]
-	append(
-		&player_arquetype.players_data,
-		PlayerData {
-			.NORMAL,
-			20,
-			Vector2{0, 0},
-			Vector2{0, 0},
-			true,
-			RECOVER_DASH_TIME,
-			RECOVER_DMG_TIME,
-			MAX_HEALTH,
-			0,
-			false,
-			false,
-			0,
-			0,
-			PLAYER_SIZE,
-			0,
+	id := add_entity(
+		world,
+		player_mask,
+		[]Component {
+			PlayerData {
+				.NORMAL,
+				20,
+				Vector2{0, 0},
+				Vector2{0, 0},
+				true,
+				RECOVER_DASH_TIME,
+				RECOVER_DMG_TIME,
+				MAX_HEALTH,
+				0,
+				false,
+				false,
+				0,
+				0,
+				PLAYER_SIZE,
+				0,
+			},
+			Position{Vector2{320, 320}, {PLAYER_SIZE, PLAYER_SIZE}},
+			Velocity{{0, 0}, PLAYER_SPEED},
+			animation_bank[ANIMATION.PLAYER],
+			Data{.PLAYER, .ALIVE, .GOOD},
+			Collider{{320, 320}, PLAYER_SIZE, PLAYER_SIZE, true},
 		},
 	)
 
-	player_position := Position{Vector2{320, 320}, {PLAYER_SIZE, PLAYER_SIZE}}
-
-	append(&player_arquetype.positions, player_position)
-	append(&player_arquetype.velocities, Velocity{{0, 0}, PLAYER_SPEED})
-	append(&player_arquetype.animations, animation_bank[ANIMATION.PLAYER])
-
-	append(&player_arquetype.data, Data{.PLAYER, .ALIVE, .GOOD})
-	append(
-		&player_arquetype.colliders,
-		Collider{player_position.pos, PLAYER_SIZE, PLAYER_SIZE, true},
-	)
+	arquetype := game.world.archetypes[player_mask]
 
 	game.player_body = Body{}
-	game.player_position = &player_arquetype.positions[0]
-	game.player_velocity = &player_arquetype.velocities[0]
-	game.player_data = &player_arquetype.players_data[0]
+	game.player_position = &arquetype.positions[0]
+	game.player_velocity = &arquetype.velocities[0]
+	game.player_data = &arquetype.players_data[0]
 }

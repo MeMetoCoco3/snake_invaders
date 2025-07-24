@@ -34,7 +34,7 @@ new_world :: proc() -> ^World {
 }
 
 
-add_entity :: proc(world: ^World, mask: COMPONENT_ID) -> u32 {
+add_entity :: proc(world: ^World, mask: COMPONENT_ID, components: []Component) -> u32 {
 	arch := world.archetypes[mask]
 	if arch == nil {
 		arch = alloc_archetype(mask)
@@ -43,6 +43,8 @@ add_entity :: proc(world: ^World, mask: COMPONENT_ID) -> u32 {
 
 	entity_id := world.entity_count
 	world.entity_count += 1
+
+	add_components(arch, components)
 
 	append(&arch.entities_id, entity_id)
 	return entity_id

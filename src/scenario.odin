@@ -12,134 +12,98 @@ BORDER_SIZE :: 128
 load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 	world := game.world
 
-	mask := COMPONENT_ID.COLLIDER | .SPRITE | .DATA | .POSITION
-
-	id := add_entity(world, mask)
-	arquetype := world.archetypes[mask]
-
-	append(
-		&arquetype.positions,
-		Position{{SCREEN_WIDTH / 2, BORDER_SIZE / 2}, {BORDER_SIZE, SCREEN_WIDTH}},
-	)
-
-	append(&arquetype.colliders, Collider{{0, 0}, SCREEN_WIDTH, PLAYER_SIZE, true})
-	append(&arquetype.sprites, Sprite{&atlas, Rect{{0, 96}, {32, 32}}, 90})
-
-	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
-
-	id = add_entity(world, mask)
-
-	append(
-		&arquetype.positions,
-		Position {
-			{SCREEN_WIDTH / 2, SCREEN_HEIGHT - BORDER_SIZE / 2},
-			{BORDER_SIZE, SCREEN_HEIGHT},
+	id := add_entity(
+		world,
+		mask_static,
+		[]Component {
+			Position{{SCREEN_WIDTH / 2, BORDER_SIZE / 2}, {BORDER_SIZE, SCREEN_WIDTH}},
+			Collider{{0, 0}, SCREEN_WIDTH, PLAYER_SIZE, true},
+			Sprite{&atlas, Rect{{0, 96}, {32, 32}}, 90},
+			Data{.STATIC, .ALIVE, .NEUTRAL},
 		},
 	)
-	append(
-		&arquetype.colliders,
-		Collider{{SCREEN_WIDTH, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE, true},
+	arquetype := world.archetypes[mask_static]
+
+	id = add_entity(
+		world,
+		mask_static,
+		[]Component {
+			Position {
+				{SCREEN_WIDTH / 2, SCREEN_HEIGHT - BORDER_SIZE / 2},
+				{BORDER_SIZE, SCREEN_WIDTH},
+			},
+			Collider{{0, 0}, PLAYER_SIZE, SCREEN_HEIGHT, true},
+			Sprite{&atlas, Rect{{0, 96}, {32, 32}}, 270},
+			Data{.STATIC, .ALIVE, .NEUTRAL},
+		},
 	)
-	append(&arquetype.sprites, Sprite{&atlas, Rect{{0, 96}, {32, 32}}, 270})
 
-	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
-
-	id = add_entity(world, mask)
-
-	append(
-		&arquetype.positions,
-		Position{{BORDER_SIZE / 2, SCREEN_WIDTH / 2}, {BORDER_SIZE, SCREEN_HEIGHT}},
+	id = add_entity(
+		world,
+		mask_static,
+		[]Component {
+			Position{{BORDER_SIZE / 2, SCREEN_WIDTH / 2}, {BORDER_SIZE, SCREEN_HEIGHT}},
+			Collider{{0, 0}, PLAYER_SIZE, SCREEN_HEIGHT, true},
+			Sprite{&atlas, Rect{{0, 96}, {32, 32}}, 0},
+			Data{.STATIC, .ALIVE, .NEUTRAL},
+		},
 	)
-	append(&arquetype.colliders, Collider{{0, 0}, PLAYER_SIZE, SCREEN_HEIGHT, true})
-	append(&arquetype.sprites, Sprite{&atlas, Rect{{0, 96}, {32, 32}}, 0})
 
-	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
-
-	add_entity(world, mask)
-	append(
-		&arquetype.positions,
-		Position{{SCREEN_WIDTH - BORDER_SIZE / 2, SCREEN_WIDTH / 2}, {BORDER_SIZE, SCREEN_HEIGHT}},
+	id = add_entity(
+		world,
+		mask_static,
+		[]Component {
+			Position {
+				{SCREEN_WIDTH - BORDER_SIZE / 2, SCREEN_HEIGHT / 2},
+				{BORDER_SIZE, SCREEN_HEIGHT},
+			},
+			Collider{{0, 0}, PLAYER_SIZE, SCREEN_HEIGHT, true},
+			Sprite{&atlas, Rect{{0, 96}, {32, 32}}, 180},
+			Data{.STATIC, .ALIVE, .NEUTRAL},
+		},
 	)
-	append(
-		&arquetype.colliders,
-		Collider{{SCREEN_WIDTH - PLAYER_SIZE, 0}, PLAYER_SIZE, SCREEN_HEIGHT, true},
-	)
-	append(
-		&arquetype.sprites,
-		Sprite{&atlas, Rect{{0, 96}, {32, 32}}, 180},
-
-		// Sprite{&atlas, Rect{{0, 96}, {32, 32}}, Rect{{672 + 128 / 2, 800 / 2}, {128, 800}}, 180},
-	)
-	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
-
 
 	// CORNERS
-	id = add_entity(world, mask)
-	append(&arquetype.positions, Position{{0, SCREEN_HEIGHT - PLAYER_SIZE}, {32, 32}})
-	append(
-		&arquetype.colliders,
-		Collider{{0, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE, true},
-	)
-	append(
-		&arquetype.sprites,
-		Sprite {
-			&atlas,
-			Rect{{32, 96}, {32, 32}},
-			// Rect{{800 - 128 / 2, 0 + 128 / 2}, {128, 128}},
-			90,
+	id = add_entity(
+		world,
+		mask_static,
+		[]Component {
+			Position{{0, SCREEN_HEIGHT - PLAYER_SIZE}, {32, 32}},
+			Collider{{0, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE, true},
+			Sprite{&atlas, Rect{{32, 96}, {32, 32}}, 90},
+			Data{.STATIC, .ALIVE, .NEUTRAL},
 		},
 	)
-	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
-
-	id = add_entity(world, mask)
-	append(&arquetype.positions, Position{{0, SCREEN_HEIGHT - PLAYER_SIZE}, {32, 32}})
-	append(
-		&arquetype.colliders,
-		Collider{{0, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE, true},
-	)
-	append(
-		&arquetype.sprites,
-		Sprite{&atlas, Rect{{32, 96}, {32, 32}}, 0},
-		// Rect{{0 + 128 / 2, 0 + 128 / 2}, {128, 128}},
-	)
-	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
-
-	id = add_entity(world, mask)
-	append(&arquetype.positions, Position{{0, SCREEN_HEIGHT - PLAYER_SIZE}, {32, 32}})
-	append(
-		&arquetype.colliders,
-		Collider{{0, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE, true},
-	)
-	append(
-		&arquetype.sprites,
-		Sprite {
-			&atlas,
-			Rect{{32, 96}, {32, 32}},
-
-			// Rect{{800 - 128 / 2, 800 - 128 / 2}, {128, 128}},
-			180,
+	id = add_entity(
+		world,
+		mask_static,
+		[]Component {
+			Position{{0, SCREEN_HEIGHT - PLAYER_SIZE}, {32, 32}},
+			Collider{{0, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE, true},
+			Sprite{&atlas, Rect{{32, 96}, {32, 32}}, 0},
+			Data{.STATIC, .ALIVE, .NEUTRAL},
 		},
 	)
-	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
-
-
-	id = add_entity(world, mask)
-	append(&arquetype.positions, Position{{0, SCREEN_HEIGHT - PLAYER_SIZE}, {32, 32}})
-	append(
-		&arquetype.colliders,
-		Collider{{0, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE, true},
-	)
-	append(
-		&arquetype.sprites,
-		Sprite {
-			&atlas,
-			Rect{{32, 96}, {32, 32}},
-			// Rect{{0 + 128 / 2, 800 - 128 / 2}, {128, 128}},
-			270,
+	id = add_entity(
+		world,
+		mask_static,
+		[]Component {
+			Position{{0, SCREEN_HEIGHT - PLAYER_SIZE}, {32, 32}},
+			Collider{{0, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE, true},
+			Sprite{&atlas, Rect{{32, 96}, {32, 32}}, 0},
+			Data{.STATIC, .ALIVE, .NEUTRAL},
 		},
 	)
-	append(&arquetype.data, Data{.STATIC, .ALIVE, .NEUTRAL})
-
+	id = add_entity(
+		world,
+		mask_static,
+		[]Component {
+			Position{{0, SCREEN_HEIGHT - PLAYER_SIZE}, {32, 32}},
+			Collider{{0, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE, true},
+			Sprite{&atlas, Rect{{32, 96}, {32, 32}}, 270},
+			Data{.STATIC, .ALIVE, .NEUTRAL},
+		},
+	)
 
 	spawn_areas := make([]rl.Rectangle, NUM_RECTANGLES_ON_SCENE)
 	spawn_areas_slice := [?]rl.Rectangle {

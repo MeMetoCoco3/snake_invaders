@@ -224,37 +224,22 @@ get_last_cell :: proc(game: ^Game) -> (^Position, ^Velocity, ^PlayerData, bool) 
 grow_body :: proc(game: ^Game, body: ^Body, head_pos, head_dir: Vector2) {
 	if body.num_cells < MAX_NUM_BODY {
 
-		add_entity(game.world, body_mask)
-		archetype := game.world.archetypes[body_mask]
-		index := len(archetype.entities_id) - 1
-
-		append(&archetype.positions, Position{pos = head_pos, size = {PLAYER_SIZE, PLAYER_SIZE}})
-		append(&archetype.velocities, Velocity{direction = head_dir, speed = 0})
-		append(&archetype.sprites, sprite_bank[SPRITE.BODY_STRAIGHT])
-		append(&archetype.data, Data{kind = .BODY, state = .ALIVE, team = .GOOD})
-		append(
-			&archetype.players_data,
-			PlayerData{player_state = .NORMAL, count_turn_left = 0, body_index = -1},
+		add_entity(
+			game.world,
+			body_mask,
+			[]Component {
+				Position{pos = head_pos, size = {PLAYER_SIZE, PLAYER_SIZE}},
+				Velocity{direction = head_dir, speed = 0},
+				sprite_bank[SPRITE.BODY_STRAIGHT],
+				PlayerData{player_state = .NORMAL, count_turn_left = 0, body_index = -1},
+				Collider{position = head_pos, w = PLAYER_SIZE, h = PLAYER_SIZE},
+				Data{kind = .BODY, state = .ALIVE, team = .GOOD},
+			},
 		)
 
-		collider := Collider {
-			position = head_pos,
-			w        = PLAYER_SIZE,
-			h        = PLAYER_SIZE,
-		}
-		// if head_dir == {0, 1} || head_dir == {0, -1} {
-		//
-		// 	collider.h = PLAYER_SIZE
-		// 	collider.w = BODY_WIDTH
-		// 	collider.position.x += f32(PLAYER_SIZE / 2 - collider.w / 2)
-		// } else {
-		//
-		// 	collider.h = BODY_WIDTH
-		// 	collider.w = PLAYER_SIZE
-		// 	collider.position.y += f32(PLAYER_SIZE / 2 - collider.h / 2)
-		// }
 
-		append(&archetype.colliders, collider)
+		archetype := game.world.archetypes[body_mask]
+		index := len(archetype.entities_id) - 1
 
 		game.player_body.first_cell_pos = &archetype.positions[index]
 		game.player_body.first_cell_data = &archetype.players_data[index]
@@ -339,10 +324,9 @@ spawn_enemy :: proc(game: ^Game) {
 	x = math.floor(x / PLAYER_SIZE) * PLAYER_SIZE
 	y = math.floor(y / PLAYER_SIZE) * PLAYER_SIZE
 
-	mask := (COMPONENT_ID.POSITION | .VELOCITY | .ANIMATION | .COLLIDER | .DATA | .IA)
-	id := add_entity(game.world, mask)
+	id := add_entity(game.world, enemy_mask, []Component{})
 
-	archetype := game.world.archetypes[mask]
+	archetype := game.world.archetypes[enemy_mask]
 	enemy_position := Position{{x, y}, {ENEMY_SIZE, ENEMY_SIZE}}
 	append(&archetype.positions, enemy_position)
 	append(&archetype.velocities, Velocity{{0, 0}, ENEMY_SPEED})
@@ -372,36 +356,28 @@ spawn_bullet :: proc(
 	direction: Vector2,
 	team: ENTITY_TEAM,
 ) {
-	mask := (COMPONENT_ID.POSITION | .VELOCITY | .ANIMATION | .COLLIDER | .DATA)
-	id := add_entity(game.world, mask)
-
-	archetype := game.world.archetypes[mask]
-
-	append(&archetype.positions, Position{origin, {bullet_size, bullet_size}})
-	append(&archetype.velocities, Velocity{direction, speed})
 
 	anim :=
 		(team == .GOOD) ? animation_bank[ANIMATION.BULLET_G] : animation_bank[ANIMATION.BULLET_B]
-	// anim.angle = angle_from_vector(direction)
-	append(&archetype.animations, anim)
-	append(
-		&archetype.colliders,
-		Collider {
-			origin + EPSILON_COLISION,
-			int(bullet_size) - EPSILON_COLISION * 2,
-			int(bullet_size) - EPSILON_COLISION * 2,
-			true,
+	id := add_entity(
+		game.world,
+		bullet_mask,
+		[]Component {
+			Position{origin, {bullet_size, bullet_size}},
+			Velocity{direction, speed},
+			anim,
+			Collider {
+				origin + EPSILON_COLISION,
+				int(bullet_size) - EPSILON_COLISION * 2,
+				int(bullet_size) - EPSILON_COLISION * 2,
+				true,
+			},
+			Data{.BULLET, .ALIVE, team},
 		},
 	)
-	append(&archetype.data, Data{.BULLET, .ALIVE, team})
 }
 
 spawn_candy :: proc(game: ^Game) {
-	mask := (COMPONENT_ID.POSITION | .ANIMATION | .COLLIDER | .DATA)
-	id := add_entity(game.world, mask)
-
-	archetype := game.world.archetypes[mask]
-
 	pos_x := rand.int_max((SCREEN_WIDTH / (PLAYER_SIZE * 2)) - 1)
 	pos_x = int(
 		clamp(
@@ -420,24 +396,24 @@ spawn_candy :: proc(game: ^Game) {
 		),
 	)
 
-	append(
-		&archetype.positions,
-		Position{{f32(pos_x + 10), f32(pos_y + 10)}, {CANDY_SIZE, CANDY_SIZE}},
-	)
-	append(&archetype.data, Data{.CANDY, .ALIVE, .NEUTRAL})
-	append(&archetype.animations, animation_bank[ANIMATION.CANDY])
-
-	collider_position := Vector2{f32(pos_x + 10), f32(pos_y + 10)} + EPSILON_COLISION
-
-	append(
-		&archetype.colliders,
-		Collider {
-			collider_position,
-			CANDY_SIZE - EPSILON_COLISION * 2,
-			CANDY_SIZE - EPSILON_COLISION * 2,
-			true,
+	id := add_entity(
+		game.world,
+		candy_mask,
+		[]Component {
+			Position{{f32(pos_x + 10), f32(pos_y + 10)}, {CANDY_SIZE, CANDY_SIZE}},
+			Data{.CANDY, .ALIVE, .NEUTRAL},
+			animation_bank[ANIMATION.CANDY],
+			Collider {
+				Vector2{f32(pos_x + 10), f32(pos_y + 10)} + EPSILON_COLISION,
+				CANDY_SIZE - EPSILON_COLISION * 2,
+				CANDY_SIZE - EPSILON_COLISION * 2,
+				true,
+			},
 		},
 	)
+
+	archetype := game.world.archetypes[candy_mask]
+
 	game.count_candies += 1
 }
 

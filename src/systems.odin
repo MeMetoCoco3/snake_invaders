@@ -356,28 +356,22 @@ CollisionSystem :: proc(game: ^Game) {
 }
 
 spawn_ghost_cell :: proc(game: ^Game, head_pos, from_dir: Vector2, rotation: f32) {
-	entity_id := add_entity(game.world, ghost_mask)
+	entity_id := add_entity(
+		game.world,
+		ghost_mask,
+		[]Component {
+			Position{pos = head_pos, size = {PLAYER_SIZE, PLAYER_SIZE}},
+			Data{kind = .GHOST_PIECE, state = .ALIVE, team = .GOOD},
+			PlayerData{player_state = .NORMAL, count_turn_left = 0, body_index = -1},
+			Collider{position = head_pos, w = PLAYER_SIZE, h = PLAYER_SIZE, active = false},
+		},
+	)
+
 	archetype := game.world.archetypes[ghost_mask]
 
 	if game.player_body.ghost_colliders == nil {
 		game.player_body.ghost_colliders = &archetype.colliders
 	}
-
-	append(&archetype.positions, Position{pos = head_pos, size = {PLAYER_SIZE, PLAYER_SIZE}})
-	// append(&archetype.sprites, sprite_bank[SPRITE.BODY_STRAIGHT])
-	append(&archetype.data, Data{kind = .GHOST_PIECE, state = .ALIVE, team = .GOOD})
-	append(
-		&archetype.players_data,
-		PlayerData{player_state = .NORMAL, count_turn_left = 0, body_index = -1},
-	)
-
-	collider := Collider {
-		position = head_pos,
-		w        = PLAYER_SIZE,
-		h        = PLAYER_SIZE,
-		active   = false,
-	}
-	append(&archetype.colliders, collider)
 
 	put_cell(
 		game.player_body.ghost_pieces,
