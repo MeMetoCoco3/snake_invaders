@@ -128,8 +128,12 @@ InputSystemPause :: proc(game: ^Game) {
 update :: proc(game: ^Game) {
 	play_sound(game)
 	update_scene(game)
-	// TESTING(game)
-	if game.player_data.cells_to_grow > 0 {
+	fmt.println("DISTANCE  :", game.player_data.distance)
+	fmt.println("SINCE TURN:", game.player_data.time_since_turn)
+	if game.player_data.cells_to_grow > 0 &&
+	   game.player_data.distance >= PLAYER_SIZE &&
+	   !game.player_body.growing {
+		fmt.println("GONNA GROW")
 		game.player_data.cells_to_grow -= 1
 		grow_body(
 			game,
@@ -175,7 +179,6 @@ clear_dead :: proc(game: ^Game) {
 							unordered_remove(&archetype.players_data, i)
 						case .COUNT:
 						}
-
 					}
 				}
 			} else {

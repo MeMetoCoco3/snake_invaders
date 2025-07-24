@@ -22,6 +22,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 			Data{.STATIC, .ALIVE, .NEUTRAL},
 		},
 	)
+
 	arquetype := world.archetypes[mask_static]
 
 	id = add_entity(
@@ -32,7 +33,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 				{SCREEN_WIDTH / 2, SCREEN_HEIGHT - BORDER_SIZE / 2},
 				{BORDER_SIZE, SCREEN_WIDTH},
 			},
-			Collider{{0, 0}, PLAYER_SIZE, SCREEN_HEIGHT, true},
+			Collider{{SCREEN_WIDTH, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE, true},
 			Sprite{&atlas, Rect{{0, 96}, {32, 32}}, 270},
 			Data{.STATIC, .ALIVE, .NEUTRAL},
 		},
@@ -57,7 +58,7 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 				{SCREEN_WIDTH - BORDER_SIZE / 2, SCREEN_HEIGHT / 2},
 				{BORDER_SIZE, SCREEN_HEIGHT},
 			},
-			Collider{{0, 0}, PLAYER_SIZE, SCREEN_HEIGHT, true},
+			Collider{{SCREEN_WIDTH - PLAYER_SIZE, 0}, PLAYER_SIZE, SCREEN_HEIGHT, true},
 			Sprite{&atlas, Rect{{0, 96}, {32, 32}}, 180},
 			Data{.STATIC, .ALIVE, .NEUTRAL},
 		},
@@ -68,9 +69,19 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 		world,
 		mask_static,
 		[]Component {
-			Position{{0, SCREEN_HEIGHT - PLAYER_SIZE}, {32, 32}},
-			Collider{{0, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE, true},
+			Position{{128 / 2, 128 / 2}, {128, 128}},
+			Sprite{&atlas, Rect{{32, 96}, {32, 32}}, 0},
+			Collider{},
+			Data{.STATIC, .ALIVE, .NEUTRAL},
+		},
+	)
+	id = add_entity(
+		world,
+		mask_static,
+		[]Component {
+			Position{{SCREEN_WIDTH - 128 / 2, 128 / 2}, {128, 128}},
 			Sprite{&atlas, Rect{{32, 96}, {32, 32}}, 90},
+			Collider{},
 			Data{.STATIC, .ALIVE, .NEUTRAL},
 		},
 	)
@@ -78,9 +89,9 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 		world,
 		mask_static,
 		[]Component {
-			Position{{0, SCREEN_HEIGHT - PLAYER_SIZE}, {32, 32}},
-			Collider{{0, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE, true},
-			Sprite{&atlas, Rect{{32, 96}, {32, 32}}, 0},
+			Position{{SCREEN_WIDTH - 128 / 2, SCREEN_HEIGHT - 128 / 2}, {128, 128}},
+			Sprite{&atlas, Rect{{32, 96}, {32, 32}}, 180},
+			Collider{},
 			Data{.STATIC, .ALIVE, .NEUTRAL},
 		},
 	)
@@ -88,19 +99,9 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 		world,
 		mask_static,
 		[]Component {
-			Position{{0, SCREEN_HEIGHT - PLAYER_SIZE}, {32, 32}},
-			Collider{{0, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE, true},
-			Sprite{&atlas, Rect{{32, 96}, {32, 32}}, 0},
-			Data{.STATIC, .ALIVE, .NEUTRAL},
-		},
-	)
-	id = add_entity(
-		world,
-		mask_static,
-		[]Component {
-			Position{{0, SCREEN_HEIGHT - PLAYER_SIZE}, {32, 32}},
-			Collider{{0, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE, true},
+			Position{{128 / 2, SCREEN_HEIGHT - 128 / 2}, {128, 128}},
 			Sprite{&atlas, Rect{{32, 96}, {32, 32}}, 270},
+			Collider{},
 			Data{.STATIC, .ALIVE, .NEUTRAL},
 		},
 	)

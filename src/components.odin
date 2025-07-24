@@ -158,7 +158,7 @@ PlayerData :: struct {
 	gona_dash:        bool,
 	cells_to_grow:    int,
 	body_index:       int,
-	time_since_turn:  f32,
+	time_since_turn:  int,
 	count_turn_left:  int,
 }
 
