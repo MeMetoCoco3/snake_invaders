@@ -225,8 +225,8 @@ get_last_cell :: proc(game: ^Game) -> (^Position, ^Velocity, ^PlayerData, bool) 
 }
 
 grow_body :: proc(game: ^Game, body: ^Body, head_pos, head_dir: Vector2) {
-	if body.num_cells < MAX_NUM_BODY {
-
+	switch {
+	case body.num_cells < MAX_NUM_BODY:
 		add_entity(
 			game.world,
 			body_mask,
@@ -251,7 +251,7 @@ grow_body :: proc(game: ^Game, body: ^Body, head_pos, head_dir: Vector2) {
 		add_body_index(game.world)
 		body.growing = true
 		body.num_cells += 1
-	} else {
+	case:
 		fmt.println("WE DO NOT GROW!")
 	}
 }

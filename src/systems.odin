@@ -482,39 +482,39 @@ VelocitySystem :: proc(game: ^Game) {
 		velocities := arquetype.velocities
 		positions := arquetype.positions
 		colliders := arquetype.colliders
-		is_player := false
+		// is_player := false
 		mask := arquetype.component_mask
-		if (mask & COMPONENT_ID.PLAYER_DATA) == .PLAYER_DATA {
-			is_player = true
-		}
+		// if (mask & COMPONENT_ID.PLAYER_DATA) == .PLAYER_DATA {
+		// 	is_player = true
+		// }
 
 		for i in 0 ..< len(arquetype.entities_id) {
-			is_body := arquetype.data[i].kind == .BODY
-			if !is_body {
+
+			switch arquetype.data[i].kind {
+			case .PLAYER:
 				vector_move := (velocities[i].direction * velocities[i].speed)
-				if is_player {
-					player_data := &arquetype.players_data[i]
-					if !player_data.can_dash {
-						player_data.time_on_dash += 1
+				player_data := &arquetype.players_data[i]
+				if !player_data.can_dash {
+					player_data.time_on_dash += 1
 
-						if player_data.time_on_dash >= RECOVER_DASH_TIME {
-							player_data.can_dash = true
-						}
+					if player_data.time_on_dash >= RECOVER_DASH_TIME {
+						player_data.can_dash = true
 					}
-
-					if player_data.time_on_dash >= DASH_DURATION {
-						velocities[i].speed = PLAYER_SPEED
-						vector_move = (velocities[i].direction * velocities[i].speed)
-						player_data.player_state = .NORMAL
-					}
-
-					head_data.distance += abs(vector_move.x + vector_move.y)
-					head_data.time_since_turn += int(abs(vector_move.x + vector_move.y))
 				}
+				if player_data.time_on_dash >= DASH_DURATION {
+					velocities[i].speed = PLAYER_SPEED
+					vector_move = (velocities[i].direction * velocities[i].speed)
+					player_data.player_state = .NORMAL
+				}
+
+				head_data.distance += abs(vector_move.x + vector_move.y)
+				head_data.time_since_turn += int(abs(vector_move.x + vector_move.y))
+
 				positions[i].pos += vector_move
 				colliders[i].position += vector_move
-			} else if is_body {
+			case .BODY:
 				curr_cell_pos := &positions[i]
+
 				curr_cell_data := &arquetype.players_data[i]
 				curr_cell_velocity := &velocities[i]
 				if head_direction != {0, 0} && !body.growing {
@@ -539,10 +539,8 @@ VelocitySystem :: proc(game: ^Game) {
 						)
 					}
 
-
-					/// START MOVEMENT
-
 					remaining_movement := head_velocity.speed
+					last_remaining_movement := remaining_movement
 					for remaining_movement > 0 {
 						direction := get_cardinal_direction(
 							curr_cell_pos.pos,
@@ -558,16 +556,14 @@ VelocitySystem :: proc(game: ^Game) {
 							remaining_movement -= distance_to_follow
 
 							colliders[i].position = curr_cell_pos.pos
-							// colliders[i].position += direction * remaining_movement
 
 							if curr_cell_data.count_turn_left > 0 {
 								curr_cell_data.count_turn_left -= 1
 							}
-
-							if curr_cell_data.body_index == int(game.player_body.num_cells - 1) &&
-							   ghost_index_being_followed >= 0 {
+							is_tail :=
+								curr_cell_data.body_index == int(game.player_body.num_cells - 1)
+							if is_tail && ghost_index_being_followed >= 0 {
 								dealing_ghost_piece(game, body, i8(curr_cell_data.body_index))
-
 							}
 
 							if curr_cell_data.count_turn_left == 0 {
@@ -579,6 +575,9 @@ VelocitySystem :: proc(game: ^Game) {
 									Collider{},
 								}
 								ghost_index_being_followed = -1
+								if piece_to_follow.position == curr_cell_pos.pos {
+									break
+								}
 							} else {
 								ghost_index_being_followed =
 									(MAX_RINGBUFFER_VALUES +
@@ -615,88 +614,173 @@ VelocitySystem :: proc(game: ^Game) {
 							break
 						}
 					}
-
-
-					// BEGIN MOVEMENT
-					// remaining_movement := head_velocity.speed
-					// for remaining_movement > 0 {
-					// 	direction := get_cardinal_direction(
-					// 		curr_cell_pos.pos,
-					// 		piece_to_follow.position,
-					// 	)
-					// 	distance_to_follow := vec2_distance(
-					// 		curr_cell_pos.pos,
-					// 		piece_to_follow.position,
-					// 	)
-					// 	if distance_to_follow <= remaining_movement {
-					// 		curr_cell_pos.pos = piece_to_follow.position
-					// 		curr_cell_velocity.direction = piece_to_follow.direction
-					// 		remaining_movement -= distance_to_follow
-					//
-					// 		colliders[i].position =
-					// 			curr_cell_pos.pos + direction * remaining_movement
-					// 		colliders[i].position += direction * remaining_movement
-					//
-					// 		if curr_cell_data.count_turn_left > 0 {
-					// 			curr_cell_data.count_turn_left -= 1
-					// 		}
-					//
-					// 		if curr_cell_data.body_index == int(game.player_body.num_cells - 1) &&
-					// 		   ghost_index_being_followed >= 0 {
-					// 			dealing_ghost_piece(game, body, i8(curr_cell_data.body_index))
-					//
-					// 		}
-					//
-					// 		if curr_cell_data.count_turn_left == 0 {
-					// 			piece_to_follow = cell_t {
-					// 				head_position.pos,
-					// 				head_direction,
-					// 				0,
-					// 				PLAYER_SIZE,
-					// 				Collider{},
-					// 			}
-					// 			ghost_index_being_followed = -1
-					// 		} else {
-					// 			ghost_index_being_followed =
-					// 				(MAX_RINGBUFFER_VALUES +
-					// 					int(body.ghost_pieces.tail) -
-					// 					curr_cell_data.count_turn_left) %
-					// 				MAX_RINGBUFFER_VALUES
-					// 			piece_to_follow = ghost_to_cell(
-					// 				body.ghost_pieces.values[ghost_index_being_followed],
-					// 			)
-					// 		}
-					// 	} else {
-					// 		curr_cell_velocity.direction = direction
-					// 		curr_cell_pos.pos += direction * remaining_movement
-					//
-					// 		collider := &colliders[i]
-					// 		collider.position = curr_cell_pos.pos + direction * remaining_movement
-					//
-					// 		if direction == {0, 1} || direction == {0, -1} {
-					// 			collider.h = PLAYER_SIZE
-					// 			collider.w = BODY_WIDTH
-					// 			collider.position.x += f32(PLAYER_SIZE / 2 - collider.w / 2)
-					// 		} else {
-					// 			collider.h = BODY_WIDTH
-					// 			collider.w = PLAYER_SIZE
-					// 			collider.position.y += f32(PLAYER_SIZE / 2 - collider.h / 2)
-					// 		}
-					//
-					//
-					// 		if curr_cell_data.body_index == int(game.player_body.num_cells - 1) &&
-					// 		   ghost_index_being_followed >= 0 {
-					// 			dealing_ghost_piece(game, body, i8(curr_cell_data.body_index))
-					//
-					// 		}
-					// 		break
-					// 	}
-					// }
 				}
+
+			case .BULLET, .ENEMY:
+				vector_move := (velocities[i].direction * velocities[i].speed)
+				positions[i].pos += vector_move
+				colliders[i].position += vector_move
+				continue
+			case .CANDY, .STATIC, .GHOST_PIECE:
+				continue
 			}
 		}
+		// 			/// START MOVEMENT
+		//
+		// 	remaining_movement := head_velocity.speed
+		// 	for remaining_movement > 0 {
+		// 		direction := get_cardinal_direction(
+		// 			curr_cell_pos.pos,
+		// 			piece_to_follow.position,
+		// 		)
+		// 		distance_to_follow := vec2_distance(
+		// 			curr_cell_pos.pos,
+		// 			piece_to_follow.position,
+		// 		)
+		// 		if distance_to_follow <= remaining_movement {
+		// 			curr_cell_pos.pos = piece_to_follow.position
+		// 			curr_cell_velocity.direction = piece_to_follow.direction
+		// 			remaining_movement -= distance_to_follow
+		//
+		// 			colliders[i].position = curr_cell_pos.pos
+		// 			// colliders[i].position += direction * remaining_movement
+		//
+		// 			if curr_cell_data.count_turn_left > 0 {
+		// 				curr_cell_data.count_turn_left -= 1
+		// 			}
+		//
+		// 			if curr_cell_data.body_index == int(game.player_body.num_cells - 1) &&
+		// 			   ghost_index_being_followed >= 0 {
+		// 				dealing_ghost_piece(game, body, i8(curr_cell_data.body_index))
+		//
+		// 			}
+		//
+		// 			if curr_cell_data.count_turn_left == 0 {
+		// 				piece_to_follow = cell_t {
+		// 					head_position.pos,
+		// 					head_direction,
+		// 					0,
+		// 					PLAYER_SIZE,
+		// 					Collider{},
+		// 				}
+		// 				ghost_index_being_followed = -1
+		// 			} else {
+		// 				ghost_index_being_followed =
+		// 					(MAX_RINGBUFFER_VALUES +
+		// 						int(body.ghost_pieces.tail) -
+		// 						curr_cell_data.count_turn_left) %
+		// 					MAX_RINGBUFFER_VALUES
+		// 				piece_to_follow = ghost_to_cell(
+		// 					body.ghost_pieces.values[ghost_index_being_followed],
+		// 				)
+		// 			}
+		// 		} else {
+		// 			curr_cell_velocity.direction = direction
+		// 			curr_cell_pos.pos += direction * remaining_movement
+		//
+		// 			collider := &colliders[i]
+		// 			collider.position = curr_cell_pos.pos + direction * remaining_movement
+		//
+		// 			if direction == {0, 1} || direction == {0, -1} {
+		// 				collider.h = PLAYER_SIZE
+		// 				collider.w = BODY_WIDTH
+		// 				collider.position.x += f32(PLAYER_SIZE / 2 - collider.w / 2)
+		// 			} else {
+		// 				collider.h = BODY_WIDTH
+		// 				collider.w = PLAYER_SIZE
+		// 				collider.position.y += f32(PLAYER_SIZE / 2 - collider.h / 2)
+		// 			}
+		//
+		//
+		// 			if curr_cell_data.body_index == int(game.player_body.num_cells - 1) &&
+		// 			   ghost_index_being_followed >= 0 {
+		// 				dealing_ghost_piece(game, body, i8(curr_cell_data.body_index))
+		//
+		// 			}
+		// 			break
+		// 		}
+		// 	}
+		//
+		//
+		// 	// BEGIN MOVEMENT
+		// 	// remaining_movement := head_velocity.speed
+		// 	// for remaining_movement > 0 {
+		// 	// 	direction := get_cardinal_direction(
+		// 	// 		curr_cell_pos.pos,
+		// 	// 		piece_to_follow.position,
+		// 	// 	)
+		// 	// 	distance_to_follow := vec2_distance(
+		// 	// 		curr_cell_pos.pos,
+		// 	// 		piece_to_follow.position,
+		// 	// 	)
+		// 	// 	if distance_to_follow <= remaining_movement {
+		// 	// 		curr_cell_pos.pos = piece_to_follow.position
+		// 	// 		curr_cell_velocity.direction = piece_to_follow.direction
+		// 	// 		remaining_movement -= distance_to_follow
+		// 	//
+		// 	// 		colliders[i].position =
+		// 	// 			curr_cell_pos.pos + direction * remaining_movement
+		// 	// 		colliders[i].position += direction * remaining_movement
+		// 	//
+		// 	// 		if curr_cell_data.count_turn_left > 0 {
+		// 	// 			curr_cell_data.count_turn_left -= 1
+		// 	// 		}
+		// 	//
+		// 	// 		if curr_cell_data.body_index == int(game.player_body.num_cells - 1) &&
+		// 	// 		   ghost_index_being_followed >= 0 {
+		// 	// 			dealing_ghost_piece(game, body, i8(curr_cell_data.body_index))
+		// 	//
+		// 	// 		}
+		// 	//
+		// 	// 		if curr_cell_data.count_turn_left == 0 {
+		// 	// 			piece_to_follow = cell_t {
+		// 	// 				head_position.pos,
+		// 	// 				head_direction,
+		// 	// 				0,
+		// 	// 				PLAYER_SIZE,
+		// 	// 				Collider{},
+		// 	// 			}
+		// 	// 			ghost_index_being_followed = -1
+		// 	// 		} else {
+		// 	// 			ghost_index_being_followed =
+		// 	// 				(MAX_RINGBUFFER_VALUES +
+		// 	// 					int(body.ghost_pieces.tail) -
+		// 	// 					curr_cell_data.count_turn_left) %
+		// 	// 				MAX_RINGBUFFER_VALUES
+		// 	// 			piece_to_follow = ghost_to_cell(
+		// 	// 				body.ghost_pieces.values[ghost_index_being_followed],
+		// 	// 			)
+		// 	// 		}
+		// 	// 	} else {
+		// 	// 		curr_cell_velocity.direction = direction
+		// 	// 		curr_cell_pos.pos += direction * remaining_movement
+		// 	//
+		// 	// 		collider := &colliders[i]
+		// 	// 		collider.position = curr_cell_pos.pos + direction * remaining_movement
+		// 	//
+		// 	// 		if direction == {0, 1} || direction == {0, -1} {
+		// 	// 			collider.h = PLAYER_SIZE
+		// 	// 			collider.w = BODY_WIDTH
+		// 	// 			collider.position.x += f32(PLAYER_SIZE / 2 - collider.w / 2)
+		// 	// 		} else {
+		// 	// 			collider.h = BODY_WIDTH
+		// 	// 			collider.w = PLAYER_SIZE
+		// 	// 			collider.position.y += f32(PLAYER_SIZE / 2 - collider.h / 2)
+		// 	// 		}
+		// 	//
+		// 	//
+		// 	// 		if curr_cell_data.body_index == int(game.player_body.num_cells - 1) &&
+		// 	// 		   ghost_index_being_followed >= 0 {
+		// 	// 			dealing_ghost_piece(game, body, i8(curr_cell_data.body_index))
+		// 	//
+		// 	// 		}
+		// 	// 		break
+		// 	// 	}
+		// 	// }
+		// }
 	}
 }
+
 
 RenderingSystem :: proc(game: ^Game) {
 	arquetypes, is_empty := query_archetype(game.world, COMPONENT_ID.POSITION | .SPRITE)
