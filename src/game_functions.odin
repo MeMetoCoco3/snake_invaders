@@ -128,11 +128,11 @@ InputSystemPause :: proc(game: ^Game) {
 update :: proc(game: ^Game) {
 	play_sound(game)
 	update_scene(game)
-	fmt.println("SINCE TURN:", game.player_data.time_since_turn)
 	if game.player_data.cells_to_grow > 0 {
 		game.player_data.cells_to_grow -= 1
 
 		if game.player_data.distance >= PLAYER_SIZE && !game.player_body.growing {
+			fmt.println("WE GONNA GROW")
 			grow_body(
 				game,
 				&game.player_body,

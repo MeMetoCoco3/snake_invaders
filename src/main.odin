@@ -91,6 +91,7 @@ main :: proc() {
 	load_scene(&game, .ONE)
 
 	for !rl.WindowShouldClose() {
+		game.fram_count += 1
 		rl.UpdateMusicStream(game.audio.bg_music)
 		switch game.state {
 		case .PLAY:

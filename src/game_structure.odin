@@ -25,6 +25,7 @@ Game :: struct {
 	audio:              audio_system_t,
 	world:              ^World,
 	arena:              ^vmem.Arena,
+	fram_count:         int,
 }
 
 Body :: struct {
