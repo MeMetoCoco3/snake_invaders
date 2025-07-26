@@ -73,18 +73,19 @@ CollisionSystem :: proc(game: ^Game) {
 			positionA := &archetypeA.positions[i]
 
 			is_player := false
-			colliderA_future_pos := Collider {
-				colliderA.position + velocityA.direction * velocityA.speed,
-				colliderA.h,
-				colliderA.w,
-				true,
-			}
-
+			colliderA_future_pos: Collider
 
 			if dataA.kind == .PLAYER {
 				is_player = true
 				colliderA_future_pos = Collider {
 					colliderA.position + archetypeA.players_data[i].next_dir * velocityA.speed,
+					colliderA.h,
+					colliderA.w,
+					true,
+				}
+			} else {
+				colliderA_future_pos = {
+					colliderA.position + velocityA.direction * velocityA.speed,
 					colliderA.h,
 					colliderA.w,
 					true,
@@ -120,7 +121,6 @@ CollisionSystem :: proc(game: ^Game) {
 						head_direction,
 						head_data,
 					) {
-						// head_data.time_since_turn = 0
 						last_dir_chosen, _ := peek_last(game.directions)
 
 						actual_turn :=
@@ -132,10 +132,8 @@ CollisionSystem :: proc(game: ^Game) {
 							head_data.time_since_turn = 0
 							if has_body {
 								put_cell(game.directions, head_velocity.direction)
-								// print_ringbuffer(game.directions)
 							}
 						} else {
-
 							game.player_body.growing = true
 						}
 					}
@@ -146,28 +144,28 @@ CollisionSystem :: proc(game: ^Game) {
 			for archetypeB in arquetypesB {
 				for j in 0 ..< len(archetypeB.entities_id) {
 					dataB := &archetypeB.data[j]
-					if dataB.state == .DEAD || dataB == dataA || dataB.kind == .PLAYER {
-						continue
-					}
+					if dataB.state == .DEAD || dataB == dataA || dataB.kind == .PLAYER do continue
 
 					colliderB := &archetypeB.colliders[j]
 					positionB := &archetypeB.positions[j]
 
-					#partial switch dataB.kind {
+					switch dataB.kind {
 					case .CANDY:
 						if is_player &&
 						   dataB.state != .DEAD &&
 						   collide_no_edges(colliderB^, colliderA^) {
 							dataB.state = .DEAD
 							add_sound(game, &sound_bank[FX.FX_EAT])
-							game.player_data.cells_to_grow += 1
 							game.count_candies -= 1
+
+							if MAX_NUM_BODY - 1 > game.player_body.num_cells {
+								game.player_data.cells_to_grow += 1
+							}
 						}
 
 					case .STATIC:
 						if collide(colliderB^, colliderA_future_pos) {
 							if is_player {
-								// game.player_data.next_dir = Vector2{0, 0}
 								velocityA.direction = {0, 0}
 								continue
 							}
@@ -269,18 +267,7 @@ CollisionSystem :: proc(game: ^Game) {
 								if (archetypeB.players_data[j].body_index > 2) &&
 								   archetypeB.data[j].state == .ALIVE &&
 								   archetypeB.colliders[j].active {
-									// fmt.printfln(
-									// 	"Player Position: %v, Player future position",
-									// 	colliderA,
-									// 	colliderA_future_pos,
-									// )
-									// fmt.printfln(
-									// 	"Ghost_piece info: Entity ID %v Collider Position: %v, body_index: %v",
-									// 	archetypeB.entities_id[j],
-									// 	archetypeB.colliders[j].position,
-									// 	archetypeB.players_data[j].body_index,
-									// )
-									// print_ringbuffer(game.player_body.ghost_pieces)
+
 									velocityA.direction = {0, 0}
 									continue
 								} else {
