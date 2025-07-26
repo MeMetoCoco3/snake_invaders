@@ -43,6 +43,7 @@ InputSystem :: proc(game: ^Game) {
 		player_data.time_on_dash = 0
 		player_data.player_state = .DASH
 		player_data.gona_dash = false
+		player_data.distance = 0
 	}
 
 	body := &game.player_body
@@ -128,10 +129,10 @@ InputSystemPause :: proc(game: ^Game) {
 update :: proc(game: ^Game) {
 	play_sound(game)
 	update_scene(game)
+
 	if game.player_data.cells_to_grow > 0 {
 		game.player_data.cells_to_grow -= 1
-
-		if game.player_data.distance >= PLAYER_SIZE && !game.player_body.growing {
+		if !game.player_body.growing && game.player_data.distance > PLAYER_SIZE {
 			fmt.println("WE GONNA GROW")
 			grow_body(
 				game,

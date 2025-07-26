@@ -122,22 +122,22 @@ CollisionSystem :: proc(game: ^Game) {
 						head_data,
 					) {
 						last_dir_chosen, _ := peek_last(game.directions)
-
-						actual_turn :=
-							head_velocity.direction != {0, 0} &&
-							head_velocity.direction != last_dir_chosen
-
-						if actual_turn {
-							is_turning = true
-							head_data.time_since_turn = 0
-							if has_body {
-								put_cell(game.directions, head_velocity.direction)
-							}
-						} else {
-							game.player_body.growing = true
+						//
+						// actual_turn :=
+						// 	head_velocity.direction != {0, 0} &&
+						// 	head_velocity.direction != last_dir_chosen
+						//
+						// if actual_turn {
+						is_turning = true
+						head_data.time_since_turn = 0
+						if has_body {
+							put_cell(game.directions, head_velocity.direction)
 						}
+					} else {
+						// game.player_body.growing = true
 					}
 				}
+
 			}
 
 
@@ -444,6 +444,7 @@ VelocitySystem :: proc(game: ^Game) {
 	head_velocity := game.player_velocity
 	head_data := game.player_data
 
+
 	arquetypes, is_empty := query_archetype(
 		game.world,
 		COMPONENT_ID.VELOCITY | COMPONENT_ID.POSITION | COMPONENT_ID.COLLIDER | .DATA,
@@ -454,17 +455,25 @@ VelocitySystem :: proc(game: ^Game) {
 	}
 
 	head_direction = game.player_velocity.direction
-	if body.growing && head_direction != {0, 0} {
-		distance := head_data.distance
-
-		if distance >= PLAYER_SIZE {
+	pass := false
+	if body.growing && head_direction != {0, 0} && body.num_cells > 0 {
+		delta :=
+			(abs(body.first_cell_pos.pos.x - head_position.pos.x) +
+				abs(body.first_cell_pos.pos.y - head_position.pos.y))
+		if delta == PLAYER_SIZE {
+			fmt.println("GOOD WE STOPPED GROWING AND THE DISTANCE IS ", delta)
+			body.growing = false
+		} else if delta > PLAYER_SIZE {
+			fmt.println("ERROR WE STOPPED GROWING AND THE DISTANCE IS ", delta)
+			pass = true
 			body.growing = false
 		} else {
 			body.growing = true
 		}
 	}
-
-	move_player(game)
+	if !pass {
+		move_player(game)
+	}
 	START_SPEED := game.player_velocity.speed
 
 	for arquetype in arquetypes {
@@ -505,9 +514,9 @@ VelocitySystem :: proc(game: ^Game) {
 							piece_to_follow.position,
 						)
 						distance_left := vec2_distance(curr_cell_pos.pos, piece_to_follow.position)
-						if distance_left <= remaining_movement {
-							fmt.println(distance_left, remaining_movement)
 
+
+						if distance_left <= remaining_movement {
 							curr_cell_pos.pos = piece_to_follow.position
 							curr_cell_velocity.direction = piece_to_follow.direction
 							remaining_movement -= distance_left
@@ -527,8 +536,7 @@ VelocitySystem :: proc(game: ^Game) {
 
 							collider_pos^ = curr_cell_pos.pos
 
-							if curr_cell_data.body_index == int(game.player_body.num_cells - 1) &&
-							   ghost_index_being_followed >= 0 {
+							if is_tail && ghost_index_being_followed >= 0 {
 								_, done := dealing_ghost_piece(
 									game,
 									body,
@@ -570,11 +578,13 @@ VelocitySystem :: proc(game: ^Game) {
 
 move_player :: proc(game: ^Game) {
 	player_data := &game.player_data
-	speed := &game.player_velocity.speed
 	position := &game.player_position.pos
+	speed := &game.player_velocity.speed
 	dir := &game.player_velocity.direction
 
+
 	if player_data^.time_on_dash >= DASH_DURATION {
+		speed := &game.player_velocity.speed
 		speed^ = PLAYER_SPEED
 		player_data^.player_state = .NORMAL
 	}
@@ -596,12 +606,6 @@ move_player :: proc(game: ^Game) {
 
 }
 
-import os "core:os/os2"
-breakpoint :: proc() {
-	buffer: [1]u8
-	os.read(os.stdin, buffer[:])
-	fmt.println("JAMON")
-}
 
 RenderingSystem :: proc(game: ^Game) {
 	arquetypes, is_empty := query_archetype(game.world, COMPONENT_ID.POSITION | .SPRITE)
