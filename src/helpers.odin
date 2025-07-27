@@ -118,6 +118,24 @@ ghost_to_cell :: proc(cell: cell_ghost_t) -> cell_t {
 	return cell_t{position = cell.position, direction = cell.direction}
 }
 
+// TODO: OPTIMIZE
+check_broken_ghost :: proc(world: ^World, rb: ^Ringuffer_t(cell_ghost_t), body: []Position) {
+	last, ok := peek_last(rb);if !ok do return
+	for piece in body {
+		if vec2_distance(piece.pos, last.position) < PLAYER_SIZE {
+			return
+		}
+	}
+
+	ghost, _ := pop_cell(rb)
+	kill_entity(world.archetypes[ghost_mask], ghost.entity_id)
+	fmt.println("WE KILLED")
+}
+
+manhattan_distance :: proc(a, b: Vector2) -> f32 {
+	return abs(b.x - a.x) + abs(b.y - a.y)
+
+}
 vec2_distance :: proc(a, b: Vector2) -> f32 {
 	if a.x == b.x && a.y == b.y {
 		return 0

@@ -42,6 +42,8 @@ EPSILON_COLISION :: 4
 SMOOTHING :: 0.1
 BULLET_SPEED :: PLAYER_SPEED * 1.5
 BULLET_SIZE :: 16
+MAX_BULLET_SIZE :: 10
+
 
 NUM_RECTANGLES_ON_SCENE :: 100
 NUM_ENTITIES :: 1000
@@ -53,7 +55,7 @@ ghost_mask := (COMPONENT_ID.POSITION | .DATA | .COLLIDER | .PLAYER_DATA)
 candy_mask := (COMPONENT_ID.POSITION | .ANIMATION | .COLLIDER | .DATA)
 enemy_mask := (COMPONENT_ID.POSITION | .VELOCITY | .ANIMATION | .COLLIDER | .DATA | .IA)
 bullet_mask := (COMPONENT_ID.POSITION | .VELOCITY | .ANIMATION | .COLLIDER | .DATA)
-mask_static := COMPONENT_ID.COLLIDER | .SPRITE | .DATA | .POSITION
+mask_static := (COMPONENT_ID.COLLIDER | .SPRITE | .DATA | .POSITION)
 
 atlas: rl.Texture2D
 tx_candy: rl.Texture2D
@@ -103,9 +105,7 @@ main :: proc() {
 			CollisionSystem(&game)
 			VelocitySystem(&game)
 
-			rl.BeginDrawing()
 			draw_game(&game)
-			rl.EndDrawing()
 
 		case .PAUSE:
 			InputSystemPause(&game)
@@ -123,6 +123,7 @@ main :: proc() {
 			rl.DrawText("WANT TO PLAY AGAIN?", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 30, rl.RED)
 			rl.ClearBackground(rl.BLACK)
 			rl.EndDrawing()
+
 		}
 	}
 }

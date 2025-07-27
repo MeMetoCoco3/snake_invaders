@@ -444,22 +444,18 @@ VelocitySystem :: proc(game: ^Game) {
 	head_velocity := game.player_velocity
 	head_data := game.player_data
 
-
 	arquetypes, is_empty := query_archetype(
 		game.world,
 		COMPONENT_ID.VELOCITY | COMPONENT_ID.POSITION | COMPONENT_ID.COLLIDER | .DATA,
-	)
+	);if is_empty do return
 
-	if is_empty {
-		return
-	}
-
-	head_direction = game.player_velocity.direction
 	pass := false
+	fmt.println(body.growing)
+	fmt.println(head_direction)
 	if body.growing && head_direction != {0, 0} && body.num_cells > 0 {
-		delta :=
-			(abs(body.first_cell_pos.pos.x - head_position.pos.x) +
-				abs(body.first_cell_pos.pos.y - head_position.pos.y))
+		fmt.println("JAMON")
+		delta := manhattan_distance(head_position.pos, body.first_cell_pos.pos)
+
 		if delta == PLAYER_SIZE {
 			fmt.println("GOOD WE STOPPED GROWING AND THE DISTANCE IS ", delta)
 			body.growing = false
@@ -493,7 +489,7 @@ VelocitySystem :: proc(game: ^Game) {
 
 				is_tail := curr_cell_data.body_index == game.player_body.num_cells - 1
 				is_neck := curr_cell_data.body_index == 0
-				// IDEA: IF NEXT POS == PREV POS, BREAK
+
 				if head_direction != {0, 0} && !body.growing {
 					remaining_movement := head_velocity.speed
 					for remaining_movement > 0 {

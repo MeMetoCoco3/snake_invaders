@@ -49,7 +49,17 @@ add_entity :: proc(world: ^World, mask: COMPONENT_ID, components: []Component) -
 	append(&arch.entities_id, entity_id)
 	return entity_id
 }
+kill_last_ghostcell :: proc(g: ^Game) {
+	archetype := g.world.archetypes[body_mask]
+	index := g.player_body.num_cells - 1
+	for i in 0 ..< len(archetype.entities_id) {
+		if archetype.data[i].kind == .BODY && archetype.players_data[i].body_index == index {
+			archetype.data[i].state = .DEAD
+			break
+		}
+	}
 
+}
 kill_last_bodycell :: proc(g: ^Game) {
 	archetype := g.world.archetypes[body_mask]
 	index := g.player_body.num_cells - 1
@@ -59,15 +69,7 @@ kill_last_bodycell :: proc(g: ^Game) {
 			break
 		}
 	}
-	//
-	// index_body := g.player_body.num_cells - 1
-	// archetype := g.world.archetypes[body_mask]
-	// for i in len(archetype.entities_id) - 1 ..= 0 {
-	// 	if archetype.data[i].kind == .BODY && archetype.players_data[i].body_index == index_body {
-	// 		archetype.data[i].state = .DEAD
-	// 		break
-	// 	}
-	// }
+
 }
 
 

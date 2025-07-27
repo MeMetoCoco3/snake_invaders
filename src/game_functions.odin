@@ -20,10 +20,9 @@ InputSystem :: proc(game: ^Game) {
 	}
 
 
-	player_velocity := &game.world.archetypes[player_mask].velocities[0]
-	player_data := &game.world.archetypes[player_mask].players_data[0]
-	player_position := &game.world.archetypes[player_mask].positions[0]
-
+	player_velocity := game.player_velocity
+	player_data := game.player_data
+	player_position := game.player_position
 
 	if (rl.IsKeyDown(.H) || rl.IsKeyDown(.LEFT)) {
 		player_data.next_dir = {-1, 0}
@@ -54,16 +53,46 @@ InputSystem :: proc(game: ^Game) {
 	}
 
 	body := &game.player_body
-	if rl.IsKeyDown(.Z) && body.num_cells > 0 && player_data.next_bullet_size <= 3 {
-		last_cell_pos, last_cell_velocity, last_cell_data, ok := get_last_cell2(game)
-		last_cell_pos.size = math.lerp(last_cell_pos.size, f32(0.0), f32(SMOOTHING / 2))
+	not_growing := !game.player_body.growing
+
+	if rl.IsKeyDown(.Z) &&
+	   body.num_cells > 0 &&
+	   player_data.next_bullet_size < MAX_BULLET_SIZE &&
+	   not_growing {
+		last_index := game.player_body.num_cells - 1
+		last_cell_pos, last_cell_velocity, last_cell_data, ok := get_cell(game, last_index)
+		last_cell_pos.size = math.lerp(last_cell_pos.size, f32(0.0), f32(SMOOTHING))
+
+		penultimate_cell_pos, _, penultimate_cell_data, penultimate_on := get_cell(
+			game,
+			last_index - 1,
+		)
+
+		num_turns_left := last_cell_data.count_turn_left
+		max_delete_cells := 3
+
+		if penultimate_on {
+			fmt.println("PNULTIMATE ON", max_delete_cells)
+			max_delete_cells = num_turns_left - penultimate_cell_data.count_turn_left
+			fmt.println("PNULTIMATE ON", max_delete_cells)
+		}
+
 		if last_cell_pos.size.x < f32(EPSILON) {
-			last_ghost, ok := peek_head(body.ghost_pieces)
 			count_turns_left := last_cell_data.count_turn_left
-			if ok &&
-			   count_turns_left > 0 &&
-			   vec2_distance(last_cell_pos.pos, last_ghost.position) < PLAYER_SIZE {
-				pop_cell(body.ghost_pieces)
+			for i := 0; i < max_delete_cells; i += 1 {
+				last_ghost, ok := peek_head(body.ghost_pieces)
+				distance_to_ghost := manhattan_distance(last_cell_pos.pos, last_ghost.position)
+
+				if ok && count_turns_left > 0 && distance_to_ghost < PLAYER_SIZE {
+					ghost, ok := pop_cell(body.ghost_pieces)
+					if ok {
+						kill_entity(game.world.archetypes[ghost_mask], ghost.entity_id)
+					}
+				} else {
+					break
+				}
+
+
 			}
 
 			player_data.next_bullet_size += 1
@@ -89,7 +118,6 @@ InputSystem :: proc(game: ^Game) {
 		add_sound(game, &sound_bank[FX.FX_SHOOT])
 		// THIS ORIGIN MARKS THE VERTEZ SO I SHOULD TAKEON ACCOUT ALSO THE SIZE OF THE BULLET
 		origin := player_position.pos + player_position.size / 2
-
 
 		speed := max(player_velocity.speed * 1.5, BULLET_SPEED)
 
@@ -147,6 +175,12 @@ update :: proc(game: ^Game) {
 		}
 
 		game.player_data.distance = 0
+	}
+
+	if game.player_body.num_cells > 0 {
+		body_positions := game.world.archetypes[body_mask].positions
+		ghosts := game.player_body.ghost_pieces
+		check_broken_ghost(game.world, ghosts, body_positions[:])
 	}
 }
 
@@ -215,16 +249,13 @@ update_scene :: proc(game: ^Game) {
 }
 
 
-get_last_cell2 :: proc(g: ^Game) -> (^Position, ^Velocity, ^PlayerData, bool) {
-	index := g.player_body.num_cells - 1
+// TODO: REDOO THIS TO BE ABLE TO QUERY FOR ANY CELL, THEN CHECK IF THE NEXT CELL IS DEPENDENT ON THE GHOST WE GONNA HERASE
+get_cell :: proc(g: ^Game, index: i8) -> (^Position, ^Velocity, ^PlayerData, bool) {
 	archetype := g.world.archetypes[body_mask]
-	fmt.println(index)
 	for i in 0 ..< len(archetype.entities_id) {
-		fmt.println(index)
 		current_index := archetype.players_data[i].body_index == index
-		fmt.println(current_index)
 		kind := archetype.data[i].kind
-		fmt.println(kind)
+
 		if kind == .BODY && current_index {
 			return &archetype.positions[i],
 				&archetype.velocities[i],
@@ -235,20 +266,20 @@ get_last_cell2 :: proc(g: ^Game) -> (^Position, ^Velocity, ^PlayerData, bool) {
 	return nil, nil, nil, false
 }
 
-
-get_last_cell :: proc(game: ^Game) -> (^Position, ^Velocity, ^PlayerData, bool) {
-	archetype := game.world.archetypes[body_mask]
-	for i in 0 ..< len(archetype.entities_id) {
-		if archetype.data[i].kind == .BODY {
-			return &archetype.positions[i],
-				&archetype.velocities[i],
-				&archetype.players_data[i],
-				true
-		}
-	}
-	return nil, nil, nil, false
-}
-
+//
+// get_last_cell :: proc(game: ^Game) -> (^Position, ^Velocity, ^PlayerData, bool) {
+// 	archetype := game.world.archetypes[body_mask]
+// 	for i in 0 ..< len(archetype.entities_id) {
+// 		if archetype.data[i].kind == .BODY {
+// 			return &archetype.positions[i],
+// 				&archetype.velocities[i],
+// 				&archetype.players_data[i],
+// 				true
+// 		}
+// 	}
+// 	return nil, nil, nil, false
+// }
+//
 grow_body :: proc(game: ^Game, body: ^Body, head_pos, head_dir: Vector2) {
 	switch {
 	case body.num_cells < MAX_NUM_BODY:
@@ -319,7 +350,8 @@ dealing_ghost_piece :: proc(game: ^Game, body: ^Body, last_piece: i8) -> (cell_g
 		return {}, false
 	}
 
-	last_cell_pos, last_cell_velocity, last_cell_data, _ := get_last_cell(game)
+	last_index := game.player_body.num_cells - 1
+	last_cell_pos, last_cell_velocity, last_cell_data, _ := get_cell(game, last_index)
 	is_colliding := rec_colliding(
 		last_cell_pos.pos,
 		PLAYER_SIZE,
@@ -449,6 +481,7 @@ spawn_candy :: proc(game: ^Game) {
 // RENDER //
 ////////////
 draw_game :: proc(game: ^Game) {
+	rl.BeginDrawing()
 	draw_grid({100, 100, 100, 255})
 	// draw_scene(game)
 	draw_body(&game.player_body)
@@ -459,6 +492,7 @@ draw_game :: proc(game: ^Game) {
 	}
 
 	rl.ClearBackground(rl.BLACK)
+	rl.EndDrawing()
 }
 
 draw_body :: proc(body: ^Body) {
