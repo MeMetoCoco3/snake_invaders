@@ -7,8 +7,8 @@ import "core:math/rand"
 import vmem "core:mem/virtual"
 import rl "vendor:raylib"
 
-DEBUG_COLISION :: #config(DEBUG_COLISION, false)
-
+// DEBUG_COLISION :: #config(DEBUG_COLISION, false)
+DEBUG_COLISION := true
 AFTER_DEATH := false
 
 SCREEN_WIDTH :: 800

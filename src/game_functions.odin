@@ -8,15 +8,22 @@ import rl "vendor:raylib"
 // INPUT //
 ///////////
 
-collider_body := [2]Collider {
-	{position = {0, 0}, w = PLAYER_SIZE, h = BODY_WIDTH},
-	{position = {0, 0}, w = BODY_WIDTH, h = PLAYER_SIZE},
-}
+// collider_body := [2]Collider {
+// 	{position = {0, 0}, w = PLAYER_SIZE, h = BODY_WIDTH},
+// 	{position = {0, 0}, w = BODY_WIDTH, h = PLAYER_SIZE},
+// }
+
 
 InputSystem :: proc(game: ^Game) {
+	if (rl.IsKeyReleased(.C)) {
+		DEBUG_COLISION = !DEBUG_COLISION
+	}
+
+
 	player_velocity := &game.world.archetypes[player_mask].velocities[0]
 	player_data := &game.world.archetypes[player_mask].players_data[0]
 	player_position := &game.world.archetypes[player_mask].positions[0]
+
 
 	if (rl.IsKeyDown(.H) || rl.IsKeyDown(.LEFT)) {
 		player_data.next_dir = {-1, 0}
@@ -48,37 +55,34 @@ InputSystem :: proc(game: ^Game) {
 
 	body := &game.player_body
 	if rl.IsKeyDown(.Z) && body.num_cells > 0 && player_data.next_bullet_size <= 3 {
-		last_cell_pos, last_cell_velocity, last_cell_data, ok := get_last_cell(game)
+		last_cell_pos, last_cell_velocity, last_cell_data, ok := get_last_cell2(game)
 		last_cell_pos.size = math.lerp(last_cell_pos.size, f32(0.0), f32(SMOOTHING / 2))
-
-		// TODO: CHECK THIS SIZE.X CAUSE ITS WRONG SHOULD BE DIFFERENT DEPENDING ON DIRECTION
 		if last_cell_pos.size.x < f32(EPSILON) {
 			last_ghost, ok := peek_head(body.ghost_pieces)
-
 			count_turns_left := last_cell_data.count_turn_left
 			if ok &&
-			   count_turns_left <= 1 &&
+			   count_turns_left > 0 &&
 			   vec2_distance(last_cell_pos.pos, last_ghost.position) < PLAYER_SIZE {
 				pop_cell(body.ghost_pieces)
 			}
 
 			player_data.next_bullet_size += 1
+			kill_last_bodycell(game)
 			body.num_cells -= 1
 		}
-	} else if body.num_cells > 0 {
-
-		last_cell_pos, last_cell_velocity, last_cell_data, ok := get_last_cell(game)
-		// TODO: CHECK THIS SIZE.X CAUSE ITS WRONG SHOULD BE DIFFERENT DEPENDING ON DIRECTION
-		if PLAYER_SIZE - last_cell_pos.size.x > EPSILON {
-			last_cell_pos.size = math.lerp(
-				Vector2{last_cell_pos.size.x, last_cell_pos.size.y},
-				f32(PLAYER_SIZE),
-				f32(SMOOTHING / 2),
-			)
-		} else {
-			last_cell_pos.size = PLAYER_SIZE
-		}
 	}
+	// } else if body.num_cells > 0 {
+	// 	last_cell_pos, last_cell_velocity, last_cell_data, ok := get_last_cell2(game)
+	// 	if PLAYER_SIZE - last_cell_pos.size.x > EPSILON {
+	// 		last_cell_pos.size = math.lerp(
+	// 			Vector2{last_cell_pos.size.x, last_cell_pos.size.y},
+	// 			f32(PLAYER_SIZE),
+	// 			f32(SMOOTHING / 2),
+	// 		)
+	// 	} else {
+	// 		last_cell_pos.size = PLAYER_SIZE
+	// 	}
+	// }
 
 
 	if (rl.IsKeyReleased(.Z)) && player_data.next_bullet_size > 0 {
@@ -211,6 +215,27 @@ update_scene :: proc(game: ^Game) {
 }
 
 
+get_last_cell2 :: proc(g: ^Game) -> (^Position, ^Velocity, ^PlayerData, bool) {
+	index := g.player_body.num_cells - 1
+	archetype := g.world.archetypes[body_mask]
+	fmt.println(index)
+	for i in 0 ..< len(archetype.entities_id) {
+		fmt.println(index)
+		current_index := archetype.players_data[i].body_index == index
+		fmt.println(current_index)
+		kind := archetype.data[i].kind
+		fmt.println(kind)
+		if kind == .BODY && current_index {
+			return &archetype.positions[i],
+				&archetype.velocities[i],
+				&archetype.players_data[i],
+				true
+		}
+	}
+	return nil, nil, nil, false
+}
+
+
 get_last_cell :: proc(game: ^Game) -> (^Position, ^Velocity, ^PlayerData, bool) {
 	archetype := game.world.archetypes[body_mask]
 	for i in 0 ..< len(archetype.entities_id) {
@@ -221,7 +246,7 @@ get_last_cell :: proc(game: ^Game) -> (^Position, ^Velocity, ^PlayerData, bool) 
 				true
 		}
 	}
-	return nil, nil, nil, true
+	return nil, nil, nil, false
 }
 
 grow_body :: proc(game: ^Game, body: ^Body, head_pos, head_dir: Vector2) {
@@ -429,7 +454,7 @@ draw_game :: proc(game: ^Game) {
 	draw_body(&game.player_body)
 	draw_ghost_cells(game.player_body.ghost_pieces)
 	RenderingSystem(game)
-	when DEBUG_COLISION {
+	if DEBUG_COLISION {
 		DrawCollidersSystem(game)
 	}
 

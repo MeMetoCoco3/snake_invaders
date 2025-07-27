@@ -153,7 +153,7 @@ draw_animated_sprite :: proc(
 
 	origin := Vector2{position.size.x / 2, position.size.y / 2}
 	rl.DrawTexturePro(animation.image^, src_rec, dst_rec, origin, angle, color)
-	when DEBUG_COLISION {
+	if DEBUG_COLISION {
 		dst_rec.x -= position.size.x / 2
 		dst_rec.y -= position.size.y / 2
 		color := rl.WHITE

@@ -491,7 +491,7 @@ VelocitySystem :: proc(game: ^Game) {
 				curr_cell_velocity := &velocities[i]
 				collider_pos := &colliders[i].position
 
-				is_tail := curr_cell_data.body_index == int(game.player_body.num_cells - 1)
+				is_tail := curr_cell_data.body_index == game.player_body.num_cells - 1
 				is_neck := curr_cell_data.body_index == 0
 				// IDEA: IF NEXT POS == PREV POS, BREAK
 				if head_direction != {0, 0} && !body.growing {
@@ -613,7 +613,10 @@ RenderingSystem :: proc(game: ^Game) {
 		for arquetype in arquetypes {
 			positions := arquetype.positions
 			sprites := arquetype.sprites
+
+			data := arquetype.data
 			for i in 0 ..< len(arquetype.entities_id) {
+				if data[i].state == .DEAD do continue
 				kind := arquetype.data[i].kind
 				pos := positions[i]
 				rotation := sprites[i].rotation
