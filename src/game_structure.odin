@@ -92,6 +92,7 @@ ANIMATION :: enum {
 	BIG_EXPLOSION,
 	BULLET_B,
 	CANDY,
+	SHIELD,
 	ANIM_COUNT,
 }
 
@@ -240,6 +241,23 @@ load_animations :: proc() {
 		padding        = {0, 0},
 		offset         = {0, 0},
 		kind           = .REPEAT,
+		angle_type     = .DIRECTIONAL,
+	}
+
+	animation_bank[ANIMATION.SHIELD] = Animation {
+		image          = &atlas,
+		w              = 32,
+		h              = 32,
+		source_x       = 0,
+		source_y       = 160,
+		_current_frame = 0,
+		num_frames     = 0,
+		frame_delay    = 0,
+		_time_on_frame = 0,
+		angle          = 90,
+		padding        = {0, 0},
+		offset         = {0, 0},
+		kind           = .STATIC,
 		angle_type     = .DIRECTIONAL,
 	}
 

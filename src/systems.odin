@@ -389,49 +389,73 @@ IASystem :: proc(game: ^Game) {
 		for i in 0 ..< len(arquetype.entities_id) {
 			center_enemy := positions[i].pos + ENEMY_SIZE / 2
 			distance_to_player := vec2_distance(center_player, center_enemy)
+			enemy := ias[i].table
+			enemy.move(
+				game,
+				&velocities[i],
+				&positions[i],
+				&animations[i],
+				&ias[i].behavior,
+				center_player,
+				center_enemy,
+			)
 
-			if ias[i]._time_for_change_state > TIME_TO_CHANGE_STATE {
-				ias[i]._time_for_change_state = 0
-				switch {
-				case distance_to_player > ias[i].maximum_distance:
-					ias[i].behavior = .APPROACH
-					animations[i] = animation_bank[ANIMATION.ENEMY_RUN]
-				case distance_to_player < ias[i].minimum_distance:
-					animations[i] = animation_bank[ANIMATION.ENEMY_RUN]
-					ias[i].behavior = .GOAWAY
-				case:
-					animations[i] = animation_bank[ANIMATION.ENEMY_SHOT]
-					ias[i].behavior = .SHOT
-				}} else {
-				ias[i]._time_for_change_state += 1
-			}
-
-			direction := (center_player - center_enemy) / distance_to_player
-
-
-			switch ias[i].behavior {
-			case .SHOT:
-				velocities[i].direction = {0, 0}
-				if ias[i].reload_time >= ENEMY_TIME_RELOAD {
-					spawn_bullet(
-						game,
-						positions[i].pos,
-						ENEMY_SIZE_BULLET,
-						BULLET_SPEED / 2,
-						direction,
-						.BAD,
-					)
-					ias[i].reload_time = 0
-				} else {
-					ias[i].reload_time += 1
-				}
-			case .APPROACH:
-				velocities[i].direction = direction
-			case .GOAWAY:
-				velocities[i].direction = -direction
-			}
 		}
 	}
+}
+
+ia_human :: proc(
+	g: ^Game,
+	velocity: ^Velocity,
+	position: ^Position,
+	animation: ^Animation,
+	ia: ^BEHAVIOR,
+	center_player, center_enemy: Vector2,
+) {
+	fmt.println()
+	fmt.println("IA HUMAN")
+	ia := cast(^IA_ENEMY_HUMAN)ia
+	distance_to_player := vec2_distance(center_player, center_enemy)
+
+
+	fmt.println(ia._time_for_change_state)
+	if ia._time_for_change_state > TIME_TO_CHANGE_STATE {
+		ia._time_for_change_state = 0
+		switch {
+		case distance_to_player > ia.maximum_distance:
+			ia.state = .APPROACH
+			animation^ = animation_bank[ANIMATION.ENEMY_RUN]
+		case distance_to_player < ia.minimum_distance:
+			animation^ = animation_bank[ANIMATION.ENEMY_RUN]
+			ia.state = .GOAWAY
+		case:
+			animation^ = animation_bank[ANIMATION.ENEMY_SHOT]
+			ia.state = .SHOT
+		}} else {
+		fmt.println("WE CHANGE!")
+		ia._time_for_change_state += 1
+	}
+
+	direction := (center_player - center_enemy) / distance_to_player
+
+
+	switch ia.state {
+	case .SHOT:
+		velocity.direction = {0, 0}
+		if ia.reload_time >= ENEMY_TIME_RELOAD {
+			spawn_bullet(g, position.pos, ENEMY_SIZE_BULLET, BULLET_SPEED / 2, direction, .BAD)
+			ia.reload_time = 0
+		} else {
+			ia.reload_time += 1
+		}
+	case .APPROACH:
+		velocity.direction = direction
+	case .GOAWAY:
+		velocity.direction = -direction
+	}
+
+
+	fmt.println(ia._time_for_change_state)
 }
 
 

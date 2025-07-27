@@ -14,6 +14,12 @@ import rl "vendor:raylib"
 // }
 
 
+table_enemy_human := ia_table {
+	move = ia_human,
+}
+// table_enemy_shield
+
+
 InputSystem :: proc(game: ^Game) {
 	if (rl.IsKeyReleased(.C)) {
 		DEBUG_COLISION = !DEBUG_COLISION
@@ -403,8 +409,11 @@ spawn_enemy :: proc(game: ^Game) {
 	append(&archetype.colliders, enemy_collider)
 
 	append(&archetype.data, Data{.ENEMY, .ALIVE, .BAD})
-	append(&archetype.ias, IA{.APPROACH, 60, 100, 500, 0})
-
+	append(
+		&archetype.ias,
+		IA{behavior = IA_ENEMY_HUMAN{.APPROACH, 60, 100, 500, 0}, table = table_enemy_human},
+	)
+	// .APPROACH, 60, 100, 500, 0
 	game.count_enemies += 1
 }
 

@@ -134,8 +134,34 @@ Data :: struct {
 	team:  ENTITY_TEAM,
 }
 
+ia_table :: struct {
+	move: proc(
+		g: ^Game,
+		velocity: ^Velocity,
+		position: ^Position,
+		animation: ^Animation,
+		ia: ^BEHAVIOR,
+		center_player, center_enemy: Vector2,
+	),
+}
+
 IA :: struct {
-	behavior:               ENEMY_BEHAVIOR,
+	behavior: BEHAVIOR,
+	table:    ia_table,
+}
+
+BEHAVIOR :: union #no_nil {
+	IA_ENEMY_HUMAN,
+	IA_SHIELD,
+}
+
+IA_SHIELD :: struct {
+	state:  ENEMY_SHIELD_STATE,
+	target: Vector2,
+}
+
+IA_ENEMY_HUMAN :: struct {
+	state:                  ENEMY_HUMAN_STATE,
 	reload_time:            f32,
 	minimum_distance:       f32,
 	maximum_distance:       f32,
@@ -162,11 +188,18 @@ PlayerData :: struct {
 	count_turn_left:  int,
 }
 
-ENEMY_BEHAVIOR :: enum {
+
+ENEMY_HUMAN_STATE :: enum {
 	APPROACH,
 	SHOT,
 	GOAWAY,
 }
+
+ENEMY_SHIELD_STATE :: enum {
+	APPROACH_TARGET,
+	STAND,
+}
+
 
 ENTITY_KIND :: enum {
 	STATIC,
