@@ -8,23 +8,32 @@ import rl "vendor:raylib"
 // INPUT //
 ///////////
 
-// collider_body := [2]Collider {
-// 	{position = {0, 0}, w = PLAYER_SIZE, h = BODY_WIDTH},
-// 	{position = {0, 0}, w = BODY_WIDTH, h = PLAYER_SIZE},
-// }
-
-
 table_enemy_human := ia_table {
-	move = ia_human,
+	move     = ia_human,
+	get_type = get_enemy_human_type,
 }
-// table_enemy_shield
+
+table_enemy_shield := ia_table {
+	move     = ia_shield,
+	get_type = get_enemy_shield_type,
+}
+
+enemy_behavior := #partial [ENEMY_KIND]IA {
+	.HUMAN = IA {
+		behavior = BEHAVIOR(IA_ENEMY_HUMAN{.APPROACH, 60, 100, 500, 0, 0}),
+		table = &table_enemy_human,
+	},
+	.SHIELD = IA {
+		behavior = BEHAVIOR(IA_ENEMY_SHIELD{.APPROACH_TARGET, nil}),
+		table = &table_enemy_shield,
+	},
+}
 
 
 InputSystem :: proc(game: ^Game) {
 	if (rl.IsKeyReleased(.C)) {
 		DEBUG_COLISION = !DEBUG_COLISION
 	}
-
 
 	player_velocity := game.player_velocity
 	player_data := game.player_data
@@ -245,7 +254,10 @@ update_scene :: proc(game: ^Game) {
 	if game.enemy_respawn_time >= ENEMY_RESPAWN_TIME {
 		game.enemy_respawn_time = 0
 		if game.count_enemies < MAX_NUM_ENEMIES {
-			spawn_enemy(game)
+			spawn_pos := get_random_position_on_spawn(game)
+			new_kind := get_random_enemy_type()
+
+			spawn_enemy(game, spawn_pos.x, spawn_pos.y, new_kind)
 		}
 	}
 
@@ -254,8 +266,12 @@ update_scene :: proc(game: ^Game) {
 	game.player_data.time_since_dmg += 1
 }
 
+get_random_enemy_type :: proc() -> ENEMY_KIND {
+	n := rand.int_max(int(ENEMY_KIND.TOP))
+	return ENEMY_KIND(n)
+}
 
-// TODO: REDOO THIS TO BE ABLE TO QUERY FOR ANY CELL, THEN CHECK IF THE NEXT CELL IS DEPENDENT ON THE GHOST WE GONNA HERASE
+
 get_cell :: proc(g: ^Game, index: i8) -> (^Position, ^Velocity, ^PlayerData, bool) {
 	archetype := g.world.archetypes[body_mask]
 	for i in 0 ..< len(archetype.entities_id) {
@@ -379,7 +395,8 @@ dealing_ghost_piece :: proc(game: ^Game, body: ^Body, last_piece: i8) -> (cell_g
 ///////////
 // SPAWN //
 ///////////
-spawn_enemy :: proc(game: ^Game) {
+
+get_random_position_on_spawn :: proc(game: ^Game) -> [2]f32 {
 	random_index := rand.int_max(n = game.count_spawn_areas)
 
 	rect := game.spawn_areas[random_index]
@@ -390,32 +407,42 @@ spawn_enemy :: proc(game: ^Game) {
 	x = math.floor(x / PLAYER_SIZE) * PLAYER_SIZE
 	y = math.floor(y / PLAYER_SIZE) * PLAYER_SIZE
 
-	id := add_entity(game.world, enemy_mask, []Component{})
+	return {x, y}
+}
 
-	archetype := game.world.archetypes[enemy_mask]
-	enemy_position := Position{{x, y}, {ENEMY_SIZE, ENEMY_SIZE}}
-	append(&archetype.positions, enemy_position)
-	append(&archetype.velocities, Velocity{{0, 0}, ENEMY_SPEED})
-	append(&archetype.animations, animation_bank[ANIMATION.ENEMY_RUN])
+spawn_enemy :: proc(game: ^Game, x, y: f32, kind: ENEMY_KIND) -> u32 {
+	animation: Animation
+	#partial switch kind {
+	case .HUMAN:
+		animation = animation_bank[ANIMATION.ENEMY_RUN]
+	case .SHIELD:
+		animation = animation_bank[ANIMATION.SHIELD]
+	}
 
 
 	colision_origin := Vector2{x, y} + EPSILON_COLISION * 2
-	enemy_collider := Collider {
-		colision_origin,
-		ENEMY_SIZE - EPSILON_COLISION * 4,
-		ENEMY_SIZE - EPSILON_COLISION * 4,
-		true,
-	}
-	append(&archetype.colliders, enemy_collider)
-
-	append(&archetype.data, Data{.ENEMY, .ALIVE, .BAD})
-	append(
-		&archetype.ias,
-		IA{behavior = IA_ENEMY_HUMAN{.APPROACH, 60, 100, 500, 0}, table = table_enemy_human},
+	id := add_entity(
+	game.world,
+	enemy_mask,
+	[]Component {
+		Position{{x, y}, {ENEMY_SIZE, ENEMY_SIZE}},
+		Velocity{{0, 0}, ENEMY_SPEED},
+		animation,
+		Collider {
+			colision_origin,
+			ENEMY_SIZE - EPSILON_COLISION * 4,
+			ENEMY_SIZE - EPSILON_COLISION * 4,
+			true,
+		},
+		Data{.ENEMY, .ALIVE, .BAD},
+		// IA{behavior = IA_ENEMY_HUMAN{.APPROACH, 60, 100, 500, 0}, table = &table_enemy_human},
+		enemy_behavior[kind],
+	},
 	)
-	// .APPROACH, 60, 100, 500, 0
 	game.count_enemies += 1
+	return id
 }
+
 
 spawn_bullet :: proc(
 	game: ^Game,

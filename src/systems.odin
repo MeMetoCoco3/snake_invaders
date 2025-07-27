@@ -162,6 +162,7 @@ CollisionSystem :: proc(game: ^Game) {
 								game.player_data.cells_to_grow += 1
 							}
 						}
+						continue
 
 					case .STATIC:
 						if collide(colliderB^, colliderA_future_pos) {
@@ -398,12 +399,114 @@ IASystem :: proc(game: ^Game) {
 				&ias[i].behavior,
 				center_player,
 				center_enemy,
+				arquetype.entities_id[i],
 			)
 
 		}
 	}
 }
 
+
+get_enemy_shield_type :: proc() -> ENEMY_KIND {return .SHIELD}
+get_enemy_human_type :: proc() -> ENEMY_KIND {return .HUMAN}
+
+ia_shield :: proc(
+	g: ^Game,
+	velocity: ^Velocity,
+	position: ^Position,
+	animation: ^Animation,
+	ia: ^BEHAVIOR,
+	center_player, center_enemy: Vector2,
+	id: u32,
+) {
+	ia := cast(^IA_ENEMY_SHIELD)ia
+	//
+	// if ia._time_for_change_state > TIME_TO_CHANGE_STATE {
+	// 	ia._time_for_change_state = 0
+	// 	switch {
+	// 	case distance_to_player > ia.maximum_distance:
+	// 		ia.state = .APPROACH
+	// 		animation^ = animation_bank[ANIMATION.ENEMY_RUN]
+	// 	case distance_to_player < ia.minimum_distance:
+	// 		animation^ = animation_bank[ANIMATION.ENEMY_RUN]
+	// 		ia.state = .GOAWAY
+	// 	case:
+	// 		animation^ = animation_bank[ANIMATION.ENEMY_SHOT]
+	// 		ia.state = .SHOT
+	// 	}} else {
+	// 	fmt.println("WE CHANGE!")
+	// 	ia._time_for_change_state += 1
+	// }
+
+	#partial switch ia.state {
+	case .APPROACH_TARGET:
+		if ia.target == nil {
+			target, ok := get_target(g, id)
+			if ok {
+				ia.target = target
+			}
+		} else {
+			//move towards target
+		}
+	case .ATTACK:
+	//move towards player
+	}
+
+
+	// switch ia.state {
+	// case .SHOT:
+	// 	velocity.direction = {0, 0}
+	// 	if ia.reload_time >= ENEMY_TIME_RELOAD {
+	// 		spawn_bullet(g, position.pos, ENEMY_SIZE_BULLET, BULLET_SPEED / 2, direction, .BAD)
+	// 		ia.reload_time = 0
+	// 	} else {
+	// 		ia.reload_time += 1
+	// 	}
+	// case .APPROACH:
+	// 	velocity.direction = direction
+	// case .GOAWAY:
+	// 	velocity.direction = -direction
+	// }
+	//
+}
+
+get_target :: proc(g: ^Game, own_id: u32) -> (^Position, bool) {
+	archetype := g.world.archetypes[enemy_mask]
+	for i in 0 ..< len(archetype.entities_id) {
+		switch &ia in archetype.ias[i].behavior {
+		case IA_ENEMY_HUMAN:
+			if ia.guardian == 0 {
+				ia.guardian = own_id
+			}
+			return &archetype.positions[i], true
+		case IA_ENEMY_SHIELD:
+			continue
+
+		}
+	}
+	return nil, false
+}
+// get_cell :: proc(g: ^Game, index: i8) -> (^Position, ^Velocity, ^PlayerData, bool) {
+// 	archetype := g.world.archetypes[body_mask]
+// 	for i in 0 ..< len(archetype.entities_id) {
+// 		current_index := archetype.players_data[i].body_index == index
+// 		kind := archetype.data[i].kind
+//
+// 		if kind == .BODY && current_index {
+// 			return &archetype.positions[i],
+// 				&archetype.velocities[i],
+// 				&archetype.players_data[i],
+// 				true
+// 		}
+// 	}
+// 	return nil, nil, nil, false
+// }
+//
+//
+//
+
+
+// TODO: MAYBE I CAN DO A MARK GUARDIAN OR MARK PROTECTOR ON THE VT
 ia_human :: proc(
 	g: ^Game,
 	velocity: ^Velocity,
@@ -411,14 +514,12 @@ ia_human :: proc(
 	animation: ^Animation,
 	ia: ^BEHAVIOR,
 	center_player, center_enemy: Vector2,
+	id: u32,
 ) {
-	fmt.println()
 	fmt.println("IA HUMAN")
 	ia := cast(^IA_ENEMY_HUMAN)ia
 	distance_to_player := vec2_distance(center_player, center_enemy)
 
-
-	fmt.println(ia._time_for_change_state)
 	if ia._time_for_change_state > TIME_TO_CHANGE_STATE {
 		ia._time_for_change_state = 0
 		switch {
@@ -453,9 +554,6 @@ ia_human :: proc(
 	case .GOAWAY:
 		velocity.direction = -direction
 	}
-
-
-	fmt.println(ia._time_for_change_state)
 }
 
 

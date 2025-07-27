@@ -135,29 +135,31 @@ Data :: struct {
 }
 
 ia_table :: struct {
-	move: proc(
+	move:     proc(
 		g: ^Game,
 		velocity: ^Velocity,
 		position: ^Position,
 		animation: ^Animation,
 		ia: ^BEHAVIOR,
 		center_player, center_enemy: Vector2,
+		id: u32,
 	),
+	get_type: proc() -> ENEMY_KIND,
 }
 
 IA :: struct {
 	behavior: BEHAVIOR,
-	table:    ia_table,
+	table:    ^ia_table,
 }
 
 BEHAVIOR :: union #no_nil {
 	IA_ENEMY_HUMAN,
-	IA_SHIELD,
+	IA_ENEMY_SHIELD,
 }
 
-IA_SHIELD :: struct {
+IA_ENEMY_SHIELD :: struct {
 	state:  ENEMY_SHIELD_STATE,
-	target: Vector2,
+	target: ^Position,
 }
 
 IA_ENEMY_HUMAN :: struct {
@@ -166,6 +168,12 @@ IA_ENEMY_HUMAN :: struct {
 	minimum_distance:       f32,
 	maximum_distance:       f32,
 	_time_for_change_state: int,
+	guardian:               u32,
+}
+ENEMY_KIND :: enum {
+	HUMAN,
+	SHIELD,
+	TOP,
 }
 
 PlayerData :: struct {
@@ -198,6 +206,7 @@ ENEMY_HUMAN_STATE :: enum {
 ENEMY_SHIELD_STATE :: enum {
 	APPROACH_TARGET,
 	STAND,
+	ATTACK, // JUST WHEN NO ENEMY TO PROTECT
 }
 
 
