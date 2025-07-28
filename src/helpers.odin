@@ -2,6 +2,7 @@ package main
 import "core:fmt"
 import "core:log"
 import "core:math"
+import "core:math/linalg"
 import "core:os"
 import rl "vendor:raylib"
 ////////////
@@ -222,13 +223,31 @@ get_ghost_piece_index :: proc(turns_left, tail: i8) -> i8 {
 // 	}
 // }
 //
-vec2_add :: proc(v0, v1: Vector2) -> Vector2 {
-	return {v0.x + v1.x, v0.y + v1.y}
 
+point_between_given_distance :: proc(a, b: Vector2, f: f32) -> Vector2 {
+	dir := b - a
+	normal_dir := linalg.normalize(dir)
+	new_point := a + normal_dir * f
+	return new_point
 }
-vec2_mul_scalar :: proc(v: Vector2, scalar: f32) -> Vector2 {
-	return {v.x * scalar, v.y * scalar}
+
+proj_point_over_line :: proc(a, b, c: Vector2) -> Vector2 {
+	ab := b - a
+	ac := c - a
+
+	dot_abc := linalg.dot(ab, ac)
+
+	length_square := linalg.length2(ab)
+	t := dot_abc / length_square
+	return Vector2{a.x + t * ab.x, a.y + t * ab.y}
 }
+// vec2_add :: proc(v0, v1: Vector2) -> Vector2 {
+// 	return {v0.x + v1.x, v0.y + v1.y}
+//
+// }
+// vec2_mul_scalar :: proc(v: Vector2, scalar: f32) -> Vector2 {
+// 	return {v.x * scalar, v.y * scalar}
+// }
 
 sign :: proc(x: f32) -> f32 {
 	return (x > 0) ? 1 : (x < 0) ? -1 : 0

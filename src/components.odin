@@ -158,8 +158,9 @@ BEHAVIOR :: union #no_nil {
 }
 
 IA_ENEMY_SHIELD :: struct {
-	state:  ENEMY_SHIELD_STATE,
-	target: ^Position,
+	state:                  ENEMY_SHIELD_STATE,
+	target:                 ^Position,
+	_time_for_change_state: int,
 }
 
 IA_ENEMY_HUMAN :: struct {
@@ -204,6 +205,7 @@ ENEMY_HUMAN_STATE :: enum {
 }
 
 ENEMY_SHIELD_STATE :: enum {
+	LOOK_FOR_TARGET,
 	APPROACH_TARGET,
 	STAND,
 	ATTACK, // JUST WHEN NO ENEMY TO PROTECT

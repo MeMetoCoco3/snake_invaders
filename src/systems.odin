@@ -2,8 +2,8 @@ package main
 import "core:fmt"
 import "core:log"
 import "core:math"
+import "core:math/linalg"
 import rl "vendor:raylib"
-
 
 audio_system_t :: struct {
 	bg_music: rl.Music,
@@ -420,54 +420,55 @@ ia_shield :: proc(
 	id: u32,
 ) {
 	ia := cast(^IA_ENEMY_SHIELD)ia
-	//
-	// if ia._time_for_change_state > TIME_TO_CHANGE_STATE {
-	// 	ia._time_for_change_state = 0
-	// 	switch {
-	// 	case distance_to_player > ia.maximum_distance:
-	// 		ia.state = .APPROACH
-	// 		animation^ = animation_bank[ANIMATION.ENEMY_RUN]
-	// 	case distance_to_player < ia.minimum_distance:
-	// 		animation^ = animation_bank[ANIMATION.ENEMY_RUN]
-	// 		ia.state = .GOAWAY
-	// 	case:
-	// 		animation^ = animation_bank[ANIMATION.ENEMY_SHOT]
-	// 		ia.state = .SHOT
-	// 	}} else {
-	// 	fmt.println("WE CHANGE!")
-	// 	ia._time_for_change_state += 1
-	// }
 
 	#partial switch ia.state {
-	case .APPROACH_TARGET:
+	case .LOOK_FOR_TARGET:
 		if ia.target == nil {
 			target, ok := get_target(g, id)
 			if ok {
 				ia.target = target
+				ia.state = .APPROACH_TARGET
+				obj := point_between_given_distance(
+					target.pos,
+					center_player,
+					DISTANCE_SHIELD_TO_HUMAN,
+				)
+				velocity.direction = linalg.normalize(obj - position.pos)
+			} else {
+				ia.state = .ATTACK
 			}
 		} else {
-			//move towards target
+			fmt.println("what the hek")
 		}
+
+	case .APPROACH_TARGET:
+		target := ia.target.pos
+		obj := point_between_given_distance(target, center_player, DISTANCE_SHIELD_TO_HUMAN)
+		velocity.direction = linalg.lerp(
+			velocity.direction,
+			linalg.normalize(obj - position.pos),
+			SMOOTHING_SHIELD,
+		)
+
+
+		distance_til_obj := linalg.length(obj - center_enemy)
+		fmt.println(distance_til_obj)
+		if distance_til_obj < 25 {
+			velocity.direction = 0
+			ia.state = .STAND
+		}
+
 	case .ATTACK:
-	//move towards player
+		velocity.direction = linalg.normalize(center_player - position.pos)
+	case .STAND:
+		target := ia.target.pos
+		obj := point_between_given_distance(target, center_player, DISTANCE_SHIELD_TO_HUMAN)
+
+		distance_til_obj := linalg.length(obj - center_enemy)
+		if distance_til_obj > 30 {
+			ia.state = .APPROACH_TARGET
+		}
 	}
-
-
-	// switch ia.state {
-	// case .SHOT:
-	// 	velocity.direction = {0, 0}
-	// 	if ia.reload_time >= ENEMY_TIME_RELOAD {
-	// 		spawn_bullet(g, position.pos, ENEMY_SIZE_BULLET, BULLET_SPEED / 2, direction, .BAD)
-	// 		ia.reload_time = 0
-	// 	} else {
-	// 		ia.reload_time += 1
-	// 	}
-	// case .APPROACH:
-	// 	velocity.direction = direction
-	// case .GOAWAY:
-	// 	velocity.direction = -direction
-	// }
-	//
 }
 
 get_target :: proc(g: ^Game, own_id: u32) -> (^Position, bool) {
@@ -516,7 +517,6 @@ ia_human :: proc(
 	center_player, center_enemy: Vector2,
 	id: u32,
 ) {
-	fmt.println("IA HUMAN")
 	ia := cast(^IA_ENEMY_HUMAN)ia
 	distance_to_player := vec2_distance(center_player, center_enemy)
 
@@ -533,7 +533,6 @@ ia_human :: proc(
 			animation^ = animation_bank[ANIMATION.ENEMY_SHOT]
 			ia.state = .SHOT
 		}} else {
-		fmt.println("WE CHANGE!")
 		ia._time_for_change_state += 1
 	}
 
@@ -544,15 +543,17 @@ ia_human :: proc(
 	case .SHOT:
 		velocity.direction = {0, 0}
 		if ia.reload_time >= ENEMY_TIME_RELOAD {
-			spawn_bullet(g, position.pos, ENEMY_SIZE_BULLET, BULLET_SPEED / 2, direction, .BAD)
+			// TODO: CHECK THIS 
+			// spawn_bullet(g, position.pos, ENEMY_SIZE_BULLET, BULLET_SPEED / 2, direction, .BAD)
 			ia.reload_time = 0
 		} else {
 			ia.reload_time += 1
 		}
 	case .APPROACH:
-		velocity.direction = direction
+		velocity.direction = linalg.normalize(direction)
+
 	case .GOAWAY:
-		velocity.direction = -direction
+		velocity.direction = -1 * linalg.normalize(direction)
 	}
 }
 
@@ -572,8 +573,6 @@ VelocitySystem :: proc(game: ^Game) {
 	);if is_empty do return
 
 	pass := false
-	fmt.println(body.growing)
-	fmt.println(head_direction)
 	if body.growing && head_direction != {0, 0} && body.num_cells > 0 {
 		fmt.println("JAMON")
 		delta := manhattan_distance(head_position.pos, body.first_cell_pos.pos)

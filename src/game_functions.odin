@@ -24,7 +24,7 @@ enemy_behavior := #partial [ENEMY_KIND]IA {
 		table = &table_enemy_human,
 	},
 	.SHIELD = IA {
-		behavior = BEHAVIOR(IA_ENEMY_SHIELD{.APPROACH_TARGET, nil}),
+		behavior = BEHAVIOR(IA_ENEMY_SHIELD{.LOOK_FOR_TARGET, nil, 0}),
 		table = &table_enemy_shield,
 	},
 }
@@ -242,7 +242,7 @@ clear_dead :: proc(game: ^Game) {
 	}
 
 }
-
+done := false
 update_scene :: proc(game: ^Game) {
 	if game.candy_respawn_time >= CANDY_RESPAWN_TIME {
 		if game.count_candies < MAX_NUM_CANDIES {
@@ -251,15 +251,23 @@ update_scene :: proc(game: ^Game) {
 		}
 	}
 
-	if game.enemy_respawn_time >= ENEMY_RESPAWN_TIME {
-		game.enemy_respawn_time = 0
-		if game.count_enemies < MAX_NUM_ENEMIES {
-			spawn_pos := get_random_position_on_spawn(game)
-			new_kind := get_random_enemy_type()
 
-			spawn_enemy(game, spawn_pos.x, spawn_pos.y, new_kind)
-		}
+	if !done {
+		spawn_pos := get_random_position_on_spawn(game)
+		spawn_enemy(game, spawn_pos.x, spawn_pos.y, .SHIELD)
+		spawn_pos = get_random_position_on_spawn(game)
+		spawn_enemy(game, spawn_pos.x, spawn_pos.y, .HUMAN)
+		done = true
 	}
+	// if game.enemy_respawn_time >= ENEMY_RESPAWN_TIME {
+	// 	game.enemy_respawn_time = 0
+	// 	if game.count_enemies < MAX_NUM_ENEMIES {
+	// 		spawn_pos := get_random_position_on_spawn(game)
+	// 		new_kind := get_random_enemy_type()
+	//
+	// 		spawn_enemy(game, spawn_pos.x, spawn_pos.y, new_kind)
+	// 	}
+	// }
 
 	game.enemy_respawn_time += 1
 	game.candy_respawn_time += 1
