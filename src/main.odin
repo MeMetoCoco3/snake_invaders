@@ -23,11 +23,11 @@ main :: proc() {
 	atlas = rl.LoadTexture("assets/atlas.png")
 	tx_candy = rl.LoadTexture("assets/coin.png")
 
-	load_animations()
-	load_sprites()
+	LoadAnimations()
+	LoadSprites()
 
 
-	load_sounds()
+	LoadSounds()
 
 	bg_music := bg_music
 	rl.SetMusicVolume(bg_music, 0.01)
@@ -38,7 +38,7 @@ main :: proc() {
 		arena = &arena,
 	}
 	InitCamera(&game)
-	load_scene(&game, .ONE)
+	LoadScene(&game, .ONE)
 
 	for !rl.WindowShouldClose() {
 		game.fram_count += 1
@@ -53,7 +53,7 @@ main :: proc() {
 			CollisionSystem(&game)
 			VelocitySystem(&game)
 
-			draw_game(&game)
+			DrawGame(&game)
 
 		case .PAUSE:
 			InputSystemPause(&game)
@@ -63,7 +63,7 @@ main :: proc() {
 			rl.ClearBackground(rl.BLACK)
 			rl.EndDrawing()
 		case .QUIT:
-			clean_up(&game)
+			CleanUp(&game)
 		case .DEAD:
 			InputSystemPause(&game)
 
@@ -86,8 +86,8 @@ add_player :: proc(game: ^Game) {
 			PlayerData {
 				.NORMAL,
 				20,
-				Vector2{0, 0},
-				Vector2{0, 0},
+				Vec2{0, 0},
+				Vec2{0, 0},
 				true,
 				RECOVER_DASH_TIME,
 				RECOVER_DMG_TIME,
@@ -100,7 +100,7 @@ add_player :: proc(game: ^Game) {
 				PLAYER_SIZE,
 				0,
 			},
-			Position{Vector2{320, 320}, {PLAYER_SIZE, PLAYER_SIZE}},
+			Position{Vec2{320, 320}, {PLAYER_SIZE, PLAYER_SIZE}},
 			Velocity{{0, 0}, PLAYER_SPEED},
 			animation_bank[ANIMATION.PLAYER],
 			Data{.PLAYER, .ALIVE, .GOOD},

@@ -153,7 +153,7 @@ CollisionSystem :: proc(game: ^Game) {
 						   dataB.state != .DEAD &&
 						   collide_no_edges(colliderB^, colliderA^) {
 							dataB.state = .DEAD
-							add_sound(game, &sound_bank[FX.FX_EAT])
+							AddSound(game, &sound_bank[FX.FX_EAT])
 							game.count_candies -= 1
 
 							if MAX_NUM_BODY - 1 > game.player_body.num_cells {
@@ -212,7 +212,7 @@ CollisionSystem :: proc(game: ^Game) {
 
 								case .DASH:
 									dataB.state = .DEAD
-									add_sound(game, &sound_bank[FX.FX_EAT])
+									AddSound(game, &sound_bank[FX.FX_EAT])
 
 									game.player_data.cells_to_grow += 1
 									// TODO: WHY IS THIS HERE? 
@@ -359,7 +359,7 @@ CollisionSystem :: proc(game: ^Game) {
 	}
 }
 
-spawn_ghost_cell :: proc(game: ^Game, head_pos, from_dir: Vector2, rotation: f32) {
+spawn_ghost_cell :: proc(game: ^Game, head_pos, from_dir: Vec2, rotation: f32) {
 	entity_id := add_entity(
 		game.world,
 		ghost_mask,
@@ -431,7 +431,7 @@ ia_shield :: proc(
 	position: ^Position,
 	animation: ^Animation,
 	ia: ^BEHAVIOR,
-	center_player, center_enemy: Vector2,
+	center_player, center_enemy: Vec2,
 	id: u32,
 ) {
 	ia := cast(^IA_ENEMY_SHIELD)ia
@@ -529,7 +529,7 @@ ia_human :: proc(
 	position: ^Position,
 	animation: ^Animation,
 	ia: ^BEHAVIOR,
-	center_player, center_enemy: Vector2,
+	center_player, center_enemy: Vec2,
 	id: u32,
 ) {
 	ia := cast(^IA_ENEMY_HUMAN)ia
@@ -768,7 +768,7 @@ RenderingSystem :: proc(game: ^Game) {
 					}
 				}
 				sprites[i].rotation = rotation
-				draw(sprites[i], pos)
+				Draw(sprites[i], pos)
 
 
 			}
@@ -780,7 +780,7 @@ RenderingSystem :: proc(game: ^Game) {
 		for arquetype in arquetypes {
 			positions := arquetype.positions
 			animations := arquetype.animations
-			direction := Vector2{0, 0}
+			direction := Vec2{0, 0}
 			team := arquetype.data
 			has_velocity := false
 			is_player := false
@@ -809,32 +809,36 @@ RenderingSystem :: proc(game: ^Game) {
 					color = rl.RED
 				}
 
-				draw(positions[i], &animations[i], direction, team[i].team, color)
+				Draw(positions[i], &animations[i], direction, team[i].team, color)
 			}
 		}
 	}
 }
 
-
-set_piece_to_follow :: proc(
-	ghosts: ^Ringuffer_t(cell_ghost_t),
-	turns_left: int,
-	head_pos, head_dir: Vector2,
-	piece_to_follow: ^cell_t,
-	ghost_index_being_followed: ^int,
-) {
-	if turns_left == 0 {
-		piece_to_follow^ = cell_t{head_pos, head_dir, 0, PLAYER_SIZE, {}}
-		ghost_index_being_followed^ = -1
-	} else {
-		ghost_index_being_followed^ =
-			(MAX_RINGBUFFER_VALUES + int(ghosts.tail) - turns_left) % MAX_RINGBUFFER_VALUES
-		piece_to_follow^ = ghost_to_cell(ghosts.values[ghost_index_being_followed^])
-	}
+ANIMATION :: enum {
+	PLAYER = 0,
+	BULLET_G,
+	ENEMY_SHOT,
+	ENEMY_RUN,
+	BIG_EXPLOSION,
+	BULLET_B,
+	CANDY,
+	SHIELD,
+	ANIM_COUNT,
 }
 
-
-angle_from_vector :: proc(v0: Vector2) -> f32 {
-	return math.atan2(v0.y, v0.x) * (180.0 / math.PI)
-
+SPRITE :: enum {
+	PLAYER_IDLE = 0,
+	PLAYER_EAT,
+	BODY_STRAIGHT,
+	BODY_TURN,
+	TAIL,
+	BORDER,
+	CORNER,
+	SPRITE_COUNT,
 }
+
+animation_bank: [ANIMATION.ANIM_COUNT]Animation
+sprite_bank: [SPRITE.SPRITE_COUNT]Sprite
+sound_bank: [FX.FX_COUNT]rl.Sound
+bg_music: rl.Music

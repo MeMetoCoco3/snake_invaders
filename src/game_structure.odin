@@ -5,7 +5,8 @@ import "core:math"
 import "core:mem"
 import vmem "core:mem/virtual"
 import rl "vendor:raylib"
-Vector2 :: [2]f32
+
+Vec2 :: [2]f32
 
 Game :: struct {
 	loops:              int,
@@ -21,7 +22,7 @@ Game :: struct {
 	enemy_respawn_time: int,
 	count_enemies:      int,
 	count_candies:      int,
-	directions:         ^Ringuffer_t(Vector2),
+	directions:         ^Ringuffer_t(Vec2),
 	audio:              audio_system_t,
 	world:              ^World,
 	arena:              ^vmem.Arena,
@@ -51,7 +52,7 @@ PLAYER_STATE :: enum {
 }
 
 cell_t :: struct {
-	position, direction: Vector2,
+	position, direction: Vec2,
 	count_turns_left:    i8,
 	size:                f32,
 	collider:            Collider,
@@ -60,60 +61,11 @@ cell_t :: struct {
 cell_ghost_t :: struct {
 	entity_id:           u32,
 	body_index:          u32,
-	position, direction: Vector2,
+	position, direction: Vec2,
 	rotation:            f32,
 }
 
-radians_from_vector :: proc(v: Vector2) -> f32 {
-	return math.atan2_f32(v.y, v.x)
-
-}
-
-vec2_normalize :: proc(v: ^Vector2) {
-	x, y: f32
-	if v.x == 0 {
-		x = 0
-	} else {
-		x = v.x / abs(v.x)
-	}
-	if v.y == 0 {
-		y = 0
-	} else {
-		y = v.y / abs(v.y)
-	}
-	v.x = x
-	v.y = y
-}
-
-ANIMATION :: enum {
-	PLAYER = 0,
-	BULLET_G,
-	ENEMY_SHOT,
-	ENEMY_RUN,
-	BIG_EXPLOSION,
-	BULLET_B,
-	CANDY,
-	SHIELD,
-	ANIM_COUNT,
-}
-
-SPRITE :: enum {
-	PLAYER_IDLE = 0,
-	PLAYER_EAT,
-	BODY_STRAIGHT,
-	BODY_TURN,
-	TAIL,
-	BORDER,
-	CORNER,
-	SPRITE_COUNT,
-}
-
-animation_bank: [ANIMATION.ANIM_COUNT]Animation
-sprite_bank: [SPRITE.SPRITE_COUNT]Sprite
-sound_bank: [FX.FX_COUNT]rl.Sound
-bg_music: rl.Music
-
-draw :: proc {
+Draw :: proc {
 	draw_sprite,
 	draw_animated_sprite,
 }
@@ -122,7 +74,7 @@ draw :: proc {
 draw_animated_sprite :: proc(
 	position: Position,
 	animation: ^Animation,
-	direction: Vector2,
+	direction: Vec2,
 	team: ENTITY_TEAM,
 	color: rl.Color,
 ) {
@@ -153,7 +105,7 @@ draw_animated_sprite :: proc(
 		position.size.y,
 	}
 
-	origin := Vector2{position.size.x / 2, position.size.y / 2}
+	origin := Vec2{position.size.x / 2, position.size.y / 2}
 	rl.DrawTexturePro(animation.image^, src_rec, dst_rec, origin, angle, color)
 	if DEBUG_COLISION {
 		dst_rec.x -= position.size.x / 2
@@ -187,15 +139,15 @@ draw_sprite :: proc(sprite: Sprite, position: Position) {
 		sprite.src_rect.size.y,
 	}
 	dst_rec := rl.Rectangle{position.pos.x, position.pos.y, position.size.x, position.size.y}
-	origin := Vector2{position.size.x / 2, position.size.y / 2}
+	origin := Vec2{position.size.x / 2, position.size.y / 2}
 	rl.DrawTexturePro(sprite.image^, src_rec, dst_rec, origin, sprite.rotation, rl.WHITE)
 }
 
-add_sound :: proc(game: ^Game, sound: ^rl.Sound) {
+AddSound :: proc(game: ^Game, sound: ^rl.Sound) {
 	append(&game.audio.fx, sound)
 }
 
-play_sound :: proc(game: ^Game) {
+PlaySound :: proc(game: ^Game) {
 	if len(game.audio.fx) > 0 {
 		fx := game.audio.fx[0]
 		unordered_remove(&game.audio.fx, 0)
@@ -203,14 +155,14 @@ play_sound :: proc(game: ^Game) {
 	}
 }
 
-load_sounds :: proc() {
+LoadSounds :: proc() {
 	bg_music = rl.LoadMusicStream("assets/bg_music.mp3")
 
 	sound_bank[FX.FX_EAT] = rl.LoadSound("assets/nom.mp3")
 	sound_bank[FX.FX_SHOOT] = rl.LoadSound("assets/pow.mp3")
 }
 
-load_animations :: proc() {
+LoadAnimations :: proc() {
 	animation_bank[ANIMATION.PLAYER] = Animation {
 		image          = &atlas,
 		w              = PLAYER_SIZE,
@@ -343,7 +295,7 @@ load_animations :: proc() {
 }
 
 
-load_sprites :: proc() {
+LoadSprites :: proc() {
 	sprite_bank[SPRITE.PLAYER_IDLE] = Sprite {
 		image    = &atlas,
 		src_rect = Rect{{0, 0}, {32, 32}},
@@ -393,41 +345,26 @@ draw_body_sprite :: proc(body: ^Body) {
 
 		sprite.rotation = cell.rotation
 
-		draw(sprite, Position{pos = cell.position + PLAYER_SIZE / 2, size = PLAYER_SIZE})
+		Draw(sprite, Position{pos = cell.position + PLAYER_SIZE / 2, size = PLAYER_SIZE})
 
 		loop_index = (loop_index + 1) % MAX_RINGBUFFER_VALUES
 	}
 }
 
 
-unload_textures :: proc() {
+UnloadTextures :: proc() {
 	rl.UnloadTexture(atlas)
 	rl.UnloadTexture(tx_candy)
 }
 
 
-unload_sounds :: proc() {
+UnloadSounds :: proc() {
 	for i in 0 ..< int(FX.FX_COUNT) {
 		rl.UnloadSound(sound_bank[i])
 	}
 }
 
-set_body_0 :: proc(game: ^Game) {
-	raw, _ := mem.alloc(size_of(Ringuffer_t(cell_ghost_t)))
-	rb_ghost := cast(^Ringuffer_t(cell_ghost_t))raw
-	rb_ghost.values = make([]cell_ghost_t, MAX_RINGBUFFER_VALUES)
-	game.player_body.ghost_pieces = rb_ghost
-}
-
-set_directions_0 :: proc(game: ^Game) {
-	raw, _ := mem.alloc(size_of(Ringuffer_t(Vector2)))
-	rb_dir := cast(^Ringuffer_t(Vector2))raw
-	rb_dir.values = make([]Vector2, MAX_RINGBUFFER_VALUES)
-	game.directions = rb_dir
-
-}
-
-load_scene :: proc(game: ^Game, scene: SCENES) {
+LoadScene :: proc(game: ^Game, scene: SCENES) {
 	game.world = new_world()
 	add_player(game)
 	set_body_0(game)

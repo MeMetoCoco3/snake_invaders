@@ -1,6 +1,7 @@
 package main
 import rl "vendor:raylib"
 
+
 COMPONENT_ID :: enum u64 {
 	POSITION    = 1,
 	VELOCITY    = 2,
@@ -25,12 +26,12 @@ Component :: union #no_nil {
 }
 
 Position :: struct {
-	pos:  Vector2,
-	size: Vector2,
+	pos:  Vec2,
+	size: Vec2,
 }
 
 Velocity :: struct {
-	direction: Vector2,
+	direction: Vec2,
 	speed:     f32,
 }
 
@@ -41,8 +42,8 @@ Sprite :: struct {
 }
 
 Rect :: struct {
-	position: Vector2,
-	size:     Vector2,
+	position: Vec2,
+	size:     Vec2,
 }
 
 
@@ -55,8 +56,8 @@ Animation :: struct {
 	num_frames:         int,
 	frame_delay:        int,
 	_time_on_frame:     int,
-	padding:            Vector2,
-	offset:             Vector2,
+	padding:            Vec2,
+	offset:             Vec2,
 	kind:               ANIMATION_KIND,
 	angle_type:         ANIM_DIRECTION,
 	angle:              f32,
@@ -75,7 +76,7 @@ ANIM_DIRECTION :: enum {
 }
 
 Collider :: struct {
-	position: Vector2,
+	position: Vec2,
 	w, h:     int,
 	active:   bool,
 }
@@ -94,7 +95,7 @@ ia_table :: struct {
 		position: ^Position,
 		animation: ^Animation,
 		ia: ^BEHAVIOR,
-		center_player, center_enemy: Vector2,
+		center_player, center_enemy: Vec2,
 		id: u32,
 	),
 	get_type: proc() -> ENEMY_KIND,
@@ -133,8 +134,8 @@ ENEMY_KIND :: enum {
 PlayerData :: struct {
 	player_state:     PLAYER_STATE,
 	distance:         f32,
-	next_dir:         Vector2,
-	previous_dir:     Vector2,
+	next_dir:         Vec2,
+	previous_dir:     Vec2,
 	can_dash:         bool,
 	// going_to_collide: bool,
 	// distance_to_move: f32,

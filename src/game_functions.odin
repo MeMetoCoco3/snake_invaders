@@ -124,7 +124,7 @@ InputSystem :: proc(game: ^Game) {
 			}
 
 			player_data.next_bullet_size += 1
-			kill_last_bodycell(game)
+			kill_last_body_cell(game)
 			body.num_cells -= 1
 		}
 	}
@@ -132,7 +132,7 @@ InputSystem :: proc(game: ^Game) {
 	// 	last_cell_pos, last_cell_velocity, last_cell_data, ok := get_last_cell2(game)
 	// 	if PLAYER_SIZE - last_cell_pos.size.x > EPSILON {
 	// 		last_cell_pos.size = math.lerp(
-	// 			Vector2{last_cell_pos.size.x, last_cell_pos.size.y},
+	// 			Vec2{last_cell_pos.size.x, last_cell_pos.size.y},
 	// 			f32(PLAYER_SIZE),
 	// 			f32(SMOOTHING / 2),
 	// 		)
@@ -143,7 +143,7 @@ InputSystem :: proc(game: ^Game) {
 
 
 	if (rl.IsKeyReleased(.Z)) && player_data.next_bullet_size > 0 {
-		add_sound(game, &sound_bank[FX.FX_SHOOT])
+		AddSound(game, &sound_bank[FX.FX_SHOOT])
 		// THIS ORIGIN MARKS THE VERTEZ SO I SHOULD TAKEON ACCOUT ALSO THE SIZE OF THE BULLET
 		origin := player_position.pos + player_position.size / 2
 
@@ -171,7 +171,7 @@ InputSystemPause :: proc(game: ^Game) {
 	if (rl.IsKeyPressed(.ENTER)) {
 		if game.state == .DEAD {
 			vmem.arena_free_all(game.arena)
-			load_scene(game, game.current_scene)
+			LoadScene(game, game.current_scene)
 		}
 		game.state = .PLAY
 		rl.ResumeMusicStream(game.audio.bg_music)
@@ -187,8 +187,8 @@ InputSystemPause :: proc(game: ^Game) {
 // UPDATE //
 ////////////
 update :: proc(game: ^Game) {
-	play_sound(game)
-	update_scene(game)
+	PlaySound(game)
+	UpdateScene(game)
 	UpdateCamera(game)
 	fmt.println(game.camera.target)
 	if game.player_data.cells_to_grow > 0 {
@@ -257,7 +257,7 @@ clear_dead :: proc(game: ^Game) {
 
 }
 done := false
-update_scene :: proc(game: ^Game) {
+UpdateScene :: proc(game: ^Game) {
 	if game.candy_respawn_time >= CANDY_RESPAWN_TIME {
 		if game.count_candies < MAX_NUM_CANDIES {
 			game.candy_respawn_time = 0
@@ -324,7 +324,7 @@ get_cell :: proc(g: ^Game, index: i8) -> (^Position, ^Velocity, ^PlayerData, boo
 // 	return nil, nil, nil, false
 // }
 //
-grow_body :: proc(game: ^Game, body: ^Body, head_pos, head_dir: Vector2) {
+grow_body :: proc(game: ^Game, body: ^Body, head_pos, head_dir: Vec2) {
 	switch {
 	case body.num_cells < MAX_NUM_BODY:
 		add_entity(
@@ -444,7 +444,7 @@ spawn_enemy :: proc(game: ^Game, x, y: f32, kind: ENEMY_KIND) -> u32 {
 		velocity = Velocity{{0, 0}, ENEMY_SPEED * 1.5}
 	}
 
-	colision_origin := Vector2{x, y} + EPSILON_COLISION * 2
+	colision_origin := Vec2{x, y} + EPSILON_COLISION * 2
 	id := add_entity(
 	game.world,
 	enemy_mask,
@@ -470,10 +470,10 @@ spawn_enemy :: proc(game: ^Game, x, y: f32, kind: ENEMY_KIND) -> u32 {
 
 spawn_bullet :: proc(
 	game: ^Game,
-	origin: Vector2,
+	origin: Vec2,
 	bullet_size: f32,
 	speed: f32,
-	direction: Vector2,
+	direction: Vec2,
 	team: ENTITY_TEAM,
 ) {
 
@@ -524,7 +524,7 @@ spawn_candy :: proc(game: ^Game) {
 			Data{.CANDY, .ALIVE, .NEUTRAL},
 			animation_bank[ANIMATION.CANDY],
 			Collider {
-				Vector2{f32(pos_x + 10), f32(pos_y + 10)} + EPSILON_COLISION,
+				Vec2{f32(pos_x + 10), f32(pos_y + 10)} + EPSILON_COLISION,
 				CANDY_SIZE - EPSILON_COLISION * 2,
 				CANDY_SIZE - EPSILON_COLISION * 2,
 				true,
@@ -540,16 +540,15 @@ spawn_candy :: proc(game: ^Game) {
 ////////////
 // RENDER //
 ////////////
-draw_game :: proc(game: ^Game) {
+DrawGame :: proc(game: ^Game) {
+	DrawGrid({100, 100, 100, 255})
 
-	draw_grid({100, 100, 100, 255})
 	rl.BeginDrawing()
-
 	rl.ClearBackground(rl.BLACK)
+
 	rl.BeginMode2D(game.camera)
-	// draw_scene(game)
-	draw_body(&game.player_body)
-	draw_ghost_cells(game.player_body.ghost_pieces)
+	DrawBody(&game.player_body)
+	DrawGhostCells(game.player_body.ghost_pieces)
 	RenderingSystem(game)
 	if DEBUG_COLISION {
 		DrawCollidersSystem(game)
@@ -559,11 +558,20 @@ draw_game :: proc(game: ^Game) {
 	rl.EndDrawing()
 }
 
-draw_body :: proc(body: ^Body) {
+DrawGrid :: proc(col: rl.Color) {
+	for i: i32 = 0; i < SCREEN_WIDTH; i += GRID_SIZE {
+		rl.DrawLine(i, 0, i, SCREEN_HEIGHT, col)
+		rl.DrawLine(0, i, SCREEN_WIDTH, i, col)
+	}
+}
+
+
+DrawBody :: proc(body: ^Body) {
 	draw_body_sprite(body)
 }
 
-draw_ghost_cells :: proc(rb: ^Ringuffer_t(cell_ghost_t)) {
+
+DrawGhostCells :: proc(rb: ^Ringuffer_t(cell_ghost_t)) {
 	for i in 0 ..< rb.count {
 		current := rb.head + i
 		if current >= MAX_RINGBUFFER_VALUES {
@@ -578,64 +586,4 @@ draw_ghost_cells :: proc(rb: ^Ringuffer_t(cell_ghost_t)) {
 			rl.PINK,
 		)
 	}
-}
-aligned_to_grid :: proc(p: Vector2) -> bool {
-	return i32(p.x) % GRID_SIZE == 0 && i32(p.y) % GRID_SIZE == 0
-}
-
-circle_colliding :: proc(v0, v1: Vector2, d0, d1: f32) -> bool {
-	return vec2_distance(v0, v1) < d0 + d1
-}
-
-rec_colliding :: proc(v0: Vector2, w0: f32, h0: f32, v1: Vector2, w1: f32, h1: f32) -> bool {
-	horizontal_in :=
-		(v0.x <= v1.x && v0.x + w0 >= v1.x) || (v0.x <= v1.x + w1 && v0.x + w0 >= v1.x + w1)
-	vertical_in :=
-		(v0.y <= v1.y && v0.y + h0 >= v1.y) || (v0.y <= v1.y + h1 && v0.y + h0 >= v1.y + h1)
-	return horizontal_in && vertical_in
-}
-
-rec_colliding_no_edges :: proc(
-	v0: Vector2,
-	w0: f32,
-	h0: f32,
-	v1: Vector2,
-	w1: f32,
-	h1: f32,
-) -> bool {
-	horizontal_in :=
-		(v0.x < v1.x && v0.x + w0 > v1.x) || (v0.x < v1.x + w1 && v0.x + w0 > v1.x + w1)
-	vertical_in := (v0.y < v1.y && v0.y + h0 > v1.y) || (v0.y < v1.y + h1 && v0.y + h0 > v1.y + h1)
-	return horizontal_in && vertical_in
-}
-
-collide_no_edges :: proc(c0, c1: Collider) -> bool {
-	v0 := c0.position
-	w0 := f32(c0.w)
-	h0 := f32(c0.h)
-
-	v1 := c1.position
-	w1 := f32(c1.w)
-	h1 := f32(c1.h)
-
-	a := (v0.x < v1.x + w1 && v0.x + w0 > v1.x && v0.y < v1.y + h1 && v0.y + h0 > v1.y)
-	b := (v0.x + w0 == v1.x || v0.x == v1.x + w1 || v0.y + h0 == v1.y || v0.y == v1.y + h1)
-
-	return a && !b
-}
-
-collide :: proc(c0, c1: Collider) -> bool {
-	v0 := c0.position
-	w0 := f32(c0.w)
-	h0 := f32(c0.h)
-
-	v1 := c1.position
-	w1 := f32(c1.w)
-	h1 := f32(c1.h)
-
-	horizontal_in :=
-		(v0.x <= v1.x && v0.x + w0 >= v1.x) || (v0.x <= v1.x + w1 && v0.x + w0 >= v1.x + w1)
-	vertical_in :=
-		(v0.y <= v1.y && v0.y + h0 >= v1.y) || (v0.y <= v1.y + h1 && v0.y + h0 >= v1.y + h1)
-	return horizontal_in && vertical_in
 }

@@ -12,11 +12,9 @@
 - ~Compose player from entity~
 - ~BUG WHEN DEAD AND PRESS ENTER: animation was being overwritten on load scene~
 
-- ~Transform ecs functions to get a slice not com | com | com
+- ~Transform ecs functions to get a slice not com | com | com~
 - ~Make ghost_cells have collider~
-- Add other objectives for player.
+- We cant make use of the bitsets from odin,because we would need extra space, and an enum cannot be a long int
 - ~Add state to enemies.~
 - Enemy3= Coin thief
-
-			// TODO:  rl.MeasureTextEx(
-			// measure_text := rl.MeasureTextEx(rl.GetFontDefault(), "WANT TO PLAY AGAIN?", 30, 6)
+- Add other objectives for player.

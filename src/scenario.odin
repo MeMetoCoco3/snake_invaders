@@ -12,100 +12,6 @@ BORDER_SIZE :: 128
 load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 	world := game.world
 
-	// id := add_entity(
-	// 	world,
-	// 	mask_static,
-	// 	[]Component {
-	// 		Position{{SCREEN_WIDTH / 2, BORDER_SIZE / 2}, {BORDER_SIZE, SCREEN_WIDTH}},
-	// 		Collider{{0, 0}, SCREEN_WIDTH, PLAYER_SIZE, true},
-	// 		Sprite{&atlas, Rect{{0, 96}, {32, 32}}, 90},
-	// 		Data{.STATIC, .ALIVE, .NEUTRAL},
-	// 	},
-	// )
-	//
-	// arquetype := world.archetypes[mask_static]
-	//
-	// id = add_entity(
-	// 	world,
-	// 	mask_static,
-	// 	[]Component {
-	// 		Position {
-	// 			{SCREEN_WIDTH / 2, SCREEN_HEIGHT - BORDER_SIZE / 2},
-	// 			{BORDER_SIZE, SCREEN_WIDTH},
-	// 		},
-	// 		Collider{{SCREEN_WIDTH, SCREEN_HEIGHT - PLAYER_SIZE}, SCREEN_WIDTH, PLAYER_SIZE, true},
-	// 		Sprite{&atlas, Rect{{0, 96}, {32, 32}}, 270},
-	// 		Data{.STATIC, .ALIVE, .NEUTRAL},
-	// 	},
-	// )
-	//
-	// id = add_entity(
-	// 	world,
-	// 	mask_static,
-	// 	[]Component {
-	// 		Position{{BORDER_SIZE / 2, SCREEN_WIDTH / 2}, {BORDER_SIZE, SCREEN_HEIGHT}},
-	// 		Collider{{0, 0}, PLAYER_SIZE, SCREEN_HEIGHT, true},
-	// 		Sprite{&atlas, Rect{{0, 96}, {32, 32}}, 0},
-	// 		Data{.STATIC, .ALIVE, .NEUTRAL},
-	// 	},
-	// )
-	//
-	// id = add_entity(
-	// 	world,
-	// 	mask_static,
-	// 	[]Component {
-	// 		Position {
-	// 			{SCREEN_WIDTH - BORDER_SIZE / 2, SCREEN_HEIGHT / 2},
-	// 			{BORDER_SIZE, SCREEN_HEIGHT},
-	// 		},
-	// 		Collider{{SCREEN_WIDTH - PLAYER_SIZE, 0}, PLAYER_SIZE, SCREEN_HEIGHT, true},
-	// 		Sprite{&atlas, Rect{{0, 96}, {32, 32}}, 180},
-	// 		Data{.STATIC, .ALIVE, .NEUTRAL},
-	// 	},
-	// )
-	//
-	// // CORNERS
-	// id = add_entity(
-	// 	world,
-	// 	mask_static,
-	// 	[]Component {
-	// 		Position{{128 / 2, 128 / 2}, {128, 128}},
-	// 		Sprite{&atlas, Rect{{32, 96}, {32, 32}}, 0},
-	// 		Collider{},
-	// 		Data{.STATIC, .ALIVE, .NEUTRAL},
-	// 	},
-	// )
-	// id = add_entity(
-	// 	world,
-	// 	mask_static,
-	// 	[]Component {
-	// 		Position{{SCREEN_WIDTH - 128 / 2, 128 / 2}, {128, 128}},
-	// 		Sprite{&atlas, Rect{{32, 96}, {32, 32}}, 90},
-	// 		Collider{},
-	// 		Data{.STATIC, .ALIVE, .NEUTRAL},
-	// 	},
-	// )
-	// id = add_entity(
-	// 	world,
-	// 	mask_static,
-	// 	[]Component {
-	// 		Position{{SCREEN_WIDTH - 128 / 2, SCREEN_HEIGHT - 128 / 2}, {128, 128}},
-	// 		Sprite{&atlas, Rect{{32, 96}, {32, 32}}, 180},
-	// 		Collider{},
-	// 		Data{.STATIC, .ALIVE, .NEUTRAL},
-	// 	},
-	// )
-	// id = add_entity(
-	// 	world,
-	// 	mask_static,
-	// 	[]Component {
-	// 		Position{{128 / 2, SCREEN_HEIGHT - 128 / 2}, {128, 128}},
-	// 		Sprite{&atlas, Rect{{32, 96}, {32, 32}}, 270},
-	// 		Collider{},
-	// 		Data{.STATIC, .ALIVE, .NEUTRAL},
-	// 	},
-	// )
-
 	spawn_areas := make([]rl.Rectangle, NUM_RECTANGLES_ON_SCENE)
 	spawn_areas_slice := [?]rl.Rectangle {
 		get_rec_from_cell(10, (SCREEN_WIDTH / PLAYER_SIZE) - 20, 2, 2),
@@ -134,11 +40,11 @@ load_scenario :: proc(game: ^Game, scene_to_load: SCENES) {
 	game.count_spawn_areas = cnt
 }
 
-clean_up :: proc(game: ^Game) {
-	free_all_entities(game)
+CleanUp :: proc(game: ^Game) {
+	FreeAllEntities(game)
 	fmt.println("AFTER FREE GAME")
-	unload_sounds()
-	unload_textures()
+	UnloadSounds()
+	UnloadTextures()
 
 	rl.UnloadMusicStream(game.audio.bg_music)
 
@@ -148,7 +54,7 @@ clean_up :: proc(game: ^Game) {
 	rl.CloseWindow()
 }
 
-free_all_entities :: proc(game: ^Game) {
+FreeAllEntities :: proc(game: ^Game) {
 	for _, archetype in game.world.archetypes {
 		mask := archetype.component_mask
 		clear(&archetype.entities_id)
