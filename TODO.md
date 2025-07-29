@@ -12,12 +12,11 @@
 - ~Compose player from entity~
 - ~BUG WHEN DEAD AND PRESS ENTER: animation was being overwritten on load scene~
 
-- Transform ecs functions to get a slice not com | com | com
-- Make ghost_cells have collider
-- Move player to stack alloc.
+- ~Transform ecs functions to get a slice not com | com | com
+- ~Make ghost_cells have collider~
 - Add other objectives for player.
-- Add state to enemies.
-
+- ~Add state to enemies.~
+- Enemy3= Coin thief
 
 			// TODO:  rl.MeasureTextEx(
 			// measure_text := rl.MeasureTextEx(rl.GetFontDefault(), "WANT TO PLAY AGAIN?", 30, 6)

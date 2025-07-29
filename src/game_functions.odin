@@ -29,6 +29,19 @@ enemy_behavior := #partial [ENEMY_KIND]IA {
 	},
 }
 
+UpdateCamera :: proc(g: ^Game) {
+	gx, gy := g.player_position.pos.x, g.player_position.pos.y
+	camera_pos := rl.Vector2{gx - SCREEN_WIDTH / 2, gy - SCREEN_HEIGHT / 2}
+	g.camera.target = camera_pos
+
+}
+
+InitCamera :: proc(g: ^Game) {
+	// g.camera.target = g.player_position.pos
+	g.camera.zoom = 1
+	// g.camera. = g.player_position
+}
+
 
 InputSystem :: proc(game: ^Game) {
 	if (rl.IsKeyReleased(.C)) {
@@ -176,7 +189,8 @@ InputSystemPause :: proc(game: ^Game) {
 update :: proc(game: ^Game) {
 	play_sound(game)
 	update_scene(game)
-
+	UpdateCamera(game)
+	fmt.println(game.camera.target)
 	if game.player_data.cells_to_grow > 0 {
 		game.player_data.cells_to_grow -= 1
 		if !game.player_body.growing && game.player_data.distance > PLAYER_SIZE {
@@ -420,13 +434,15 @@ get_random_position_on_spawn :: proc(game: ^Game) -> [2]f32 {
 
 spawn_enemy :: proc(game: ^Game, x, y: f32, kind: ENEMY_KIND) -> u32 {
 	animation: Animation
+	velocity: Velocity
 	#partial switch kind {
 	case .HUMAN:
 		animation = animation_bank[ANIMATION.ENEMY_RUN]
+		velocity = Velocity{{0, 0}, ENEMY_SPEED}
 	case .SHIELD:
 		animation = animation_bank[ANIMATION.SHIELD]
+		velocity = Velocity{{0, 0}, ENEMY_SPEED * 1.5}
 	}
-
 
 	colision_origin := Vector2{x, y} + EPSILON_COLISION * 2
 	id := add_entity(
@@ -434,7 +450,7 @@ spawn_enemy :: proc(game: ^Game, x, y: f32, kind: ENEMY_KIND) -> u32 {
 	enemy_mask,
 	[]Component {
 		Position{{x, y}, {ENEMY_SIZE, ENEMY_SIZE}},
-		Velocity{{0, 0}, ENEMY_SPEED},
+		velocity,
 		animation,
 		Collider {
 			colision_origin,
@@ -525,8 +541,12 @@ spawn_candy :: proc(game: ^Game) {
 // RENDER //
 ////////////
 draw_game :: proc(game: ^Game) {
-	rl.BeginDrawing()
+
 	draw_grid({100, 100, 100, 255})
+	rl.BeginDrawing()
+
+	rl.ClearBackground(rl.BLACK)
+	rl.BeginMode2D(game.camera)
 	// draw_scene(game)
 	draw_body(&game.player_body)
 	draw_ghost_cells(game.player_body.ghost_pieces)
@@ -535,7 +555,7 @@ draw_game :: proc(game: ^Game) {
 		DrawCollidersSystem(game)
 	}
 
-	rl.ClearBackground(rl.BLACK)
+	rl.EndMode2D()
 	rl.EndDrawing()
 }
 

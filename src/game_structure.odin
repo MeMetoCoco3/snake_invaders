@@ -26,6 +26,7 @@ Game :: struct {
 	world:              ^World,
 	arena:              ^vmem.Arena,
 	fram_count:         int,
+	camera:             rl.Camera2D,
 }
 
 Body :: struct {

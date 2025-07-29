@@ -94,7 +94,6 @@ CollisionSystem :: proc(game: ^Game) {
 
 
 			if dataA.kind == .PLAYER {
-
 				player := game.world.archetypes[player_mask]
 				body := &game.player_body
 				head_position := &player.positions[i].pos
@@ -137,7 +136,6 @@ CollisionSystem :: proc(game: ^Game) {
 						// game.player_body.growing = true
 					}
 				}
-
 			}
 
 
@@ -183,8 +181,13 @@ CollisionSystem :: proc(game: ^Game) {
 						   dataB.state != .DEAD &&
 						   collide_no_edges(colliderB^, colliderA^) {
 							player_data := &archetypeA.players_data[i]
-							switch player_data.player_state {
-							case .NORMAL:
+							enemy_kind := archetypeB.ias[j].table.get_type()
+							fmt.println("WE COLLIDE WITH ENEMY", enemy_kind)
+							switch enemy_kind {
+							case .TOP:
+							case .SHIELD:
+								fmt.println("SHOULD WORK WTH")
+
 								if player_data.time_since_dmg > RECOVER_DMG_TIME {
 									player_data.health -= 1
 									player_data.time_since_dmg = 0
@@ -194,18 +197,30 @@ CollisionSystem :: proc(game: ^Game) {
 									}
 								}
 
-							case .DASH:
-								fmt.println("WE EAT")
-								dataB.state = .DEAD
-								add_sound(game, &sound_bank[FX.FX_EAT])
+							case .HUMAN:
+								player_state := player_data.player_state
+								switch player_state {
+								case .NORMAL:
+									if player_data.time_since_dmg > RECOVER_DMG_TIME {
+										player_data.health -= 1
+										player_data.time_since_dmg = 0
 
-								game.player_data.cells_to_grow += 1
-								// TODO: WHY IS THIS HERE? 
-								// archetypeA.players_data[i].distance = 0
-								game.count_enemies -= 1
+										if player_data.health <= 0 {
+											game.state = .DEAD
+										}
+									}
+
+								case .DASH:
+									dataB.state = .DEAD
+									add_sound(game, &sound_bank[FX.FX_EAT])
+
+									game.player_data.cells_to_grow += 1
+									// TODO: WHY IS THIS HERE? 
+									// archetypeA.players_data[i].distance = 0
+									game.count_enemies -= 1
+								}
 							}
 						}
-
 					case .BULLET:
 						if dataA.team == dataB.team {
 							continue

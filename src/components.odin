@@ -1,53 +1,6 @@
 package main
 import rl "vendor:raylib"
 
-init_component :: proc(archetype: ^Archetype, component: COMPONENT_ID) {
-	switch component {
-	case .POSITION:
-		archetype.positions = make([dynamic]Position, 0, 64)
-	case .VELOCITY:
-		archetype.velocities = make([dynamic]Velocity, 0, 64)
-	case .SPRITE:
-		archetype.sprites = make([dynamic]Sprite, 0, 64)
-	case .ANIMATION:
-		archetype.animations = make([dynamic]Animation, 0, 64)
-	case .DATA:
-		archetype.data = make([dynamic]Data, 0, 64)
-	case .COLLIDER:
-		archetype.colliders = make([dynamic]Collider, 0, 64)
-	case .IA:
-		archetype.ias = make([dynamic]IA, 0, 64)
-	case .PLAYER_DATA:
-		archetype.players_data = make([dynamic]PlayerData, 0, 64)
-	case .COUNT:
-	}
-}
-
-add_components :: proc(arch: ^Archetype, components: []Component) {
-	for component in components {
-		switch kind in component {
-		case Position:
-			append(&arch.positions, kind)
-		case Velocity:
-			append(&arch.velocities, kind)
-		case Sprite:
-			append(&arch.sprites, kind)
-		case Animation:
-			append(&arch.animations, kind)
-		case Data:
-			append(&arch.data, kind)
-		case Collider:
-			append(&arch.colliders, kind)
-		case IA:
-			append(&arch.ias, kind)
-		case PlayerData:
-			append(&arch.players_data, kind)
-		}
-	}
-
-}
-
-
 COMPONENT_ID :: enum u64 {
 	POSITION    = 1,
 	VELOCITY    = 2,
@@ -231,4 +184,51 @@ ENTITY_TEAM :: enum {
 	GOOD,
 	BAD,
 	NEUTRAL,
+}
+
+
+init_component :: proc(archetype: ^Archetype, component: COMPONENT_ID) {
+	switch component {
+	case .POSITION:
+		archetype.positions = make([dynamic]Position, 0, 64)
+	case .VELOCITY:
+		archetype.velocities = make([dynamic]Velocity, 0, 64)
+	case .SPRITE:
+		archetype.sprites = make([dynamic]Sprite, 0, 64)
+	case .ANIMATION:
+		archetype.animations = make([dynamic]Animation, 0, 64)
+	case .DATA:
+		archetype.data = make([dynamic]Data, 0, 64)
+	case .COLLIDER:
+		archetype.colliders = make([dynamic]Collider, 0, 64)
+	case .IA:
+		archetype.ias = make([dynamic]IA, 0, 64)
+	case .PLAYER_DATA:
+		archetype.players_data = make([dynamic]PlayerData, 0, 64)
+	case .COUNT:
+	}
+}
+
+add_components :: proc(arch: ^Archetype, components: []Component) {
+	for component in components {
+		switch kind in component {
+		case Position:
+			append(&arch.positions, kind)
+		case Velocity:
+			append(&arch.velocities, kind)
+		case Sprite:
+			append(&arch.sprites, kind)
+		case Animation:
+			append(&arch.animations, kind)
+		case Data:
+			append(&arch.data, kind)
+		case Collider:
+			append(&arch.colliders, kind)
+		case IA:
+			append(&arch.ias, kind)
+		case PlayerData:
+			append(&arch.players_data, kind)
+		}
+	}
+
 }
