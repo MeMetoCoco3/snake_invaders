@@ -160,6 +160,20 @@ CollisionSystem :: proc(game: ^Game) {
 								game.player_data.cells_to_grow += 1
 							}
 						}
+
+						if dataA.kind == .ENEMY {
+							enemy_kind := archetypeA.ias[i].table.get_type()
+							if enemy_kind == .THIEF && collide_no_edges(colliderB^, colliderA^) {
+								dataB.state = .DEAD
+								AddSound(game, &sound_bank[FX.FX_EAT])
+								game.count_candies -= 1
+
+
+							}
+
+
+						}
+
 						continue
 
 					case .STATIC:
@@ -185,9 +199,9 @@ CollisionSystem :: proc(game: ^Game) {
 							fmt.println("WE COLLIDE WITH ENEMY", enemy_kind)
 							switch enemy_kind {
 							case .TOP:
-							case .SHIELD:
-								fmt.println("SHOULD WORK WTH")
+							case .THIEF:
 
+							case .SHIELD:
 								if player_data.time_since_dmg > RECOVER_DMG_TIME {
 									player_data.health -= 1
 									player_data.time_since_dmg = 0
@@ -216,7 +230,7 @@ CollisionSystem :: proc(game: ^Game) {
 
 									game.player_data.cells_to_grow += 1
 									// TODO: WHY IS THIS HERE? 
-									// archetypeA.players_data[i].distance = 0
+									archetypeA.players_data[i].distance = 0
 									game.count_enemies -= 1
 								}
 							}
@@ -424,6 +438,50 @@ IASystem :: proc(game: ^Game) {
 
 get_enemy_shield_type :: proc() -> ENEMY_KIND {return .SHIELD}
 get_enemy_human_type :: proc() -> ENEMY_KIND {return .HUMAN}
+get_enemy_thief_type :: proc() -> ENEMY_KIND {return .THIEF}
+
+ia_thief :: proc(
+	g: ^Game,
+	velocity: ^Velocity,
+	position: ^Position,
+	animation: ^Animation,
+	ia: ^BEHAVIOR,
+	center_player, center_enemy: Vec2,
+	id: u32,
+) {
+	ia := cast(^IA_ENEMY_THIEF)ia
+
+
+	if ia._time_for_change_state > 100 {
+		ia._time_for_change_state = 0
+		#partial switch ia.state {
+		case .WANDER:
+			closest_candy, distance := get_closest_candy(g, center_enemy)
+			fmt.println(closest_candy)
+			if closest_candy != {} {
+				ia.target = closest_candy
+				ia.state = .APPROACH_TARGET
+				fmt.println("WE UPDATE")
+			}
+		}
+	} else do ia._time_for_change_state += 1
+
+	#partial switch ia.state {
+	case .APPROACH_TARGET:
+		if ia.target.data.state == .ALIVE {
+			fmt.println("WE APPROACH TO LIVING THING")
+			dir_to_coin := ia.target.position.pos - center_enemy
+			vec2_normalize(&dir_to_coin)
+			velocity.direction = dir_to_coin
+			fmt.println("DIRECTION = ", dir_to_coin)
+		} else {
+			ia.state = .APPROACH_TARGET
+		}
+	}
+
+
+}
+
 
 ia_shield :: proc(
 	g: ^Game,
@@ -495,7 +553,7 @@ get_target :: proc(g: ^Game, own_id: u32) -> (^Position, bool) {
 				ia.guardian = own_id
 			}
 			return &archetype.positions[i], true
-		case IA_ENEMY_SHIELD:
+		case IA_ENEMY_SHIELD, IA_ENEMY_THIEF:
 			continue
 
 		}
@@ -540,9 +598,9 @@ ia_human :: proc(
 		switch {
 		case distance_to_player > ia.maximum_distance:
 			ia.state = .APPROACH
-			animation^ = animation_bank[ANIMATION.ENEMY_RUN]
+			animation^ = animation_bank[ANIMATION.HUMAN_RUN]
 		case distance_to_player < ia.minimum_distance:
-			animation^ = animation_bank[ANIMATION.ENEMY_RUN]
+			animation^ = animation_bank[ANIMATION.HUMAN_RUN]
 			ia.state = .GOAWAY
 		case:
 			animation^ = animation_bank[ANIMATION.ENEMY_SHOT]
@@ -819,11 +877,12 @@ ANIMATION :: enum {
 	PLAYER = 0,
 	BULLET_G,
 	ENEMY_SHOT,
-	ENEMY_RUN,
+	HUMAN_RUN,
 	BIG_EXPLOSION,
 	BULLET_B,
 	CANDY,
 	SHIELD,
+	THIEF_RUN,
 	ANIM_COUNT,
 }
 

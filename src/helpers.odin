@@ -138,6 +138,26 @@ set_directions_0 :: proc(game: ^Game) {
 //////////////
 ////SYSTEMS///
 //////////////
+
+get_closest_candy :: proc(g: ^Game, v: Vec2) -> (target: Target_Information, closest: f32) {
+	archetype := g.world.archetypes[candy_mask]
+	closest = 1000
+
+	for i in 0 ..< len(archetype.entities_id) {
+		position := &archetype.positions[i]
+
+		new_distance := vec2_distance(v, position.pos)
+		if new_distance < closest {
+			closest = new_distance
+			target.position = position
+			target.data = &archetype.data[i]
+		}
+	}
+
+	return target, closest
+}
+
+
 rec_colliding :: proc(v0: Vec2, w0: f32, h0: f32, v1: Vec2, w1: f32, h1: f32) -> bool {
 	horizontal_in :=
 		(v0.x <= v1.x && v0.x + w0 >= v1.x) || (v0.x <= v1.x + w1 && v0.x + w0 >= v1.x + w1)

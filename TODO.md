@@ -1,4 +1,5 @@
-## Stuff to do
+
+## Stuff done
 - ~Fix ghost pieces after shotting.~
     - ~When picking candy and already shotting we have to change the size of last piece for full and new piece for last one.~
     - ~We need to check ghost pieces when consuming~
@@ -14,7 +15,12 @@
 
 - ~Transform ecs functions to get a slice not com | com | com~
 - ~Make ghost_cells have collider~
-- We cant make use of the bitsets from odin,because we would need extra space, and an enum cannot be a long int
 - ~Add state to enemies.~
-- Enemy3= Coin thief
+
+## Stuff to do
+- Enemy3: Coin thief
 - Add other objectives for player.
+
+
+## Stuff I tried and did not work
+- We cant make use of the bitsets from odin,because we would need extra space, and an enum cannot be a long int

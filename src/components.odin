@@ -109,6 +109,7 @@ IA :: struct {
 BEHAVIOR :: union #no_nil {
 	IA_ENEMY_HUMAN,
 	IA_ENEMY_SHIELD,
+	IA_ENEMY_THIEF,
 }
 
 IA_ENEMY_SHIELD :: struct {
@@ -116,6 +117,19 @@ IA_ENEMY_SHIELD :: struct {
 	target:                 ^Position,
 	_time_for_change_state: int,
 }
+
+Target_Information :: struct {
+	position: ^Position,
+	data:     ^Data,
+}
+
+IA_ENEMY_THIEF :: struct {
+	state:                  ENEMY_THIEF_STATE,
+	target:                 Target_Information,
+	count_coins:            int,
+	_time_for_change_state: int,
+}
+
 
 IA_ENEMY_HUMAN :: struct {
 	state:                  ENEMY_HUMAN_STATE,
@@ -128,6 +142,7 @@ IA_ENEMY_HUMAN :: struct {
 ENEMY_KIND :: enum {
 	HUMAN,
 	SHIELD,
+	THIEF,
 	TOP,
 }
 
@@ -151,6 +166,10 @@ PlayerData :: struct {
 	count_turn_left:  int,
 }
 
+ENEMY_THIEF_STATE :: enum {
+	WANDER,
+	APPROACH_TARGET,
+}
 
 ENEMY_HUMAN_STATE :: enum {
 	APPROACH,
@@ -159,10 +178,10 @@ ENEMY_HUMAN_STATE :: enum {
 }
 
 ENEMY_SHIELD_STATE :: enum {
-	LOOK_FOR_TARGET,
 	APPROACH_TARGET,
+	LOOK_FOR_TARGET,
+	ATTACK,
 	STAND,
-	ATTACK, // JUST WHEN NO ENEMY TO PROTECT
 }
 
 

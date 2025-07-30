@@ -18,6 +18,11 @@ table_enemy_shield := ia_table {
 	get_type = get_enemy_shield_type,
 }
 
+table_enemy_thief := ia_table {
+	move     = ia_thief,
+	get_type = get_enemy_thief_type,
+}
+
 enemy_behavior := #partial [ENEMY_KIND]IA {
 	.HUMAN = IA {
 		behavior = BEHAVIOR(IA_ENEMY_HUMAN{.APPROACH, 60, 100, 500, 0, 0}),
@@ -26,6 +31,10 @@ enemy_behavior := #partial [ENEMY_KIND]IA {
 	.SHIELD = IA {
 		behavior = BEHAVIOR(IA_ENEMY_SHIELD{.LOOK_FOR_TARGET, nil, 0}),
 		table = &table_enemy_shield,
+	},
+	.THIEF = IA {
+		behavior = BEHAVIOR(IA_ENEMY_THIEF{.WANDER, {}, 0, 0}),
+		table = &table_enemy_thief,
 	},
 }
 
@@ -190,7 +199,6 @@ update :: proc(game: ^Game) {
 	PlaySound(game)
 	UpdateScene(game)
 	UpdateCamera(game)
-	fmt.println(game.camera.target)
 	if game.player_data.cells_to_grow > 0 {
 		game.player_data.cells_to_grow -= 1
 		if !game.player_body.growing && game.player_data.distance > PLAYER_SIZE {
@@ -267,10 +275,10 @@ UpdateScene :: proc(game: ^Game) {
 
 
 	if !done {
+		// spawn_pos := get_random_position_on_spawn(game)
+		// spawn_enemy(game, spawn_pos.x, spawn_pos.y, .SHIELD)
 		spawn_pos := get_random_position_on_spawn(game)
-		spawn_enemy(game, spawn_pos.x, spawn_pos.y, .SHIELD)
-		spawn_pos = get_random_position_on_spawn(game)
-		spawn_enemy(game, spawn_pos.x, spawn_pos.y, .HUMAN)
+		spawn_enemy(game, spawn_pos.x, spawn_pos.y, .THIEF)
 		done = true
 	}
 	// if game.enemy_respawn_time >= ENEMY_RESPAWN_TIME {
@@ -437,10 +445,13 @@ spawn_enemy :: proc(game: ^Game, x, y: f32, kind: ENEMY_KIND) -> u32 {
 	velocity: Velocity
 	#partial switch kind {
 	case .HUMAN:
-		animation = animation_bank[ANIMATION.ENEMY_RUN]
+		animation = animation_bank[ANIMATION.HUMAN_RUN]
 		velocity = Velocity{{0, 0}, ENEMY_SPEED}
 	case .SHIELD:
 		animation = animation_bank[ANIMATION.SHIELD]
+		velocity = Velocity{{0, 0}, ENEMY_SPEED * 1.5}
+	case .THIEF:
+		animation = animation_bank[ANIMATION.THIEF_RUN]
 		velocity = Velocity{{0, 0}, ENEMY_SPEED * 1.5}
 	}
 

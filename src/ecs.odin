@@ -99,7 +99,7 @@ alloc_archetype :: proc(mask: COMPONENT_ID) -> ^Archetype {
 
 
 query_archetype :: proc(world: ^World, mask: COMPONENT_ID) -> ([dynamic]^Archetype, bool) {
-	archetypes := make([dynamic]^Archetype) //  TODO: IM NOT FREEING THIS!!
+	archetypes := make([dynamic]^Archetype, context.temp_allocator)
 	empty := true
 	for k, v in world.archetypes {
 		if (k & mask) == mask {

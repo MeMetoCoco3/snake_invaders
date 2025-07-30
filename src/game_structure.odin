@@ -247,12 +247,28 @@ LoadAnimations :: proc() {
 		angle_type     = .LR,
 	}
 
-	animation_bank[ANIMATION.ENEMY_RUN] = Animation {
+	animation_bank[ANIMATION.HUMAN_RUN] = Animation {
 		image          = &atlas,
 		w              = 32,
 		h              = 32,
 		source_x       = 32,
 		source_y       = 128,
+		_current_frame = 0,
+		num_frames     = 4,
+		frame_delay    = 8,
+		_time_on_frame = 0,
+		padding        = {0, 0},
+		offset         = {0, 0},
+		kind           = .REPEAT,
+		angle_type     = .LR,
+	}
+
+	animation_bank[ANIMATION.THIEF_RUN] = Animation {
+		image          = &atlas,
+		w              = 32,
+		h              = 32,
+		source_x       = 32,
+		source_y       = 192,
 		_current_frame = 0,
 		num_frames     = 4,
 		frame_delay    = 8,
