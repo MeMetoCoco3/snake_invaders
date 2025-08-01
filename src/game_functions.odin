@@ -240,10 +240,8 @@ clear_dead :: proc(game: ^Game) {
 							unordered_remove(&archetype.positions, i)
 						case .VELOCITY:
 							unordered_remove(&archetype.velocities, i)
-						case .SPRITE:
-							unordered_remove(&archetype.sprites, i)
-						case .ANIMATION:
-							unordered_remove(&archetype.animations, i)
+						case .VISUAL:
+							unordered_remove(&archetype.visuals, i)
 						case .DATA:
 							unordered_remove(&archetype.data, i)
 						case .COLLIDER:
@@ -278,7 +276,7 @@ UpdateScene :: proc(game: ^Game) {
 		// spawn_pos := get_random_position_on_spawn(game)
 		// spawn_enemy(game, spawn_pos.x, spawn_pos.y, .SHIELD)
 		spawn_pos := get_random_position_on_spawn(game)
-		spawn_enemy(game, spawn_pos.x, spawn_pos.y, .THIEF)
+		spawn_enemy(game, spawn_pos.x, spawn_pos.y, .HUMAN)
 		done = true
 	}
 	// if game.enemy_respawn_time >= ENEMY_RESPAWN_TIME {
@@ -308,7 +306,7 @@ get_cell :: proc(g: ^Game, index: i8) -> (^Position, ^Velocity, ^PlayerData, boo
 		current_index := archetype.players_data[i].body_index == index
 		kind := archetype.data[i].kind
 
-		if kind == .BODY && current_index {
+		if kind == ENTITY_KIND.BODY && current_index {
 			return &archetype.positions[i],
 				&archetype.velocities[i],
 				&archetype.players_data[i],
@@ -341,7 +339,7 @@ grow_body :: proc(game: ^Game, body: ^Body, head_pos, head_dir: Vec2) {
 			[]Component {
 				Position{pos = head_pos, size = {PLAYER_SIZE, PLAYER_SIZE}},
 				Velocity{direction = head_dir, speed = 0},
-				sprite_bank[SPRITE.BODY_STRAIGHT],
+				Visual(sprite_bank[SPRITE.BODY_STRAIGHT]),
 				PlayerData{player_state = .NORMAL, count_turn_left = 0, body_index = -1},
 				Collider{position = head_pos, w = PLAYER_SIZE, h = PLAYER_SIZE},
 				Data{kind = .BODY, state = .ALIVE, team = .GOOD},
@@ -462,7 +460,7 @@ spawn_enemy :: proc(game: ^Game, x, y: f32, kind: ENEMY_KIND) -> u32 {
 	[]Component {
 		Position{{x, y}, {ENEMY_SIZE, ENEMY_SIZE}},
 		velocity,
-		animation,
+		Visual(animation),
 		Collider {
 			colision_origin,
 			ENEMY_SIZE - EPSILON_COLISION * 4,
@@ -496,7 +494,7 @@ spawn_bullet :: proc(
 		[]Component {
 			Position{origin, {bullet_size, bullet_size}},
 			Velocity{direction, speed},
-			anim,
+			Visual(anim),
 			Collider {
 				origin + EPSILON_COLISION,
 				int(bullet_size) - EPSILON_COLISION * 2,
@@ -533,7 +531,7 @@ spawn_candy :: proc(game: ^Game) {
 		[]Component {
 			Position{{f32(pos_x + 10), f32(pos_y + 10)}, {CANDY_SIZE, CANDY_SIZE}},
 			Data{.CANDY, .ALIVE, .NEUTRAL},
-			animation_bank[ANIMATION.CANDY],
+			Visual(animation_bank[ANIMATION.CANDY]),
 			Collider {
 				Vec2{f32(pos_x + 10), f32(pos_y + 10)} + EPSILON_COLISION,
 				CANDY_SIZE - EPSILON_COLISION * 2,
@@ -569,7 +567,7 @@ DrawGame :: proc(game: ^Game) {
 	rl.EndDrawing()
 }
 
-DrawGrid :: proc(col: rl.Color) {
+DrawGrid :: proc(col: Color) {
 	for i: i32 = 0; i < SCREEN_WIDTH; i += GRID_SIZE {
 		rl.DrawLine(i, 0, i, SCREEN_HEIGHT, col)
 		rl.DrawLine(0, i, SCREEN_WIDTH, i, col)

@@ -65,10 +65,8 @@ FreeAllEntities :: proc(game: ^Game) {
 					clear(&archetype.positions)
 				case .VELOCITY:
 					clear(&archetype.velocities)
-				case .SPRITE:
-					clear(&archetype.sprites)
-				case .ANIMATION:
-					clear(&archetype.animations)
+				case .VISUAL:
+					clear(&archetype.visuals)
 				case .DATA:
 					clear(&archetype.data)
 				case .COLLIDER:

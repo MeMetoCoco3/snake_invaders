@@ -4,6 +4,7 @@ import "core:fmt"
 import "core:math"
 import "core:mem"
 import vmem "core:mem/virtual"
+import "core:slice"
 import rl "vendor:raylib"
 
 Vec2 :: [2]f32
@@ -65,10 +66,67 @@ cell_ghost_t :: struct {
 	rotation:            f32,
 }
 
-Draw :: proc {
-	draw_sprite,
-	draw_animated_sprite,
+// SHAPE STUFF
+SHAPE_KIND :: enum {
+	TRIANGLE = 3,
+	SQUARE,
+	PENTAGON,
 }
+
+Shape :: union #no_nil {
+	Triangle,
+	Square,
+	Pentagon,
+}
+
+Triangle :: struct {
+	Vertices: [3]Vec2,
+	Color:    Color,
+	// table:    ^ShTable,
+}
+
+Square :: struct {
+	Vertices: [4]Vec2,
+	Color:    Color,
+	// table:    ^ShTable,
+}
+
+Pentagon :: struct {
+	Vertices: [5]Vec2,
+	Color:    Color,
+	// table:    ^ShTable,
+}
+
+
+draw_shape :: proc(s: Shape) {
+	switch &k in s {
+	case Pentagon:
+		vertices := s.(Pentagon).Vertices
+		color := s.(Pentagon).Color
+		draw_lines_given_vertices(vertices[:], color)
+	case Triangle:
+		vertices := s.(Triangle).Vertices
+		color := s.(Triangle).Color
+		rl.DrawTriangle(vertices[0], vertices[1], vertices[2], color)
+	case Square:
+		vertices := s.(Square).Vertices
+		color := s.(Square).Color
+		draw_lines_given_vertices(vertices[:], color)
+	}
+}
+
+
+draw_lines_given_vertices :: proc(vertices: []Vec2, color: Color) {
+	first := vertices[0]
+	n := len(vertices)
+	for i in 0 ..< n {
+		rl.DrawLineV(vertices[i - 1], vertices[i], color)
+	}
+
+	rl.DrawLineV(vertices[n - 1], first, color)
+}
+
+///
 
 
 draw_animated_sprite :: proc(
@@ -78,6 +136,9 @@ draw_animated_sprite :: proc(
 	team: ENTITY_TEAM,
 	color: rl.Color,
 ) {
+	time_on_frame := &animation._time_on_frame
+	fmt.println("BEFORE: ", time_on_frame^)
+	fmt.printfln("Pointer inside: %p	", animation)
 	if animation._current_frame >= animation.num_frames {
 		animation._current_frame = 0
 	}
@@ -107,6 +168,7 @@ draw_animated_sprite :: proc(
 
 	origin := Vec2{position.size.x / 2, position.size.y / 2}
 	rl.DrawTexturePro(animation.image^, src_rec, dst_rec, origin, angle, color)
+
 	if DEBUG_COLISION {
 		dst_rec.x -= position.size.x / 2
 		dst_rec.y -= position.size.y / 2
@@ -127,8 +189,9 @@ draw_animated_sprite :: proc(
 		animation._current_frame += 1
 		animation._time_on_frame = 0
 	}
-
 	animation._time_on_frame += 1
+
+	fmt.println("AFTER: ", time_on_frame^)
 }
 
 draw_sprite :: proc(sprite: Sprite, position: Position) {
@@ -361,7 +424,7 @@ draw_body_sprite :: proc(body: ^Body) {
 
 		sprite.rotation = cell.rotation
 
-		Draw(sprite, Position{pos = cell.position + PLAYER_SIZE / 2, size = PLAYER_SIZE})
+		draw_sprite(sprite, Position{pos = cell.position + PLAYER_SIZE / 2, size = PLAYER_SIZE})
 
 		loop_index = (loop_index + 1) % MAX_RINGBUFFER_VALUES
 	}

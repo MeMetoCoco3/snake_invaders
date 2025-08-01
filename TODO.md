@@ -1,3 +1,5 @@
+## RANDOM STUFF
+-  Enemies need an animation as Visual component.
 
 ## Stuff done
 - ~Fix ghost pieces after shotting.~
@@ -16,9 +18,12 @@
 - ~Transform ecs functions to get a slice not com | com | com~
 - ~Make ghost_cells have collider~
 - ~Add state to enemies.~
+- ~Enemy3: Coin thief~
 
 ## Stuff to do
-- Enemy3: Coin thief
+- Apply vtable for draw call on every Visual, probably warp it on struct like ia, and just pass the data, if more needed like pos, we will see
+- Enemy4: Walker (walks towards you or some shit)
+- Enemy5: Dasher (dashes towards you or some shit)
 - Add other objectives for player.
 
 

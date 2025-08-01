@@ -167,11 +167,10 @@ CollisionSystem :: proc(game: ^Game) {
 								dataB.state = .DEAD
 								AddSound(game, &sound_bank[FX.FX_EAT])
 								game.count_candies -= 1
-
-
+								enemy_behavior := cast(^IA_ENEMY_THIEF)&archetypeA.ias[i].behavior
+								enemy_behavior.target = {}
+								enemy_behavior.state = .WANDER
 							}
-
-
 						}
 
 						continue
@@ -413,7 +412,7 @@ IASystem :: proc(game: ^Game) {
 	for arquetype in arquetypes {
 		velocities := &arquetype.velocities
 		positions := &arquetype.positions
-		animations := &arquetype.animations
+		animations := &arquetype.visuals
 		ias := &arquetype.ias
 
 		for i in 0 ..< len(arquetype.entities_id) {
@@ -424,7 +423,7 @@ IASystem :: proc(game: ^Game) {
 				game,
 				&velocities[i],
 				&positions[i],
-				&animations[i],
+				&animations[i].(Animation),
 				&ias[i].behavior,
 				center_player,
 				center_enemy,
@@ -451,35 +450,28 @@ ia_thief :: proc(
 ) {
 	ia := cast(^IA_ENEMY_THIEF)ia
 
-
 	if ia._time_for_change_state > 100 {
 		ia._time_for_change_state = 0
 		#partial switch ia.state {
 		case .WANDER:
 			closest_candy, distance := get_closest_candy(g, center_enemy)
-			fmt.println(closest_candy)
 			if closest_candy != {} {
 				ia.target = closest_candy
 				ia.state = .APPROACH_TARGET
-				fmt.println("WE UPDATE")
 			}
+		case .APPROACH_TARGET:
 		}
 	} else do ia._time_for_change_state += 1
 
 	#partial switch ia.state {
 	case .APPROACH_TARGET:
 		if ia.target.data.state == .ALIVE {
-			fmt.println("WE APPROACH TO LIVING THING")
 			dir_to_coin := ia.target.position.pos - center_enemy
-			vec2_normalize(&dir_to_coin)
-			velocity.direction = dir_to_coin
-			fmt.println("DIRECTION = ", dir_to_coin)
+			velocity.direction = linalg.normalize0(dir_to_coin)
 		} else {
-			ia.state = .APPROACH_TARGET
+			ia.state = .WANDER
 		}
 	}
-
-
 }
 
 
@@ -525,7 +517,6 @@ ia_shield :: proc(
 
 
 		distance_til_obj := linalg.length(obj - center_enemy)
-		fmt.println(distance_til_obj)
 		if distance_til_obj < 25 {
 			velocity.direction = 0
 			ia.state = .STAND
@@ -547,7 +538,8 @@ ia_shield :: proc(
 get_target :: proc(g: ^Game, own_id: u32) -> (^Position, bool) {
 	archetype := g.world.archetypes[enemy_mask]
 	for i in 0 ..< len(archetype.entities_id) {
-		switch &ia in archetype.ias[i].behavior {
+		curr_behavior := archetype.ias[i].behavior
+		switch &ia in curr_behavior {
 		case IA_ENEMY_HUMAN:
 			if ia.guardian == 0 {
 				ia.guardian = own_id
@@ -580,7 +572,6 @@ get_target :: proc(g: ^Game, own_id: u32) -> (^Position, bool) {
 //
 
 
-// TODO: MAYBE I CAN DO A MARK GUARDIAN OR MARK PROTECTOR ON THE VT
 ia_human :: proc(
 	g: ^Game,
 	velocity: ^Velocity,
@@ -798,80 +789,110 @@ move_player :: proc(game: ^Game) {
 
 
 RenderingSystem :: proc(game: ^Game) {
-	arquetypes, is_empty := query_archetype(game.world, COMPONENT_ID.POSITION | .SPRITE)
+	arquetypes, is_empty := query_archetype(game.world, COMPONENT_ID.POSITION | .VISUAL)
 	if !is_empty {
 		for arquetype in arquetypes {
 			positions := arquetype.positions
-			sprites := arquetype.sprites
 
 			data := arquetype.data
 			for i in 0 ..< len(arquetype.entities_id) {
 				if data[i].state == .DEAD do continue
-				kind := arquetype.data[i].kind
+				kind := data[i].kind
 				pos := positions[i]
-				rotation := sprites[i].rotation
-
-				if kind == .BODY {
-					rl.DrawRectangle(
-						i32(positions[i].pos.x),
-						i32(positions[i].pos.y),
-						PLAYER_SIZE,
-						PLAYER_SIZE,
-						rl.ORANGE,
-					)
-					pos.pos += pos.size / 2
-					direction := arquetype.velocities[i].direction
-					if direction != {0, 0} {
-						rotation = 90 + angle_from_vector(direction)
-					}
-				}
-				sprites[i].rotation = rotation
-				Draw(sprites[i], pos)
+				visual := &arquetype.visuals[i]
 
 
-			}
-		}
-	}
+				switch &v in visual {
+				case Animation:
+					animated_sprite := &visual.(Animation)
 
-	arquetypes, is_empty = query_archetype(game.world, COMPONENT_ID.POSITION | .ANIMATION)
-	if !is_empty {
-		for arquetype in arquetypes {
-			positions := arquetype.positions
-			animations := arquetype.animations
-			direction := Vec2{0, 0}
-			team := arquetype.data
-			has_velocity := false
-			is_player := false
-
-			if (arquetype.component_mask & COMPONENT_ID.PLAYER_DATA) == .PLAYER_DATA {
-				is_player = true
-			}
-
-
-			if (arquetype.component_mask & COMPONENT_ID.VELOCITY) == .VELOCITY {
-				has_velocity = true
-			}
-
-			for i in 0 ..< len(arquetype.entities_id) {
-				if has_velocity {
-
-					if is_player && arquetype.velocities[i].direction == {0, 0} {
-						direction = arquetype.players_data[i].previous_dir
-					} else {
+					fmt.printfln("Pointer &v: %p	", &v)
+					fmt.printfln("Pointer &visual: %p	", &visual)
+					fmt.printfln("Pointer &visual.(Animation): %p	", animated_sprite)
+					direction: Vec2
+					if has_component(arquetype.component_mask, .VELOCITY) {
 						direction = arquetype.velocities[i].direction
 					}
+
+					fmt.println("TIME ON FRAME BEFORE AND OUTSIDE: ", v._time_on_frame)
+					draw_animated_sprite(positions[i], &v, direction, data[i].team, rl.WHITE)
+					fmt.println("TIME ON FRAME AFTER AND OUTSIDE: ", v._time_on_frame)
+					fmt.println(
+						"Lets see this one: ",
+						arquetype.visuals[i].(Animation)._time_on_frame,
+					)
+				case Shape:
+					draw_shape(v)
+
+				case Sprite:
+					rotation: f32
+					if kind == .BODY {
+						rl.DrawRectangle(
+							i32(positions[i].pos.x),
+							i32(positions[i].pos.y),
+							PLAYER_SIZE,
+							PLAYER_SIZE,
+							rl.ORANGE,
+						)
+						pos.pos += pos.size / 2
+						direction := arquetype.velocities[i].direction
+						if direction != {0, 0} {
+							rotation = 90 + angle_from_vector(direction)
+						}
+					}
+					v.rotation = rotation
+					draw_sprite(v, pos)
+
 				}
 
-				color := rl.WHITE
-				if is_player && arquetype.players_data[i].time_since_dmg < RECOVER_DMG_TIME {
-					color = rl.RED
-				}
 
-				Draw(positions[i], &animations[i], direction, team[i].team, color)
+				// 				// Draw(sprites[i], pos)
+
+
 			}
 		}
 	}
 }
+//
+// arquetypes, is_empty = query_archetype(game.world, COMPONENT_ID.POSITION | .ANIMATION)
+// if !is_empty {
+// 	for arquetype in arquetypes {
+// 		positions := arquetype.positions
+// 		animations := arquetype.animations
+// 		direction := Vec2{0, 0}
+// 		team := arquetype.data
+// 		has_velocity := false
+// 		is_player := false
+//
+// 		if (arquetype.component_mask & COMPONENT_ID.PLAYER_DATA) == .PLAYER_DATA {
+// 			is_player = true
+// 		}
+//
+//
+// 		if (arquetype.component_mask & COMPONENT_ID.VELOCITY) == .VELOCITY {
+// 			has_velocity = true
+// 		}
+//
+// 		for i in 0 ..< len(arquetype.entities_id) {
+// 			if has_velocity {
+//
+// 				if is_player && arquetype.velocities[i].direction == {0, 0} {
+// 					direction = arquetype.players_data[i].previous_dir
+// 				} else {
+// 					direction = arquetype.velocities[i].direction
+// 				}
+// 			}
+//
+// 			color := rl.WHITE
+// 			if is_player && arquetype.players_data[i].time_since_dmg < RECOVER_DMG_TIME {
+// 				color = rl.RED
+// 			}
+//
+// 			Draw(positions[i], &animations[i], direction, team[i].team, color)
+// 		}
+// 	}
+// }
+
 
 ANIMATION :: enum {
 	PLAYER = 0,

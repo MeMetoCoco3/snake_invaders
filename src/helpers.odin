@@ -139,19 +139,25 @@ set_directions_0 :: proc(game: ^Game) {
 ////SYSTEMS///
 //////////////
 
+
+has_component :: proc(mask, component: COMPONENT_ID) -> bool {
+	return (mask & component) == component
+}
+
 get_closest_candy :: proc(g: ^Game, v: Vec2) -> (target: Target_Information, closest: f32) {
 	archetype := g.world.archetypes[candy_mask]
 	closest = 1000
 
 	for i in 0 ..< len(archetype.entities_id) {
 		position := &archetype.positions[i]
-
 		new_distance := vec2_distance(v, position.pos)
+
 		if new_distance < closest {
 			closest = new_distance
 			target.position = position
 			target.data = &archetype.data[i]
 		}
+
 	}
 
 	return target, closest

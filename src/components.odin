@@ -5,20 +5,18 @@ import rl "vendor:raylib"
 COMPONENT_ID :: enum u64 {
 	POSITION    = 1,
 	VELOCITY    = 2,
-	SPRITE      = 4,
-	ANIMATION   = 8,
-	DATA        = 16,
-	COLLIDER    = 32,
-	IA          = 64,
-	PLAYER_DATA = 128,
-	COUNT       = 256,
+	VISUAL      = 4,
+	DATA        = 8,
+	COLLIDER    = 16,
+	IA          = 32,
+	PLAYER_DATA = 64,
+	COUNT       = 128,
 }
 
 Component :: union #no_nil {
 	Position,
 	Velocity,
-	Sprite,
-	Animation,
+	Visual,
 	Data,
 	Collider,
 	IA,
@@ -34,6 +32,14 @@ Velocity :: struct {
 	direction: Vec2,
 	speed:     f32,
 }
+
+
+Visual :: union #no_nil {
+	Animation,
+	Sprite,
+	Shape,
+}
+
 
 Sprite :: struct {
 	image:    ^rl.Texture2D,
@@ -213,10 +219,8 @@ init_component :: proc(archetype: ^Archetype, component: COMPONENT_ID) {
 		archetype.positions = make([dynamic]Position, 0, 64)
 	case .VELOCITY:
 		archetype.velocities = make([dynamic]Velocity, 0, 64)
-	case .SPRITE:
-		archetype.sprites = make([dynamic]Sprite, 0, 64)
-	case .ANIMATION:
-		archetype.animations = make([dynamic]Animation, 0, 64)
+	case .VISUAL:
+		archetype.visuals = make([dynamic]Visual, 0, 64)
 	case .DATA:
 		archetype.data = make([dynamic]Data, 0, 64)
 	case .COLLIDER:
@@ -236,10 +240,8 @@ add_components :: proc(arch: ^Archetype, components: []Component) {
 			append(&arch.positions, kind)
 		case Velocity:
 			append(&arch.velocities, kind)
-		case Sprite:
-			append(&arch.sprites, kind)
-		case Animation:
-			append(&arch.animations, kind)
+		case Visual:
+			append(&arch.visuals, kind)
 		case Data:
 			append(&arch.data, kind)
 		case Collider:
