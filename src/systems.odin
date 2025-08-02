@@ -805,23 +805,14 @@ RenderingSystem :: proc(game: ^Game) {
 				switch &v in visual {
 				case Animation:
 					animated_sprite := &visual.(Animation)
-
-					fmt.printfln("Pointer &v: %p	", &v)
-					fmt.printfln("Pointer &visual: %p	", &visual)
-					fmt.printfln("Pointer &visual.(Animation): %p	", animated_sprite)
 					direction: Vec2
 					if has_component(arquetype.component_mask, .VELOCITY) {
 						direction = arquetype.velocities[i].direction
 					}
 
-					fmt.println("TIME ON FRAME BEFORE AND OUTSIDE: ", v._time_on_frame)
 					draw_animated_sprite(positions[i], &v, direction, data[i].team, rl.WHITE)
-					fmt.println("TIME ON FRAME AFTER AND OUTSIDE: ", v._time_on_frame)
-					fmt.println(
-						"Lets see this one: ",
-						arquetype.visuals[i].(Animation)._time_on_frame,
-					)
 				case Shape:
+					fmt.println("WE SHAPE")
 					draw_shape(v)
 
 				case Sprite:

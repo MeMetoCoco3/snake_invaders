@@ -355,3 +355,20 @@ get_logger :: proc() -> log.Logger {
 delete_logger :: proc(logger: log.Logger) {
 	log.destroy_file_logger(logger)
 }
+
+
+///////////////
+/// TESTING ///
+///////////////
+
+spawn_triangle :: proc(w: ^World) {
+	tri := Visual(
+		Shape{num_sides = 10, angle = 0, size = 50, center = {400, 400}, color = rl.GREEN},
+	)
+	add_entity(
+		w,
+		COMPONENT_ID.VISUAL | .POSITION | .DATA,
+		[]Component{Position{{400, 400}, {40, 40}}, tri, Data{.ENEMY, .ALIVE, .GOOD}},
+	)
+
+}

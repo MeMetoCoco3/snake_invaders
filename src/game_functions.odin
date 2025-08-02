@@ -4,6 +4,7 @@ import "core:math"
 import "core:math/rand"
 import vmem "core:mem/virtual"
 import rl "vendor:raylib"
+
 ///////////
 // INPUT //
 ///////////
@@ -275,8 +276,9 @@ UpdateScene :: proc(game: ^Game) {
 	if !done {
 		// spawn_pos := get_random_position_on_spawn(game)
 		// spawn_enemy(game, spawn_pos.x, spawn_pos.y, .SHIELD)
-		spawn_pos := get_random_position_on_spawn(game)
-		spawn_enemy(game, spawn_pos.x, spawn_pos.y, .HUMAN)
+		// spawn_pos := get_random_position_on_spawn(game)
+		// spawn_enemy(game, spawn_pos.x, spawn_pos.y, .HUMAN)
+		spawn_triangle(game.world)
 		done = true
 	}
 	// if game.enemy_respawn_time >= ENEMY_RESPAWN_TIME {

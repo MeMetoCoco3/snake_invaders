@@ -1,6 +1,6 @@
 ## RANDOM STUFF
 -  Enemies need an animation as Visual component.
-
+-  
 ## Stuff done
 - ~Fix ghost pieces after shotting.~
     - ~When picking candy and already shotting we have to change the size of last piece for full and new piece for last one.~

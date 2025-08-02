@@ -2,6 +2,7 @@ package main
 
 import "core:fmt"
 import "core:math"
+import "core:math/linalg"
 import "core:mem"
 import vmem "core:mem/virtual"
 import "core:slice"
@@ -66,67 +67,29 @@ cell_ghost_t :: struct {
 	rotation:            f32,
 }
 
-// SHAPE STUFF
-SHAPE_KIND :: enum {
-	TRIANGLE = 3,
-	SQUARE,
-	PENTAGON,
-}
-
-Shape :: union #no_nil {
-	Triangle,
-	Square,
-	Pentagon,
-}
-
-Triangle :: struct {
-	Vertices: [3]Vec2,
-	Color:    Color,
-	// table:    ^ShTable,
-}
-
-Square :: struct {
-	Vertices: [4]Vec2,
-	Color:    Color,
-	// table:    ^ShTable,
-}
-
-Pentagon :: struct {
-	Vertices: [5]Vec2,
-	Color:    Color,
-	// table:    ^ShTable,
+Shape :: struct {
+	num_sides: i32,
+	angle:     f32,
+	size:      f32,
+	center:    Vec2,
+	color:     rl.Color,
 }
 
 
 draw_shape :: proc(s: Shape) {
-	switch &k in s {
-	case Pentagon:
-		vertices := s.(Pentagon).Vertices
-		color := s.(Pentagon).Color
-		draw_lines_given_vertices(vertices[:], color)
-	case Triangle:
-		vertices := s.(Triangle).Vertices
-		color := s.(Triangle).Color
-		rl.DrawTriangle(vertices[0], vertices[1], vertices[2], color)
-	case Square:
-		vertices := s.(Square).Vertices
-		color := s.(Square).Color
-		draw_lines_given_vertices(vertices[:], color)
-	}
-}
+	vertices := make([]Vec2, s.num_sides, context.temp_allocator)
 
-
-draw_lines_given_vertices :: proc(vertices: []Vec2, color: Color) {
-	first := vertices[0]
-	n := len(vertices)
-	for i in 0 ..< n {
-		rl.DrawLineV(vertices[i - 1], vertices[i], color)
+	for i in 0 ..< s.num_sides {
+		angle := s.angle + 2 * math.PI * f32(i) / f32(s.num_sides)
+		vertices[i] = s.center + Vec2{math.cos(angle), math.sin(angle)} * s.size
 	}
 
-	rl.DrawLineV(vertices[n - 1], first, color)
+	for i in 0 ..< s.num_sides {
+		curr := vertices[i]
+		next := vertices[(i + 1) % s.num_sides]
+		rl.DrawLineEx(curr, next, 2, s.color)
+	}
 }
-
-///
 
 
 draw_animated_sprite :: proc(
@@ -137,8 +100,6 @@ draw_animated_sprite :: proc(
 	color: rl.Color,
 ) {
 	time_on_frame := &animation._time_on_frame
-	fmt.println("BEFORE: ", time_on_frame^)
-	fmt.printfln("Pointer inside: %p	", animation)
 	if animation._current_frame >= animation.num_frames {
 		animation._current_frame = 0
 	}
@@ -190,8 +151,6 @@ draw_animated_sprite :: proc(
 		animation._time_on_frame = 0
 	}
 	animation._time_on_frame += 1
-
-	fmt.println("AFTER: ", time_on_frame^)
 }
 
 draw_sprite :: proc(sprite: Sprite, position: Position) {
