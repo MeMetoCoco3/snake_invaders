@@ -485,8 +485,9 @@ ia_shield :: proc(
 	id: u32,
 ) {
 	ia := cast(^IA_ENEMY_SHIELD)ia
+	obj_direction: Vec2
 
-	#partial switch ia.state {
+	switch ia.state {
 	case .LOOK_FOR_TARGET:
 		if ia.target == nil {
 			target, ok := get_target(g, id)
@@ -498,41 +499,47 @@ ia_shield :: proc(
 					center_player,
 					DISTANCE_SHIELD_TO_HUMAN,
 				)
-				velocity.direction = linalg.normalize(obj - position.pos)
+				obj_direction = linalg.normalize(obj - position.pos)
 			} else {
 				ia.state = .ATTACK
 			}
-		} else {
-			fmt.println("what the hek")
 		}
 
 	case .APPROACH_TARGET:
 		target := ia.target.pos
 		obj := point_between_given_distance(target, center_player, DISTANCE_SHIELD_TO_HUMAN)
-		velocity.direction = linalg.lerp(
-			velocity.direction,
-			linalg.normalize(obj - position.pos),
-			SMOOTHING_SHIELD,
-		)
-
+		obj_direction = linalg.normalize(obj - position.pos)
 
 		distance_til_obj := linalg.length(obj - center_enemy)
-		if distance_til_obj < 25 {
-			velocity.direction = 0
+		if distance_til_obj < 30 {
 			ia.state = .STAND
 		}
 
+		if velocity.speed < ENEMY_SHIELD_SPEED {
+			velocity.speed = linalg.lerp(velocity.speed, ENEMY_SHIELD_SPEED, SMOOTHING_VELOCITY)
+		}
+
 	case .ATTACK:
-		velocity.direction = linalg.normalize(center_player - position.pos)
+		obj_direction = linalg.normalize(center_player - position.pos)
+
 	case .STAND:
 		target := ia.target.pos
 		obj := point_between_given_distance(target, center_player, DISTANCE_SHIELD_TO_HUMAN)
 
+		obj_direction = linalg.normalize(center_player - position.pos)
+
 		distance_til_obj := linalg.length(obj - center_enemy)
-		if distance_til_obj > 30 {
+
+		if velocity.speed > 0.1 {
+			velocity.speed = linalg.lerp(velocity.speed, 0, SMOOTHING_VELOCITY)
+		}
+
+		if distance_til_obj > 50 {
 			ia.state = .APPROACH_TARGET
 		}
 	}
+
+	velocity.direction = linalg.lerp(velocity.direction, obj_direction, SMOOTHING_SHIELD)
 }
 
 get_target :: proc(g: ^Game, own_id: u32) -> (^Position, bool) {
@@ -547,7 +554,6 @@ get_target :: proc(g: ^Game, own_id: u32) -> (^Position, bool) {
 			return &archetype.positions[i], true
 		case IA_ENEMY_SHIELD, IA_ENEMY_THIEF:
 			continue
-
 		}
 	}
 	return nil, false
@@ -655,7 +661,6 @@ VelocitySystem :: proc(game: ^Game) {
 	if !pass {
 		move_player(game)
 	}
-	START_SPEED := game.player_velocity.speed
 
 	for &arquetype in arquetypes {
 		velocities := arquetype.velocities
@@ -751,8 +756,15 @@ VelocitySystem :: proc(game: ^Game) {
 					arch_dir := &arquetype.visuals[i].(Shape)
 
 					vector_move := (dir * speed)
-					positions[i].pos += vector_move
-					colliders[i].position += vector_move
+					future_pos := positions[i].pos + vector_move
+					positions[i].pos = linalg.lerp(
+						positions[i].pos,
+						future_pos,
+						SMOOTHING_VELOCITY,
+					)
+					// positions[i].pos += vector_move
+					// colliders[i].position += vector_move
+
 					arch_dir.direction = angle_from_vector(dir)
 				}
 
@@ -762,7 +774,6 @@ VelocitySystem :: proc(game: ^Game) {
 			}
 		}
 	}
-	assert(START_SPEED == game.player_velocity.speed)
 }
 
 
@@ -842,55 +853,10 @@ RenderingSystem :: proc(game: ^Game) {
 					draw_sprite(v, pos)
 
 				}
-
-
-				// 				// Draw(sprites[i], pos)
-
-
 			}
 		}
 	}
 }
-//
-// arquetypes, is_empty = query_archetype(game.world, COMPONENT_ID.POSITION | .ANIMATION)
-// if !is_empty {
-// 	for arquetype in arquetypes {
-// 		positions := arquetype.positions
-// 		animations := arquetype.animations
-// 		direction := Vec2{0, 0}
-// 		team := arquetype.data
-// 		has_velocity := false
-// 		is_player := false
-//
-// 		if (arquetype.component_mask & COMPONENT_ID.PLAYER_DATA) == .PLAYER_DATA {
-// 			is_player = true
-// 		}
-//
-//
-// 		if (arquetype.component_mask & COMPONENT_ID.VELOCITY) == .VELOCITY {
-// 			has_velocity = true
-// 		}
-//
-// 		for i in 0 ..< len(arquetype.entities_id) {
-// 			if has_velocity {
-//
-// 				if is_player && arquetype.velocities[i].direction == {0, 0} {
-// 					direction = arquetype.players_data[i].previous_dir
-// 				} else {
-// 					direction = arquetype.velocities[i].direction
-// 				}
-// 			}
-//
-// 			color := rl.WHITE
-// 			if is_player && arquetype.players_data[i].time_since_dmg < RECOVER_DMG_TIME {
-// 				color = rl.RED
-// 			}
-//
-// 			Draw(positions[i], &animations[i], direction, team[i].team, color)
-// 		}
-// 	}
-// }
-
 
 ANIMATION :: enum {
 	PLAYER = 0,

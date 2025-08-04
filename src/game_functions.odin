@@ -451,7 +451,7 @@ spawn_enemy :: proc(game: ^Game, x, y: f32, kind: ENEMY_KIND) -> u32 {
 			size      = ENEMY_SIZE,
 			color     = rl.RED,
 		}
-		velocity = Velocity{{0, 0}, ENEMY_SPEED}
+		velocity = Velocity{{0, 0}, ENEMY_HUMAN_SPEED}
 	case .SHIELD:
 		// animation = animation_bank[ANIMATION.SHIELD]
 		shape = Shape {
@@ -459,7 +459,7 @@ spawn_enemy :: proc(game: ^Game, x, y: f32, kind: ENEMY_KIND) -> u32 {
 			size      = ENEMY_SIZE,
 			color     = rl.RED,
 		}
-		velocity = Velocity{{0, 0}, ENEMY_SPEED * 1.5}
+		velocity = Velocity{{0, 0}, ENEMY_SHIELD_SPEED}
 	case .THIEF:
 		shape = Shape {
 			num_sides = 5,
@@ -467,7 +467,7 @@ spawn_enemy :: proc(game: ^Game, x, y: f32, kind: ENEMY_KIND) -> u32 {
 			color     = rl.RED,
 		}
 		// animation = animation_bank[ANIMATION.THIEF_RUN]
-		velocity = Velocity{{0, 0}, ENEMY_SPEED * 1.5}
+		velocity = Velocity{{0, 0}, ENEMY_THIEF_SPEED}
 	}
 
 	colision_origin := Vec2{x, y} + EPSILON_COLISION * 2
