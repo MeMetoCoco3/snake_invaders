@@ -274,11 +274,11 @@ UpdateScene :: proc(game: ^Game) {
 
 
 	if !done {
-		// spawn_pos := get_random_position_on_spawn(game)
-		// spawn_enemy(game, spawn_pos.x, spawn_pos.y, .SHIELD)
-		// spawn_pos := get_random_position_on_spawn(game)
-		// spawn_enemy(game, spawn_pos.x, spawn_pos.y, .HUMAN)
-		spawn_triangle(game.world)
+		spawn_pos := get_random_position_on_spawn(game)
+		spawn_enemy(game, spawn_pos.x, spawn_pos.y, .SHIELD)
+		spawn_pos = get_random_position_on_spawn(game)
+		spawn_enemy(game, spawn_pos.x, spawn_pos.y, .HUMAN)
+		// spawn_triangle(game.world)
 		done = true
 	}
 	// if game.enemy_respawn_time >= ENEMY_RESPAWN_TIME {
@@ -441,17 +441,32 @@ get_random_position_on_spawn :: proc(game: ^Game) -> [2]f32 {
 }
 
 spawn_enemy :: proc(game: ^Game, x, y: f32, kind: ENEMY_KIND) -> u32 {
-	animation: Animation
+	shape: Shape
 	velocity: Velocity
 	#partial switch kind {
 	case .HUMAN:
-		animation = animation_bank[ANIMATION.HUMAN_RUN]
+		// animation = animation_bank[ANIMATION.HUMAN_RUN]
+		shape = Shape {
+			num_sides = 3,
+			size      = ENEMY_SIZE,
+			color     = rl.RED,
+		}
 		velocity = Velocity{{0, 0}, ENEMY_SPEED}
 	case .SHIELD:
-		animation = animation_bank[ANIMATION.SHIELD]
+		// animation = animation_bank[ANIMATION.SHIELD]
+		shape = Shape {
+			num_sides = 6,
+			size      = ENEMY_SIZE,
+			color     = rl.RED,
+		}
 		velocity = Velocity{{0, 0}, ENEMY_SPEED * 1.5}
 	case .THIEF:
-		animation = animation_bank[ANIMATION.THIEF_RUN]
+		shape = Shape {
+			num_sides = 5,
+			size      = ENEMY_SIZE,
+			color     = rl.RED,
+		}
+		// animation = animation_bank[ANIMATION.THIEF_RUN]
 		velocity = Velocity{{0, 0}, ENEMY_SPEED * 1.5}
 	}
 
@@ -462,7 +477,7 @@ spawn_enemy :: proc(game: ^Game, x, y: f32, kind: ENEMY_KIND) -> u32 {
 	[]Component {
 		Position{{x, y}, {ENEMY_SIZE, ENEMY_SIZE}},
 		velocity,
-		Visual(animation),
+		Visual(shape),
 		Collider {
 			colision_origin,
 			ENEMY_SIZE - EPSILON_COLISION * 4,

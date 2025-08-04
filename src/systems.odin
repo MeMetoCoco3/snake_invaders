@@ -412,7 +412,7 @@ IASystem :: proc(game: ^Game) {
 	for arquetype in arquetypes {
 		velocities := &arquetype.velocities
 		positions := &arquetype.positions
-		animations := &arquetype.visuals
+		shapes := &arquetype.visuals
 		ias := &arquetype.ias
 
 		for i in 0 ..< len(arquetype.entities_id) {
@@ -423,7 +423,7 @@ IASystem :: proc(game: ^Game) {
 				game,
 				&velocities[i],
 				&positions[i],
-				&animations[i].(Animation),
+				&shapes[i].(Shape),
 				&ias[i].behavior,
 				center_player,
 				center_enemy,
@@ -443,7 +443,7 @@ ia_thief :: proc(
 	g: ^Game,
 	velocity: ^Velocity,
 	position: ^Position,
-	animation: ^Animation,
+	shape: ^Shape,
 	ia: ^BEHAVIOR,
 	center_player, center_enemy: Vec2,
 	id: u32,
@@ -479,7 +479,7 @@ ia_shield :: proc(
 	g: ^Game,
 	velocity: ^Velocity,
 	position: ^Position,
-	animation: ^Animation,
+	shape: ^Shape,
 	ia: ^BEHAVIOR,
 	center_player, center_enemy: Vec2,
 	id: u32,
@@ -576,7 +576,7 @@ ia_human :: proc(
 	g: ^Game,
 	velocity: ^Velocity,
 	position: ^Position,
-	animation: ^Animation,
+	shape: ^Shape,
 	ia: ^BEHAVIOR,
 	center_player, center_enemy: Vec2,
 	id: u32,
@@ -589,12 +589,12 @@ ia_human :: proc(
 		switch {
 		case distance_to_player > ia.maximum_distance:
 			ia.state = .APPROACH
-			animation^ = animation_bank[ANIMATION.HUMAN_RUN]
+		// animation^ = animation_bank[ANIMATION.HUMAN_RUN]
 		case distance_to_player < ia.minimum_distance:
-			animation^ = animation_bank[ANIMATION.HUMAN_RUN]
+			// animation^ = animation_bank[ANIMATION.HUMAN_RUN]
 			ia.state = .GOAWAY
 		case:
-			animation^ = animation_bank[ANIMATION.ENEMY_SHOT]
+			// animation^ = animation_bank[ANIMATION.ENEMY_SHOT]
 			ia.state = .SHOT
 		}} else {
 		ia._time_for_change_state += 1
@@ -638,7 +638,6 @@ VelocitySystem :: proc(game: ^Game) {
 
 	pass := false
 	if body.growing && head_direction != {0, 0} && body.num_cells > 0 {
-		fmt.println("JAMON")
 		delta := manhattan_distance(head_position.pos, body.first_cell_pos.pos)
 
 		if delta == PLAYER_SIZE {
@@ -652,12 +651,13 @@ VelocitySystem :: proc(game: ^Game) {
 			body.growing = true
 		}
 	}
+
 	if !pass {
 		move_player(game)
 	}
 	START_SPEED := game.player_velocity.speed
 
-	for arquetype in arquetypes {
+	for &arquetype in arquetypes {
 		velocities := arquetype.velocities
 		positions := arquetype.positions
 		colliders := arquetype.colliders
@@ -744,9 +744,18 @@ VelocitySystem :: proc(game: ^Game) {
 				}
 
 			case .BULLET, .ENEMY:
-				vector_move := (velocities[i].direction * velocities[i].speed)
-				positions[i].pos += vector_move
-				colliders[i].position += vector_move
+				dir := velocities[i].direction
+				speed := velocities[i].speed
+
+				if dir != {0, 0} {
+					arch_dir := &arquetype.visuals[i].(Shape)
+
+					vector_move := (dir * speed)
+					positions[i].pos += vector_move
+					colliders[i].position += vector_move
+					arch_dir.direction = angle_from_vector(dir)
+				}
+
 				continue
 			case .CANDY, .STATIC, .GHOST_PIECE:
 				continue
@@ -801,7 +810,6 @@ RenderingSystem :: proc(game: ^Game) {
 				pos := positions[i]
 				visual := &arquetype.visuals[i]
 
-
 				switch &v in visual {
 				case Animation:
 					animated_sprite := &visual.(Animation)
@@ -812,8 +820,7 @@ RenderingSystem :: proc(game: ^Game) {
 
 					draw_animated_sprite(positions[i], &v, direction, data[i].team, rl.WHITE)
 				case Shape:
-					fmt.println("WE SHAPE")
-					draw_shape(v)
+					draw_shape(v, pos.pos, v.direction * linalg.RAD_PER_DEG)
 
 				case Sprite:
 					rotation: f32

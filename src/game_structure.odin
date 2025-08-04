@@ -69,19 +69,19 @@ cell_ghost_t :: struct {
 
 Shape :: struct {
 	num_sides: i32,
-	angle:     f32,
+	direction: f32,
 	size:      f32,
-	center:    Vec2,
 	color:     rl.Color,
 }
 
 
-draw_shape :: proc(s: Shape) {
+draw_shape :: proc(s: Shape, pos: Vec2, angle: f32) {
 	vertices := make([]Vec2, s.num_sides, context.temp_allocator)
 
+	center := Vec2{pos.x + s.size / 2, pos.y + s.size / 2}
 	for i in 0 ..< s.num_sides {
-		angle := s.angle + 2 * math.PI * f32(i) / f32(s.num_sides)
-		vertices[i] = s.center + Vec2{math.cos(angle), math.sin(angle)} * s.size
+		angle := angle + 2 * math.PI * f32(i) / f32(s.num_sides)
+		vertices[i] = center + Vec2{math.cos(angle), math.sin(angle)} * s.size
 	}
 
 	for i in 0 ..< s.num_sides {

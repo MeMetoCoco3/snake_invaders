@@ -1,5 +1,5 @@
 ## RANDOM STUFF
--  Enemies need an animation as Visual component.
+-  ~Enemies need an animation as Visual component.~
 -  
 ## Stuff done
 - ~Fix ghost pieces after shotting.~

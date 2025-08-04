@@ -99,7 +99,7 @@ ia_table :: struct {
 		g: ^Game,
 		velocity: ^Velocity,
 		position: ^Position,
-		animation: ^Animation,
+		shape: ^Shape,
 		ia: ^BEHAVIOR,
 		center_player, center_enemy: Vec2,
 		id: u32,

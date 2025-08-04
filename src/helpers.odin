@@ -362,9 +362,7 @@ delete_logger :: proc(logger: log.Logger) {
 ///////////////
 
 spawn_triangle :: proc(w: ^World) {
-	tri := Visual(
-		Shape{num_sides = 10, angle = 0, size = 50, center = {400, 400}, color = rl.GREEN},
-	)
+	tri := Visual(Shape{num_sides = 10, size = 50, color = rl.GREEN})
 	add_entity(
 		w,
 		COMPONENT_ID.VISUAL | .POSITION | .DATA,
