@@ -59,7 +59,7 @@ FreeAllEntities :: proc(game: ^Game) {
 		mask := archetype.component_mask
 		clear(&archetype.entities_id)
 		for component in COMPONENT_ID {
-			if (component & mask) == component {
+			if has_component(mask, component) {
 				switch component {
 				case .POSITION:
 					clear(&archetype.positions)

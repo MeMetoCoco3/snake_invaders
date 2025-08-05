@@ -105,7 +105,7 @@ add_player :: proc(game: ^Game) {
 			Velocity{{0, 0}, PLAYER_SPEED},
 			Visual(animation_bank[ANIMATION.PLAYER]),
 			Data{.PLAYER, .ALIVE, .GOOD},
-			Collider{{320, 320}, PLAYER_SIZE, PLAYER_SIZE, true},
+			Collider{{320, 320}, Vec2{PLAYER_SIZE, PLAYER_SIZE}, true},
 		},
 	)
 

@@ -141,7 +141,7 @@ set_directions_0 :: proc(game: ^Game) {
 
 
 has_component :: proc(mask, component: COMPONENT_ID) -> bool {
-	return (mask & component) == component
+	return bool(mask & component)
 }
 
 get_closest_candy :: proc(g: ^Game, v: Vec2) -> (target: Target_Information, closest: f32) {
@@ -157,9 +157,7 @@ get_closest_candy :: proc(g: ^Game, v: Vec2) -> (target: Target_Information, clo
 			target.position = position
 			target.data = &archetype.data[i]
 		}
-
 	}
-
 	return target, closest
 }
 
@@ -179,37 +177,42 @@ rec_colliding_no_edges :: proc(v0: Vec2, w0: f32, h0: f32, v1: Vec2, w1: f32, h1
 	return horizontal_in && vertical_in
 }
 
+
+collide :: proc(c0, c1: Collider) -> bool {return true}
 collide_no_edges :: proc(c0, c1: Collider) -> bool {
-	v0 := c0.position
-	w0 := f32(c0.w)
-	h0 := f32(c0.h)
-
-	v1 := c1.position
-	w1 := f32(c1.w)
-	h1 := f32(c1.h)
-
-	a := (v0.x < v1.x + w1 && v0.x + w0 > v1.x && v0.y < v1.y + h1 && v0.y + h0 > v1.y)
-	b := (v0.x + w0 == v1.x || v0.x == v1.x + w1 || v0.y + h0 == v1.y || v0.y == v1.y + h1)
-
-	return a && !b
+	return true
 }
-
-collide :: proc(c0, c1: Collider) -> bool {
-	v0 := c0.position
-	w0 := f32(c0.w)
-	h0 := f32(c0.h)
-
-	v1 := c1.position
-	w1 := f32(c1.w)
-	h1 := f32(c1.h)
-
-	horizontal_in :=
-		(v0.x <= v1.x && v0.x + w0 >= v1.x) || (v0.x <= v1.x + w1 && v0.x + w0 >= v1.x + w1)
-	vertical_in :=
-		(v0.y <= v1.y && v0.y + h0 >= v1.y) || (v0.y <= v1.y + h1 && v0.y + h0 >= v1.y + h1)
-	return horizontal_in && vertical_in
-}
-
+// collide_no_edges :: proc(c0, c1: Collider) -> bool {
+// 	v0 := c0.position
+// 	w0 := f32(c0.size)
+// 	h0 := f32(c0.size)
+//
+// 	v1 := c1.position
+// 	w1 := f32(c1.w)
+// 	h1 := f32(c1.h)
+//
+// 	a := (v0.x < v1.x + w1 && v0.x + w0 > v1.x && v0.y < v1.y + h1 && v0.y + h0 > v1.y)
+// 	b := (v0.x + w0 == v1.x || v0.x == v1.x + w1 || v0.y + h0 == v1.y || v0.y == v1.y + h1)
+//
+// 	return a && !b
+// }
+//
+// collide :: proc(c0, c1: Collider) -> bool {
+// 	v0 := c0.position
+// 	w0 := f32(c0.w)
+// 	h0 := f32(c0.h)
+//
+// 	v1 := c1.position
+// 	w1 := f32(c1.w)
+// 	h1 := f32(c1.h)
+//
+// 	horizontal_in :=
+// 		(v0.x <= v1.x && v0.x + w0 >= v1.x) || (v0.x <= v1.x + w1 && v0.x + w0 >= v1.x + w1)
+// 	vertical_in :=
+// 		(v0.y <= v1.y && v0.y + h0 >= v1.y) || (v0.y <= v1.y + h1 && v0.y + h0 >= v1.y + h1)
+// 	return horizontal_in && vertical_in
+// }
+//
 is_oposite_directions :: proc(new, curr: Vec2) -> bool {
 	return new.x == -curr.x && new.y == -curr.y
 }

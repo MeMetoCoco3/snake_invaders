@@ -26,6 +26,7 @@ DrawCollidersSystem :: proc(game: ^Game) {
 	for arquetype in arquetypes {
 		colliders := arquetype.colliders
 		for i in 0 ..< len(arquetype.entities_id) {
+			collider := colliders[i]
 			team := arquetype.data[i].team
 			color := rl.WHITE
 
@@ -42,13 +43,18 @@ DrawCollidersSystem :: proc(game: ^Game) {
 			}
 
 
-			rect := rl.Rectangle {
-				x      = colliders[i].position.x,
-				y      = colliders[i].position.y,
-				width  = f32(colliders[i].w),
-				height = f32(colliders[i].h),
+			switch s in collider.size {
+			case Vec2:
+				rect := rl.Rectangle {
+					x      = collider.position.x,
+					y      = collider.position.y,
+					width  = f32(s.x),
+					height = f32(s.y),
+				}
+				rl.DrawRectangleRec(rect, color)
+			case f32:
+				rl.DrawCircle(i32(collider.position.x), i32(collider.position.y), s, color)
 			}
-			rl.DrawRectangleRec(rect, color)
 		}
 	}
 }
@@ -79,15 +85,13 @@ CollisionSystem :: proc(game: ^Game) {
 				is_player = true
 				colliderA_future_pos = Collider {
 					colliderA.position + archetypeA.players_data[i].next_dir * velocityA.speed,
-					colliderA.h,
-					colliderA.w,
+					colliderA.size,
 					true,
 				}
 			} else {
 				colliderA_future_pos = {
 					colliderA.position + velocityA.direction * velocityA.speed,
-					colliderA.h,
-					colliderA.w,
+					colliderA.size,
 					true,
 				}
 			}
@@ -104,7 +108,6 @@ CollisionSystem :: proc(game: ^Game) {
 				has_body := game.player_body.num_cells > 0 ? true : false
 
 				is_player = true
-
 
 				if is_move_allowed(
 					head_velocity,
@@ -151,7 +154,7 @@ CollisionSystem :: proc(game: ^Game) {
 					case .CANDY:
 						if is_player &&
 						   dataB.state != .DEAD &&
-						   collide_no_edges(colliderB^, colliderA^) {
+						   collide_no_edges(colliderB^, colliderA^) {// TODO: SWAP THIS FOR REC COLLIDING, FAKE IT FOR CIRCLES
 							dataB.state = .DEAD
 							AddSound(game, &sound_bank[FX.FX_EAT])
 							game.count_candies -= 1
@@ -266,8 +269,7 @@ CollisionSystem :: proc(game: ^Game) {
 						colliderB_future_pos := Collider {
 							colliderB.position +
 							archetypeB.velocities[j].direction * velocityA.speed,
-							colliderB.h,
-							colliderB.w,
+							colliderB.size,
 							true,
 						}
 
@@ -380,7 +382,7 @@ spawn_ghost_cell :: proc(game: ^Game, head_pos, from_dir: Vec2, rotation: f32) {
 			Position{pos = head_pos, size = {PLAYER_SIZE, PLAYER_SIZE}},
 			Data{kind = .GHOST_PIECE, state = .ALIVE, team = .GOOD},
 			PlayerData{player_state = .NORMAL, count_turn_left = 0, body_index = -1},
-			Collider{position = head_pos, w = PLAYER_SIZE, h = PLAYER_SIZE, active = false},
+			Collider{position = head_pos, size = Vec2{PLAYER_SIZE, PLAYER_SIZE}, active = false},
 		},
 	)
 

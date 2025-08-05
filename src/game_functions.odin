@@ -235,7 +235,8 @@ clear_dead :: proc(game: ^Game) {
 			if data[i].state == .DEAD {
 				unordered_remove(&archetype.entities_id, i)
 				for component, index in COMPONENT_ID {
-					if (component & archetype.component_mask) == component {
+					// if (component & archetype.component_mask) == component {
+					if has_component(archetype.component_mask, component) {
 						switch component {
 						case .POSITION:
 							unordered_remove(&archetype.positions, i)
@@ -343,7 +344,7 @@ grow_body :: proc(game: ^Game, body: ^Body, head_pos, head_dir: Vec2) {
 				Velocity{direction = head_dir, speed = 0},
 				Visual(sprite_bank[SPRITE.BODY_STRAIGHT]),
 				PlayerData{player_state = .NORMAL, count_turn_left = 0, body_index = -1},
-				Collider{position = head_pos, w = PLAYER_SIZE, h = PLAYER_SIZE},
+				Collider{position = head_pos, size = Vec2{PLAYER_SIZE, PLAYER_SIZE}},
 				Data{kind = .BODY, state = .ALIVE, team = .GOOD},
 			},
 		)
@@ -445,6 +446,7 @@ spawn_enemy :: proc(game: ^Game, x, y: f32, kind: ENEMY_KIND) -> u32 {
 	velocity: Velocity
 	#partial switch kind {
 	case .HUMAN:
+		fmt.println(velocity.speed)
 		// animation = animation_bank[ANIMATION.HUMAN_RUN]
 		shape = Shape {
 			num_sides = 3,
@@ -478,12 +480,7 @@ spawn_enemy :: proc(game: ^Game, x, y: f32, kind: ENEMY_KIND) -> u32 {
 		Position{{x, y}, {ENEMY_SIZE, ENEMY_SIZE}},
 		velocity,
 		Visual(shape),
-		Collider {
-			colision_origin,
-			ENEMY_SIZE - EPSILON_COLISION * 4,
-			ENEMY_SIZE - EPSILON_COLISION * 4,
-			true,
-		},
+		Collider{colision_origin, Vec2{ENEMY_SIZE, ENEMY_SIZE}, true},
 		Data{.ENEMY, .ALIVE, .BAD},
 		// IA{behavior = IA_ENEMY_HUMAN{.APPROACH, 60, 100, 500, 0}, table = &table_enemy_human},
 		enemy_behavior[kind],
@@ -514,8 +511,7 @@ spawn_bullet :: proc(
 			Visual(anim),
 			Collider {
 				origin + EPSILON_COLISION,
-				int(bullet_size) - EPSILON_COLISION * 2,
-				int(bullet_size) - EPSILON_COLISION * 2,
+				Vec2{(bullet_size) - EPSILON_COLISION * 2, (bullet_size) - EPSILON_COLISION * 2},
 				true,
 			},
 			Data{.BULLET, .ALIVE, team},
@@ -551,8 +547,7 @@ spawn_candy :: proc(game: ^Game) {
 			Visual(animation_bank[ANIMATION.CANDY]),
 			Collider {
 				Vec2{f32(pos_x + 10), f32(pos_y + 10)} + EPSILON_COLISION,
-				CANDY_SIZE - EPSILON_COLISION * 2,
-				CANDY_SIZE - EPSILON_COLISION * 2,
+				Vec2{CANDY_SIZE - EPSILON_COLISION * 2, CANDY_SIZE - EPSILON_COLISION * 2},
 				true,
 			},
 		},

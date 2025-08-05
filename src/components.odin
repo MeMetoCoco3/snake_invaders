@@ -83,7 +83,10 @@ ANIM_DIRECTION :: enum {
 
 Collider :: struct {
 	position: Vec2,
-	w, h:     int,
+	size:     union #no_nil {
+		Vec2,
+		f32,
+	},
 	active:   bool,
 }
 
